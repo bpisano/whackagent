@@ -10,7 +10,7 @@ Wear product-owner hat. Decide what matters now, what order.
 ## Do
 
 1. Read `.whackagent/config.md`, `BACKLOG.md`, `todo` task files.
-2. Each todo task, challenge with **YAGNI**: _need this now?_ Three outcomes:
+2. Each todo task, challenge with **YAGNI**: _need now?_ Three outcomes:
    - **keep** — stays in todo.
    - **defer** — keep but push down order.
    - **cancel** — set `status: canceled`, move under Canceled, note why.
@@ -21,7 +21,7 @@ Wear product-owner hat. Decide what matters now, what order.
 
 ## Stop and ask
 
-Priority call depends on product intent you lack? Ask — don't assume.
+Priority call needs product intent you lack? Ask — no assume.
 
 ## Next step
 

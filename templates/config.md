@@ -14,8 +14,8 @@ review:
   categories:                  # each = ONE parallel reviewer; the listed module file(s) are all it loads.
     style: [style.md, swiftui.md, testing.md]   # setup drops swiftui.md if no SwiftUI
     elegance: [elegance.md]
-    architecture: [architecture-app.md]         # layers/boundaries/naming — or architecture-package.md
-    arborescence: [architecture-app.md]         # file tree/folders section of the same module
+    architecture: [architecture-global.md, architecture-app.md]  # global = YAGNI/SOLID/DRY/DI; app = layers/naming — or architecture-package.md
+    arborescence: [architecture-app.md]         # file tree/folders section of the kind module — or architecture-package.md
     correctness: []            # pure bug hunt — no module
 
 commit:

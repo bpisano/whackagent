@@ -5,14 +5,14 @@ description: Turn a fuzzy idea into a clear, grilled task. Clarity before code.
 
 # /wa-task
 
-Turn fuzzy idea into clear, grilled task. Clarity before code.
+Turn fuzzy idea into clear grilled task. Clarity before code.
 
 ## Do
 
 1. Read `.whackagent/config.md` + wiki index for project context.
-2. **Title first.** Distill request into SHORT explicit title — feature clear in one glance ("Login Apple", not "improve auth"). Slug = kebab-case title (`login-apple`).
-3. **Grill.** Invoke **grill-me** skill: interview user relentlessly down design tree, one question at a time, recommend answer each. Resolve scope with **YAGNI** — push back on speculative. If a question is answerable from the code, **query graphify first** (the code graph, if `graphify-out/` exists) to explore — don't ask the user what the project already tells you, and don't blind-Grep.
-   - **Cover architecture.** Grill must settle *where this lives*: which feature/folder, what new files/folders, how it fits architecture module (group by feature, proper nesting — not flat), which layer boundaries it touches. Read architecture module in `.whackagent/conventions/` first, so grill against real rules.
+2. **Title first.** Distill request into SHORT explicit title — feature clear one glance ("Login Apple", not "improve auth"). Slug = kebab-case title (`login-apple`).
+3. **Grill.** Invoke **grill-me** skill: interview user relentlessly down design tree, one question at time, recommend answer each. Resolve scope with **YAGNI** — push back on speculative. If question answerable from code, **query graphify first** (code graph, if `graphify-out/` exists) to explore — no ask user what project already tells, no blind-Grep.
+   - **Cover architecture.** Grill must settle *where this lives*: which feature/folder, what new files/folders, how fits architecture module (group by feature, proper nesting — not flat), which layer boundaries touch. Read architecture module in `.whackagent/conventions/` first, so grill against real rules.
    - Exception: user flags trivial quick win → skip grill, create task `grilled: false`.
 4. **Write task file** at `.whackagent/tasks/<slug>.md` from `${CLAUDE_PLUGIN_ROOT}/templates/task.md`:
    - `title`, `status: todo`, `grilled: true` (or false if skipped), `created` = today.
@@ -24,7 +24,7 @@ Turn fuzzy idea into clear, grilled task. Clarity before code.
 
 ## Stop and ask
 
-Whole skill about not guessing. If user answers leave contradiction, surface it — don't paper over.
+Whole skill about no guessing. If user answers leave contradiction, surface it — no paper over.
 
 ## Next step
 

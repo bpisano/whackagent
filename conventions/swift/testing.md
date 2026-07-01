@@ -1,12 +1,12 @@
 # Swift — Testing & mocks
 
-> whackagent convention module · review category: **style**. Loads when project has (or should have) tests.
+> whackagent convention module · review category: **style**. Load when project has (or should have) tests.
 
 ## Testing
 
 - Swift Testing — never XCTest.
 - Group tests in `@Suite struct`, one suite per file (one-type rule).
-- Use backtick name syntax so test name carries description without duplicating in string.
+- Use backtick name syntax so test name carry description, no duplicate in string.
 - Assert with `#expect`; use `#require` to unwrap or stop test on failure.
 - Use `async`/`await` for async tests.
 - Put `@Suite` and `@Test` attributes on separate line from declaration.
@@ -29,7 +29,7 @@ struct UserStoreTests {
 
 ## Model mocks
 
-Model needs mock (previews, tests) → add `static func mock(...)` in extension in **same file** as model. Every parameter mirrors stored property and **has default value**, so `.mock()` works bare and any field overridable.
+Model need mock (previews, tests) → add `static func mock(...)` in extension in **same file** as model. Every parameter mirror stored property and **has default value**, so `.mock()` work bare and any field overridable.
 
 ```swift
 // User.swift

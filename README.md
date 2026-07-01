@@ -1,94 +1,147 @@
 # whackagent
 
-Flow de développement orchestré pour Claude Code. Un backlog + un wiki qui se référencent, un cycle de vie de tâche en étapes claires, des subagents isolés pour ne pas polluer le contexte principal, et un autopilot pour avaler des petites tâches la nuit.
+A Claude Code plugin for your entire development flow.
 
-Swift-first, mais piloté par des **templates de conventions par langage** (override par projet).
+## Features
 
-## Philosophie
+- **codebase knowledge**: project knowledge base, graphified for fast search and context.
+- **task management**: create, prioritize, and track tasks.
+- **code pipeline**: implement a task and review it.
 
-- **YAGNI** partout. On code ce qui est utile maintenant, pas l'hypothétique.
-- **Clarté avant code.** La moindre interrogation hors-spec → stop et on demande (sauf en autopilot, voir plus bas).
-- **Contexte propre.** Les skills routent dans le thread principal ; le code et la review partent dans des subagents isolés.
-- **Jamais de commit non sollicité.** En flow normal, aucun commit tant que tu n'as pas validé la feature. En autopilot, commits autorisés mais sur branche isolée uniquement, jamais de merge, jamais au nom de Claude — toujours au tien.
+## Installation
 
-## Le flow
+Add the marketplace, then install the plugin:
 
-```
-/wa-setup            →  config + scaffolding (.whackagent/), lance graphify   (une fois)
-/wa-board            →  dashboard : tableau du backlog, suggère la prochaine action
-/wa-task <desc>      →  crée une tâche + spec, la grille (grill-me, inclut l'archi)
-/wa-prio             →  product-owner : ordonne le backlog, YAGNI, peut splitter
-/wa-code <slug>      →  pipeline complet : comprendre → coder+tester → review → report+itère
-/wa-autopilot [slug] →  applique wa-code sur 1..n tâches en autonomie, branche par tâche
-/wa-review [scope]   →  review 5-catégories standalone (diff / path / projet) — audit, --fix optionnel
-/wa-wiki             →  met le wiki + graphify à jour
-/wa-wiki <feature>   →  cherche une info dans le wiki / le graphe
+```bash
+/plugin marketplace add bpisano/whackagent
+/plugin install whackagent@whackagent
 ```
 
-Chaque étape suggère la suivante. Tu ne cherches jamais quoi lancer.
+## Commands
 
-## Le pipeline `/wa-code`
+| Command | Description |
+| --- | --- |
+| `/wa-setup` | Config + scaffolding (`.whackagent/`), runs graphify (once) |
+| `/wa-board` | Dashboard: backlog table, suggests the next action |
+| `/wa-task <desc>` | Creates a task + spec, grills it (grill-me, includes architecture) |
+| `/wa-prio` | Product owner: orders the backlog, YAGNI, can split |
+| `/wa-code <slug>` | Full pipeline: understand → code + test → review → report + iterate |
+| `/wa-autopilot [slug]` | Applies wa-code on 1..n tasks autonomously, one branch per task |
+| `/wa-review [scope]` | Standalone 5-category review (diff / path / project) — audit, optional `--fix` |
+| `/wa-wiki` | Updates the wiki + graphify |
+| `/wa-wiki <feature>` | Looks up info in the wiki / the graph |
 
-Une seule commande déroule tout le cycle de codage d'une feature, en orchestrant des subagents isolés :
+Each step suggests the next one. You never have to figure out what to run.
 
-1. **Comprendre** — lire la tâche, chercher l'existant (graphify) pour ne pas recoder, décomposer en petits modules, prévoir le plan de tests.
-2. **Coder + tester** — `wa-implementer` (séquentiel) code la feature *et* les tests, puis run build/tests pour prouver que ça marche.
-3. **Review** — 5 `wa-reviewer` en parallèle, un par lentille (**style · élégance · architecture · arborescence · correctness**), chacun ne charge que son module → focus, rien d'oublié. Agrège → autofix en boucle jusqu'au clean.
-4. **Report + itère** — résumé à l'écran pour itérer avec toi, report sauvé dans `.whackagent/reports/<slug>.md`. À validation : tâche passée en `done`.
+## Typical flow
 
-→ ensuite `/wa-wiki` met le wiki + le graphe à jour. Jamais de commit avant ta validation.
+Bootstrap once, then loop through describe → prioritize → code.
 
-## Arborescence créée dans ton projet
+**0. Setup (once per project)**
+
+```
+/wa-setup
+```
+
+Detects language + project kind, scaffolds `.whackagent/`, runs graphify to index the code.
+
+**1. Describe a task — `/wa-task`**
+
+```
+/wa-task Sign in with Apple on the login screen
+```
+
+Grills the idea (grill-me) until it's clear, plans the architecture, and writes `.whackagent/tasks/login-apple.md` with a spec + a size (🟢 quickwin / 🟡 medium / 🔴 large).
+
+**2. Prioritize — `/wa-prio`**
+
+```
+/wa-prio
+```
+
+Product-owner pass over the backlog: orders tasks by what matters now, applies YAGNI, splits anything too big. Result is `.whackagent/BACKLOG.md` — top of the list is what to code next.
+
+```
+1. 🟢 login-apple      Sign in with Apple on the login screen
+2. 🟡 offline-cache    Cache the feed for offline reads
+3. 🔴 payments         Stripe checkout + receipts
+```
+
+**3. Code it — `/wa-code <slug>`**
+
+```
+/wa-code login-apple
+```
+
+A single command runs the whole coding cycle, orchestrating isolated subagents:
+
+1. **Understand**: read the task, search the existing code (graphify) to avoid rewriting, break it down into small modules, plan the tests.
+2. **Code + test**: `wa-implementer` (sequential) writes the feature *and* the tests, then runs build/tests to prove it works.
+3. **Review**: 5 `wa-reviewer` in parallel, one per lens (**style · elegance · architecture · file tree · correctness**), each loading only its own module → focused, nothing forgotten. Aggregates → autofix in a loop until clean.
+4. **Report + iterate**: on-screen summary to iterate with you, report saved in `.whackagent/reports/login-apple.md`. On validation: task moved to `done`.
+
+**4. Keep knowledge fresh — `/wa-wiki`**
+
+```
+/wa-wiki
+```
+
+Updates the wiki + the graph after a feature lands. Never commits before your validation.
+
+> Prefer autonomy? `/wa-autopilot` runs the `/wa-code` cycle across the top backlog tasks on its own, one branch per task.
+
+## File tree created in your project
 
 ```
 .whackagent/
-  config.md            # langue, langage, project_kind, catégories de review, droit de commit
-  conventions/         # modules de convention copiés (que les utiles), éditables par projet
-  BACKLOG.md           # index des tâches (ordre = priorité)
-  tasks/<slug>.md      # une tâche = un fichier (frontmatter + corps)
-  wiki/index.md        # sommaire du wiki
-  wiki/<page>.md       # pages de domaine, liens [[wikilink]] (compatible Obsidian)
-  reports/<slug>.md    # reports de features livrées
+  config.md            # language, coding language, project_kind, review categories, commit permission
+  conventions/         # copied convention modules (only the useful ones), editable per project
+  BACKLOG.md           # task index (order = priority)
+  tasks/<slug>.md      # one task = one file (frontmatter + body)
+  wiki/index.md        # wiki summary
+  wiki/<page>.md       # domain pages, [[wikilink]] links (Obsidian-compatible)
+  reports/<slug>.md    # reports of delivered features
 ```
 
-## Tâche : anatomie
+## Task
 
 ```markdown
 ---
-title: Login Apple          # court, explicite — la feature en un coup d'œil
-summary: Sign in with Apple sur l'écran de connexion   # une ligne, pour le tableau
+title: Login Apple          # short, explicit — the feature at a glance
+summary: Sign in with Apple on the login screen   # one line, for the board
 size: quickwin             # quickwin 🟢 | medium 🟡 | large 🔴
 status: todo                # todo | in-progress | review | done | canceled
-grilled: false             # true une fois passée par /wa-task (grill-me)
+grilled: false             # true once it went through /wa-task (grill-me)
 wiki: [[auth]], [[onboarding]]
-note:                       # déclencheur / contexte libre (optionnel)
+note:                       # trigger / free context (optional)
 ---
 
-## Contexte / Décisions
-## Implémentation
+## Context / Decisions
+## Implementation
 ## Review
 ```
 
-## Conventions — modules par catégorie
+## Conventions
 
-Les conventions sont **modulaires**, découpées par catégorie de review, et **auto-contenues** (aucune dépendance à un autre plugin). Swift :
+Conventions are **modular**, split by review category, and **self-contained** (no dependency on another plugin). Swift:
 
 ```
 conventions/swift/
-  style.md             # one-type-per-file, types explicites, ordre des membres, commentaires/doc, format
-  elegance.md          # Swift idiomatique (pas du C en Swift), concurrence (no Combine)
-  architecture-app.md  # arbo iOS : Coordinator → ViewModel → Store → View, group-by-feature
-  architecture-package.md  # arbo Swift non-iOS (package/CLI/serveur) : règles plus libres mais définies
-  swiftui.md           # règles SwiftUI — copié SEULEMENT si le projet utilise SwiftUI
+  style.md             # one-type-per-file, explicit types, member order, comments/doc, format
+  elegance.md          # code speaks for itself, idiomatic Swift (resultBuilder & co, not C in Swift), concurrency (no Combine)
+  architecture-global.md   # YAGNI · SOLID · DRY, composition/DI, testability — every Swift project
+  architecture-app.md  # iOS tree: Coordinator → ViewModel → Store → View, group-by-feature
+  architecture-package.md  # non-iOS Swift tree (package/CLI/server): looser but defined rules
+  swiftui.md           # SwiftUI rules — copied ONLY if the project uses SwiftUI
   testing.md           # Swift Testing + mocks
 ```
 
-`/wa-setup` détecte le langage, le **kind** (app vs package) et l'usage de SwiftUI, puis copie **uniquement les modules utiles** dans `.whackagent/conventions/` (ex : pas de `swiftui.md` dans un package sans SwiftUI). Tu édites ces copies pour adapter par projet (ex : couper la doc publique). TypeScript et generic ont un fichier unique.
+`/wa-setup` detects the language, the **kind** (app vs package) and SwiftUI usage, then copies **only the useful modules** into `.whackagent/conventions/` (e.g. no `swiftui.md` in a package without SwiftUI). You edit these copies to adapt per project (e.g. drop public doc). TypeScript and generic have a single file.
 
-Chaque catégorie de review charge **seulement son module** → contexte focus, rien d'oublié.
+Each review category loads **only its own module** → focused context, nothing forgotten.
 
-## Dépendances de skills
+## Skill dependencies
 
-- **grill-me** — clarification des tâches dans `/wa-task`
-- **caveman** — compression des reports (phase report de `/wa-code`) + compression de la config et du wiki au setup et à chaque `/wa-wiki` (`compress_wiki: true`, économise les tokens de relecture)
-- **graphify** — index du code interrogé par les skills (créé au setup, rafraîchi à `/wa-wiki`)
+- **grill-me**: task clarification in `/wa-task`
+- **caveman**: report compression (report phase of `/wa-code`) + config and wiki compression at setup and on each `/wa-wiki` (`compress_wiki: true`, saves re-reading tokens)
+- **graphify**: code index queried by the skills (created at setup, refreshed on `/wa-wiki`)

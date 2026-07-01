@@ -14,7 +14,7 @@ Read `.whackagent/config.md` first.
 
 ## Update mode — `/wa-wiki`
 
-Task status + report already handled by `/wa-code`. This step keeps shared knowledge true.
+Task status + report handled by `/wa-code`. This step keep shared knowledge true.
 
 1. **Figure out what changed** — recent `done` tasks, latest `.whackagent/reports/*.md`, and/or git diff since last sync.
 2. **Wiki.** Update or create affected pages:
@@ -23,7 +23,7 @@ Task status + report already handled by `/wa-code`. This step keeps shared knowl
    - Create any page a task's `wiki:` flagged missing.
    - Keep narrative (*why* + shape), not code dump.
    - **Compress** (if `compress_wiki: true`): run **caveman-compress** on each page written, then delete `*.original.md` backup. Wiki only.
-3. **Graph.** Re-run **graphify** skill on source (`--update` if supported) so index reflects new code.
+3. **Graph.** Re-run **graphify** skill on source (`--update` if supported) so index reflect new code.
 4. **Commit (only if allowed).** If `commit.auto_commit_after_validation: true` AND user validated feature, commit with configured author name/email — **never** as Claude. Else leave it. Outside autopilot, never commit unvalidated work.
 
 Stop and ask if can't tell which page a change belongs to — don't scatter duplicates.

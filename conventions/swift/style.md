@@ -19,16 +19,15 @@ private extension Badge {
 }
 ```
 
-## Explicit types + `.init()`
+## Explicit types
 
-Annotate type every declaration, even when compiler infer. Use `.init()` on right when type explicit on left — never repeat type name.
+Annotate type every declaration, even when compiler infer.
 
 ```swift
 let count: Int = 0
 let items: [Item] = []
 let store: UserStore = .init()   // ✅
 let store = UserStore()          // ❌ type not explicit
-let store: UserStore = UserStore() // ❌ redundant
 ```
 
 Exception — optional binding take no explicit type:
@@ -38,9 +37,18 @@ guard let value else { return }            // ✅
 if let coordinate { center(on: coordinate) } // ✅
 ```
 
+## `.init()`
+
+Use `.init()` on right when type explicit on left — never repeat type name.
+
+```swift
+let store: UserStore = .init()      // ✅
+let store: UserStore = UserStore()  // ❌ redundant
+```
+
 ## Member order
 
-Members fixed order. Within each section, order by access: `public` → internal (no keyword) → `private`, separate access subgroups with one blank line.
+Members fixed order. Within each section, order by access: `public` → internal (no keyword) → `private`, separate access subgroups one blank line.
 
 1. Static stored properties
 2. Instance stored properties
@@ -126,7 +134,7 @@ if
 
 ## Pattern matching
 
-Bind with `case let` once on the left, not `let` on each value.
+Bind with `case let` once on left, not `let` on each value.
 
 ```swift
 case let .example(a, b):   // ✅

@@ -5,12 +5,12 @@ description: Renders a dashboard and suggests the next action based on the .whac
 
 # /wa-board
 
-Dashboard. Lift lid on backlog, point at next move.
+Dashboard. Lift lid on backlog, point next move.
 
 ## Do
 
-1. Read `.whackagent/config.md` (respect discussion language). If `.whackagent/` missing, tell user run `/wa-setup` and stop.
-2. Read `.whackagent/BACKLOG.md` and referenced task files (need each task `summary`, `size`, `grilled`).
+1. Read `.whackagent/config.md` (respect discussion language). If `.whackagent/` missing, tell user run `/wa-setup`, stop.
+2. Read `.whackagent/BACKLOG.md` + referenced task files (need each task `summary`, `size`, `grilled`).
 3. Render backlog as **table**, one section per status (see Display format below), priority order within each.
 4. Suggest exactly **one** next action, by state:
    - something `in-progress` → resume it (`/wa-code <slug>`)
@@ -21,7 +21,7 @@ Dashboard. Lift lid on backlog, point at next move.
 
 ## Display format
 
-Canonical way tasks shown anywhere in flow (here and `/wa-prio`). One table per non-empty status section, tasks in priority order:
+Canonical way tasks shown anywhere in flow (here + `/wa-prio`). One table per non-empty status section, tasks priority order:
 
 ```
 ### Todo
@@ -43,4 +43,4 @@ Rules:
 
 ## Output
 
-Tables, then one bold **→ next:** line. Don't re-explain whole flow each time.
+Tables, then one bold **→ next:** line. No re-explain whole flow each time.

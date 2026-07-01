@@ -1,6 +1,6 @@
 # Conventions — TypeScript
 
-Base template copied into `.whackagent/conventions/` by `/wa-setup`. Edit **Toggles** block per project. `wa-implementer` writes against these rules; each category `wa-reviewer` checks them.
+Base template copied into `.whackagent/conventions/` by `/wa-setup`. Edit **Toggles** block per project. `wa-implementer` writes against these rules; `wa-reviewer` checks each category.
 
 ## Toggles
 
@@ -20,12 +20,13 @@ no_default_export: true   # named exports only
 5. **Modules** (`no_default_export`) — named exports; one main concept per file.
 6. **Async** — `async`/`await`, never floating promises; handle rejections.
 7. **Testing** — colocated `*.test.ts`, one `describe` per unit, clear test names.
+8. **YAGNI · SOLID · DRY** — no speculative generality (YAGNI); single responsibility, depend on abstractions (interfaces/types) not concretions, small composable units (SOLID); no duplicated logic — factor it, reuse what exists (DRY).
 
 ## Architecture (review category: architecture)
 
-- **Group by feature/domain, not by type.** No god `utils/`, `types/`, `services/` buckets holding everything.
-- **No flat tree.** Large folders get sub-folders; nest as area grows.
-- **Clear module boundaries**, one-directional dependencies, no cycles.
+- **Group by feature/domain, not by type.** No god `utils/`, `types/`, `services/` buckets.
+- **No flat tree.** Big folders get sub-folders; nest as area grows.
+- **Clear module boundaries**, one-directional deps, no cycles.
 - **Barrel/`index.ts`** only at intentional public boundaries, not everywhere.
 
 ## Build proof

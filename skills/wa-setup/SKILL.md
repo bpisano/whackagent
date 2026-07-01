@@ -5,7 +5,7 @@ description: Interactively bootstrap the whackagent workflow in a project.
 
 # /wa-setup
 
-Set up orchestrated dev flow for this project. Short interactive setup, then scaffold, then index.
+Set up orchestrated dev flow for project. Short interactive setup, then scaffold, then index.
 
 ## 1. Interactive config (ask one at a time, propose a default)
 
@@ -21,7 +21,7 @@ Then confirm with user:
 3. **Review toggles** — surface public-doc one explicitly, varies by company: _"Require `///` documentation on every public API? (some teams skip this)"_ → sets `review.public_doc`. Offer to flip other toggles.
 4. **Commit policy** — _"Once YOU validate a feature, may I commit it myself, or always wait for you to commit?"_ → sets `auto_commit_after_validation`. Remind: commits always use your name, never Claude's. Outside autopilot, nothing committed before you validate.
 
-Keep short — 4 questions. Everything else takes template default.
+Keep short — 4 questions. Rest take template default.
 
 ## 2. Scaffold `.whackagent/`
 
@@ -29,9 +29,9 @@ Create directory and files (do not overwrite existing without asking):
 
 - `config.md` — copy `${CLAUDE_PLUGIN_ROOT}/templates/config.md`, fill answers above, set `review.categories` to modules you actually copy (next bullet).
 - `conventions/` — copy **only relevant** convention modules into `.whackagent/conventions/`:
-  - **Swift** (`${CLAUDE_PLUGIN_ROOT}/conventions/swift/`): always `style.md`, `elegance.md`, `testing.md`. Architecture: `architecture-app.md` if kind is `app`, else `architecture-package.md`. Add `swiftui.md` **only if SwiftUI used** (skip for package/CLI with no SwiftUI — whole point).
+  - **Swift** (`${CLAUDE_PLUGIN_ROOT}/conventions/swift/`): always `style.md`, `elegance.md`, `testing.md`, and `architecture-global.md` (platform-agnostic YAGNI/SOLID/DRY/DI — every Swift project). Kind module: `architecture-app.md` if kind is `app`, else `architecture-package.md`. Add `swiftui.md` **only if SwiftUI used** (skip for package/CLI with no SwiftUI — whole point).
   - **TypeScript / generic**: copy single `${CLAUDE_PLUGIN_ROOT}/conventions/<lang>.md` and point every `review.categories` entry at it.
-  - Set `review.categories` in config to match what you copied (drop `swiftui.md` from `style` list if not copied; use architecture file you chose).
+  - Set `review.categories` in config to match what you copied: `architecture` loads `[architecture-global.md, <kind module>]`, `arborescence` loads just the kind module; drop `swiftui.md` from `style` if not copied.
 - `BACKLOG.md` — copy `${CLAUDE_PLUGIN_ROOT}/templates/BACKLOG.md`.
 - `wiki/index.md` — copy `${CLAUDE_PLUGIN_ROOT}/templates/wiki-index.md`.
 - Create empty `tasks/` and `reports/` directories (`.gitkeep` fine).

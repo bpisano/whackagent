@@ -35,7 +35,7 @@ Decompose views into small reusable components, each own file even if private to
 
 ## View init
 
-Make initializers pretty, match SwiftUI built-ins. Hide primary parameter behind label-less first argument.
+Make init pretty, match SwiftUI built-ins. Hide primary param behind label-less first arg.
 
 ```swift
 struct ProfileView: View {
@@ -49,7 +49,7 @@ struct ProfileView: View {
 
 ## Modifier-style customization
 
-Expose optional / customization properties through view-modifier methods, not init parameters. Give default value when possible.
+Expose optional/customization props through view-modifier methods, not init params. Give default value when possible.
 
 ```swift
 struct ProfileView: View {
@@ -85,6 +85,7 @@ extension ButtonStyle where Self == PrimaryButtonStyle {
     static var primary: Self {
         .init()
     }
+
     // with parameters, expose a func instead:
     // static func primary(_ variant: Variant = .filled) -> Self { .init(variant: variant) }
 }
