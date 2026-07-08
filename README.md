@@ -6,7 +6,7 @@ A Claude Code plugin for your entire development flow.
 
 - **codebase knowledge**: project knowledge base, graphified for fast search and context.
 - **task management**: create, prioritize, and track tasks.
-- **code pipeline**: implement a task and review it.
+- **code pipeline**: implement a task, review it, and verify it runs — for app targets, `/wa-code` can drive the built app on a simulator/device (taps + screenshots via [mobile-mcp](https://github.com/mobile-next/mobile-mcp), iOS & Android) to confirm the task actually works. Build stays XcodeBuildMCP (iOS) / gradle (Android); mobile-mcp only drives the built binary.
 
 ## Installation
 
@@ -25,7 +25,7 @@ Add the marketplace, then install the plugin:
 | `/wa-board` | Dashboard: backlog table, suggests the next action |
 | `/wa-task <desc>` | Creates a task + spec, grills it (grill-me, includes architecture) |
 | `/wa-prio` | Product owner: orders the backlog, YAGNI, can split |
-| `/wa-code <slug>` | Full pipeline: understand → code + test → review → report + iterate |
+| `/wa-code <slug>` | Full pipeline: understand → code + test → review → verify → report + iterate |
 | `/wa-autopilot [slug]` | Applies wa-code on 1..n tasks autonomously, one branch per task |
 | `/wa-review [scope]` | Standalone 5-category review (diff / path / project) — audit, optional `--fix` |
 | `/wa-wiki` | Updates the wiki + graphify |

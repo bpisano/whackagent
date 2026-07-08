@@ -97,6 +97,24 @@ Button("Save") { save() }
     .buttonStyle(PrimaryButtonStyle()) // ❌ bare initializer
 ```
 
+## Accessibility identifiers (targetable UI)
+
+Every **interactive** or **asserted** element carries a stable `.accessibilityIdentifier(_:)` — buttons, text fields, toggles, tappable rows, and any view a test or the runtime verifier must find or assert on. `wa-verifier` drives the app through mobile-mcp, which targets elements by the accessibility tree; without identifiers it falls back to raw coordinates — brittle, breaks on layout change. Missing identifier on an interactive element = style finding.
+
+Rules:
+- Identifier is **stable and semantic**, not positional: `"login.submitButton"`, not `"button2"`. Namespace by screen/feature.
+- Set on the interactive view itself, not a wrapping container.
+- Purely decorative / non-interactive views (spacers, background shapes, static labels nothing asserts) do **not** need one — YAGNI.
+- Define identifiers as constants, not scattered string literals, so view and test/verify reference the same source.
+
+```swift
+Button("Sign in") { submit() }
+    .accessibilityIdentifier("login.submitButton")
+
+TextField("Email", text: $email)
+    .accessibilityIdentifier("login.emailField")
+```
+
 ## Previews
 
 Every View has `#Preview` in its file. Multiple states → one preview per state.

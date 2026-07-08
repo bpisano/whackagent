@@ -20,6 +20,7 @@ Turn fuzzy idea into clear grilled task. Clarity before code.
    - `size` — estimate effort: `quickwin` (🟢, hour or less), `medium` (🟡), or `large` (🔴, multi-session / probably split). Base on what grill surfaced.
    - `wiki:` — link relevant existing wiki pages with `[[page]]`; note any page to create.
    - Fill `## Contexte / Décisions` with resolved decisions from grill.
+   - Fill `## Critères d'acceptation` — observable checks that mean "done" (what appears on screen, what an input must produce). These drive `wa-verifier`; keep them concrete, YAGNI. Skip only for tasks with no runnable surface (pure lib/logic).
 5. **Add to backlog.** Append task under **Todo** in `.whackagent/BACKLOG.md`, link file.
 
 ## Stop and ask

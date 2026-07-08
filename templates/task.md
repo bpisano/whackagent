@@ -13,6 +13,11 @@ created:                # YYYY-MM-DD
 
 <!-- Filled by /wa-task. What, why, scope (YAGNI), decisions resolved during grill. -->
 
+## Critères d'acceptation
+
+<!-- Filled by /wa-task. Observable checks that mean "done" — each one a thing you can see
+     on screen or a state an input must produce. wa-verifier drives these on device. -->
+
 ## Implémentation
 
 <!-- Filled by /wa-code. Approach, files touched, build proof, notes from wa-implementer. -->
@@ -20,3 +25,8 @@ created:                # YYYY-MM-DD
 ## Review
 
 <!-- Filled by /wa-code (review phase). Per-category findings + what autofix changed. -->
+
+## Vérification
+
+<!-- Filled by /wa-code (verify phase). wa-verifier checks (✅/❌) + screenshot paths per criterion. -->
+

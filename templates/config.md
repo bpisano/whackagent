@@ -18,6 +18,11 @@ review:
     arborescence: [architecture-app.md]         # file tree/folders section of the kind module — or architecture-package.md
     correctness: []            # pure bug hunt — no module
 
+verify:                        # wa-code's runtime check — drives the built app via mobile-mcp
+  enabled: false               # set true for app targets with a UI to exercise (needs mobile-mcp)
+  platform: ios                # ios | android | both
+  target: simulator            # simulator | emulator | device (build stays XcodeBuildMCP/gradle)
+
 commit:
   auto_commit_after_validation: false   # may Claude commit once YOU validate a feature?
   author_name: "Benjamin Pisano"        # commits ALWAYS use this — never "Claude"

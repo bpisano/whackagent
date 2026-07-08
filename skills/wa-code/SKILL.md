@@ -5,7 +5,7 @@ description: Run the full coding pipeline for a task — understand, code + test
 
 # /wa-code
 
-Full coding pipeline, one task: **understand → code + test → review → report + iterate**. You orchestrate from main thread; heavy work go to isolated subagents (`wa-implementer`, `wa-reviewer`) — keep main context clean. `wa-autopilot` run same pipeline unattended.
+Full coding pipeline, one task: **understand → code + test → review → verify → report + iterate**. You orchestrate from main thread; heavy work go to isolated subagents (`wa-implementer`, `wa-reviewer`, `wa-verifier`) — keep main context clean. `wa-autopilot` run same pipeline unattended.
 
 Read `.whackagent/config.md` and task file `.whackagent/tasks/<slug>.md` first.
 
@@ -36,6 +36,17 @@ When all bricks coded + green, run multi-category review:
 2. **Aggregate** findings into one severity-ordered list, tagged by category; dedupe.
 3. **Autofix** (if `review.autofix: true`): spawn **wa-implementer** once in **fix mode** with aggregated findings + conventions dir (fix only what findings name, re-read style, add no comments), then **re-review** (back to step 1). Loop until clean or no progress. Cap 3 rounds; if not converging, stop and show remaining findings. A `BLOCKED:` from autofix → stop and ask.
 4. Record final per-category findings + what autofix changed in task's `## Review`.
+
+## 3.5 Verify (runtime)
+
+Static review says the code reads right; verify says it **works when used**. Run only when `verify.enabled: true` and the task has a runnable UI surface (skip pure-logic/lib tasks — nothing to drive).
+
+1. Dispatch **wa-verifier** once. Pass: task path (for acceptance criteria), the implementer's `ARTIFACT:` (binary path + bundle id/package), `verify.platform` + `verify.target`, `autopilot` flag.
+2. Verifier installs the built binary via **mobile-mcp**, drives the task's acceptance criteria with real inputs (tap/type/swipe), screenshots each checkpoint. Handle receipt:
+   - `RESULT: pass` → record checks + screenshot paths in task's `## Verification`, continue.
+   - `RESULT: fail` → treat like a critical finding: feed the failed checks back through the review autofix loop (Review step 3) if `review.autofix`, else **stop and show** the user what broke. Re-verify after a fix.
+   - `RESULT: blocked` (mobile-mcp absent, no device, won't install) → **stop and ask** the user; don't silently mark verified.
+3. Never claim a task works without the verifier's evidence when verify is enabled.
 
 ## 4. Report + iterate
 

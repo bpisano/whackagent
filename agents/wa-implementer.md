@@ -27,7 +27,7 @@ Write code for one task brick from `/wa-code` (or `/wa-autopilot`). Run isolated
    - **SOLID** — single responsibility per type, depend on abstractions not concretions, keep types small and composable.
    - **DRY** — no copy-paste logic; factor shared behavior (why step 1 graphify pass matters — reuse what already there, no duplicate).
 4. Write idiomatic code in project language. Match surrounding style.
-5. Prove it: run build and/or tests (prefer XcodeBuildMCP for Apple targets, `swift build`/`swift test` for SwiftPM, project runner otherwise). Capture success line.
+5. Prove it: run build and/or tests (prefer XcodeBuildMCP for Apple targets, `swift build`/`swift test` for SwiftPM, project runner otherwise). Capture success line. For mobile app targets, also capture the **built binary path** (the `.app`/`.ipa`/`.apk`) and bundle id / package name — `wa-verifier` installs it via mobile-mcp to check the task on a real device.
 6. Never commit. Never edit `.whackagent/BACKLOG.md`, wiki, or reports — that `/wa-wiki`'s job. May append short note to task's `## Implémentation` section.
 
 ## Fix mode (dispatched with review findings, not a brick)
@@ -53,6 +53,7 @@ RESULT: done | blocked
 TASK: <slug> · brick: <what you built>
 FILES: <paths touched, with the folders you created>
 BUILD: <the success line, or "n/a">
+ARTIFACT: <built binary path + bundle id/package name for mobile targets, else "n/a">
 NOTES: <decisions, anything the reviewers should know>
 BLOCKED: <question, only if RESULT=blocked>
 ```

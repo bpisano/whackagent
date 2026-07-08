@@ -1,21 +1,12 @@
 {
   "name": "whackagent",
   "description": "Orchestrated dev workflow: backlog + wiki + a task lifecycle (setup → task → prioritize → code → review → track → report) driven by isolated implementer/reviewer subagents, plus an overnight autopilot. Swift-first, language-template driven.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": {
     "name": "Benjamin Pisano"
   },
   "license": "MIT",
-  "keywords": [
-    "workflow",
-    "backlog",
-    "wiki",
-    "orchestrator",
-    "swift",
-    "autopilot",
-    "code-review",
-    "yagni"
-  ],
+  "keywords": ["workflow", "backlog", "wiki", "orchestrator", "swift", "autopilot", "code-review", "yagni"],
   "skills": [
     "./skills/wa-setup",
     "./skills/wa-board",

@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Orchestrated dev workflow: backlog + wiki + task lifecycle with isolated subagents and an overnight autopilot.",
-    "version": "0.1.0"
+    "version": "0.3.0"
   },
   "plugins": [
     {
       "name": "whackagent",
       "source": "./",
       "description": "Backlog + wiki + task lifecycle (setup → task → prioritize → code → review → track → report), isolated implementer/reviewer subagents, and an overnight autopilot. Swift-first, language-template driven.",
-      "version": "0.1.0",
+      "version": "0.3.0",
       "author": {
         "name": "Benjamin Pisano"
       },

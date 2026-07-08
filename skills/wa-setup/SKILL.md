@@ -23,6 +23,8 @@ Then confirm with user:
 
 Keep short — 4 questions. Rest take template default.
 
+**Only if project kind is `app`:** offer runtime verify — _"Drive the built app on a simulator/device after review to confirm the task actually works (taps + screenshots via mobile-mcp)?"_ → sets `verify.enabled` + `verify.platform`/`verify.target`. If yes, tell user it needs the **mobile-mcp** server (`mobile-next/mobile-mcp`) configured; build itself stays XcodeBuildMCP (iOS) / gradle (Android).
+
 ## 2. Scaffold `.whackagent/`
 
 Create directory and files (do not overwrite existing without asking):
