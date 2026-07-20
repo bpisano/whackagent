@@ -34,6 +34,12 @@ Create directory and files (do not overwrite existing without asking):
   - **Swift** (`${CLAUDE_PLUGIN_ROOT}/conventions/swift/`): always `style.md`, `elegance.md`, `testing.md`, and `architecture-global.md` (platform-agnostic YAGNI/SOLID/DRY/DI — every Swift project). Kind module: `architecture-app.md` if kind is `app`, else `architecture-package.md`. Add `swiftui.md` **only if SwiftUI used** (skip for package/CLI with no SwiftUI — whole point).
   - **TypeScript / generic**: copy single `${CLAUDE_PLUGIN_ROOT}/conventions/<lang>.md` and point every `review.categories` entry at it.
   - Set `review.categories` in config to match what you copied: `architecture` loads `[architecture-global.md, <kind module>]`, `arborescence` loads just the kind module; drop `swiftui.md` from `style` if not copied.
+- **Xcode projects only** (repo has `.xcodeproj`/`.xcworkspace`): create `.xcodebuildmcp/config.yaml` at repo root (not in `.whackagent/`) so XcodeBuildMCP builds incrementally instead of full-rebuilding every time. Content:
+  ```yaml
+  schemaVersion: 1
+  incrementalBuildsEnabled: true
+  ```
+  Skip if the file already exists (don't clobber a user's config). This is why the implementer must always build through XcodeBuildMCP — command-line `xcodebuild` ignores this and rebuilds from scratch.
 - `BACKLOG.md` — copy `${CLAUDE_PLUGIN_ROOT}/templates/BACKLOG.md`.
 - `wiki/index.md` — copy `${CLAUDE_PLUGIN_ROOT}/templates/wiki-index.md`.
 - Create empty `tasks/` and `reports/` directories (`.gitkeep` fine).
