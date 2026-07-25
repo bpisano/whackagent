@@ -9,7 +9,9 @@ Unattended task cruncher. Give batch, walk away, read report later.
 
 ## Scope
 
-Run given slugs, or all `todo` tasks if none given (confirm list first if user present). Best for small, well-scoped tasks — say so if task looks large or `grilled: false`.
+Run given tasks, or all `todo` tasks if none given (confirm list first if user present). Best for small, well-scoped tasks — say so if task looks large or `grilled: false`.
+
+**Args accept slugs or display indexes**, mixed and in any order: `/wa-autopilot login-apple`, `/wa-autopilot 2,4,5`, `/wa-autopilot 2-5`, `/wa-autopilot 3 sync-offline`. Indexes are the `#` from the wa-board table — resolve per **wa-board → Task indexes** (re-read `BACKLOG.md`, re-derive numbering). Always **echo the resolved list** (`2 → login-apple`, `4 → export-csv`) and run in the order given, not backlog order. Bad index → stop, say which, don't guess.
 
 ## Per-task loop (sequential)
 
@@ -45,4 +47,4 @@ Make obvious at glance what ready to validate/merge, what needs you.
 
 ## Next step
 
-Suggest review delivered branches, then **`/wa-wiki`** to sync wiki + graph per validated feature.
+Suggest review delivered branches. Notes on any of them → **`/wa-feedback <slug> <notes>`** (checks out that branch, applies notes through the same reviewed + verified pipeline). Then **`/wa-wiki`** to sync wiki + graph per validated feature.

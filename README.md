@@ -23,19 +23,33 @@ Add the marketplace, then install the plugin:
 | --- | --- |
 | `/wa-setup` | Config + scaffolding (`.whackagent/`), runs graphify (once) |
 | `/wa-board` | Dashboard: backlog table, suggests the next action |
-| `/wa-task <desc>` | Creates a task + spec, grills it (grill-me, includes architecture) |
-| `/wa-prio` | Product owner: orders the backlog, YAGNI, can split |
-| `/wa-code <slug>` | Full pipeline: understand → code + test → review → verify → report + iterate |
-| `/wa-autopilot [slug]` | Applies wa-code on 1..n tasks autonomously, one branch per task |
+| `/wa-task <desc\|task>` | Creates a task + spec, grills it (grill-me, includes architecture), then re-prioritizes the backlog |
+| `/wa-task` | No argument: prioritization pass only — reorders, YAGNI, can split |
+| `/wa-code <task>` | Full pipeline: understand → code + test → review → verify → report |
+| `/wa-feedback [task] <notes>` | Applies your notes on what was built — same isolated pipeline, so conventions are re-read and the change is re-reviewed and re-verified |
+| `/wa-autopilot [tasks]` | Applies wa-code on 1..n tasks autonomously, one branch per task |
 | `/wa-review [scope]` | Standalone 5-category review (diff / path / project) — audit, optional `--fix` |
 | `/wa-wiki` | Updates the wiki + graphify |
 | `/wa-wiki <feature>` | Looks up info in the wiki / the graph |
 
 Each step suggests the next one. You never have to figure out what to run.
 
+### Referring to tasks
+
+`/wa-board` numbers every row (`#` column), continuously across sections. Anywhere a task is expected you can pass that number instead of the slug — single, list, or range:
+
+```
+/wa-code 3
+/wa-autopilot 2,4,5
+/wa-autopilot 2-5
+/wa-task 3
+```
+
+The number is display-only: it comes from the current backlog order, so it changes whenever the backlog is reordered (which happens on its own each time a task is added). The command always echoes what it resolved (`3 → sync-offline`) before doing any work, so a stale number can't silently run the wrong task.
+
 ## Typical flow
 
-Bootstrap once, then loop through describe → prioritize → code.
+Bootstrap once, then loop through describe → code. Prioritization isn't a step you run — it happens on its own every time a task is added.
 
 **0. Setup (once per project)**
 
@@ -53,24 +67,20 @@ Detects language + project kind, scaffolds `.whackagent/`, runs graphify to inde
 
 Grills the idea (grill-me) until it's clear, plans the architecture, and writes `.whackagent/tasks/login-apple.md` with a spec + a size (🟢 quickwin / 🟡 medium / 🔴 large).
 
-**2. Prioritize — `/wa-prio`**
+Then it prioritizes on its own — there's no separate command for it: a product-owner pass slots the new task where it belongs, applies YAGNI, and flags anything too big to split (asking first). You end up looking at a fresh, ordered board — top of the list is what to code next:
 
 ```
-/wa-prio
+| # | Taille | Tâche          | Résumé                                | Grillée |
+|:-:|:------:|----------------|---------------------------------------|:-------:|
+| 1 | 🟢     | Login Apple    | Sign in with Apple on the login screen | ✅      |
+| 2 | 🟡     | Offline cache  | Cache the feed for offline reads       | ✅      |
+| 3 | 🔴     | Payments       | Stripe checkout + receipts             | ⚠️      |
 ```
 
-Product-owner pass over the backlog: orders tasks by what matters now, applies YAGNI, splits anything too big. Result is `.whackagent/BACKLOG.md` — top of the list is what to code next.
+**2. Code it — `/wa-code <task>`**
 
 ```
-1. 🟢 login-apple      Sign in with Apple on the login screen
-2. 🟡 offline-cache    Cache the feed for offline reads
-3. 🔴 payments         Stripe checkout + receipts
-```
-
-**3. Code it — `/wa-code <slug>`**
-
-```
-/wa-code login-apple
+/wa-code 1
 ```
 
 A single command runs the whole coding cycle, orchestrating isolated subagents:
@@ -78,7 +88,17 @@ A single command runs the whole coding cycle, orchestrating isolated subagents:
 1. **Understand**: read the task, search the existing code (graphify) to avoid rewriting, break it down into small modules, plan the tests.
 2. **Code + test**: `wa-implementer` (sequential) writes the feature *and* the tests, then runs build/tests to prove it works.
 3. **Review**: 5 `wa-reviewer` in parallel, one per lens (**style · elegance · architecture · file tree · correctness**), each loading only its own module → focused, nothing forgotten. Aggregates → autofix in a loop until clean.
-4. **Report + iterate**: on-screen summary to iterate with you, report saved in `.whackagent/reports/login-apple.md`. On validation: task moved to `done`.
+4. **Report**: on-screen summary, report saved in `.whackagent/reports/login-apple.md`, task moved to `review` for you to look at.
+
+**3. Send your notes — `/wa-feedback`**
+
+```
+/wa-feedback the button should be secondary, and the error toast is too aggressive
+```
+
+Feedback is where quality usually leaks: the change looks small, so it gets patched inline — outside the conventions, outside the review, and nothing gets re-run. This command refuses to work that way. Every note, however small, goes back through `wa-implementer` (which re-reads every convention module first), then through the full review fan-out and the runtime verification again.
+
+It also triages what you said: a **defect** gets fixed, an **adjustment** updates the acceptance criteria too, a **new feature** in disguise is sent back to `/wa-task` instead of being silently built — and a **rule** ("always do X") is offered up for your conventions file, so it stops being forgotten on the next task.
 
 **4. Keep knowledge fresh — `/wa-wiki`**
 

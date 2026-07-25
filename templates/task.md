@@ -30,3 +30,9 @@ created:                # YYYY-MM-DD
 
 <!-- Filled by /wa-code (verify phase). wa-verifier checks (✅/❌) + screenshot paths per criterion. -->
 
+## Feedback
+
+<!-- Filled by /wa-feedback, one block per round: what you asked (your words), triage
+     (defect / adjustment / new scope / rule), what changed, review + verify verdicts,
+     any rule promoted into .whackagent/conventions/. Rounds append, never overwrite. -->
+

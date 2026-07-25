@@ -1,6 +1,6 @@
 # Backlog
 
-Order = priority. Top of a section is the most urgent. Set by `/wa-prio`.
+Order = priority. Top of a section is the most urgent. Maintained by `/wa-task`, which re-prioritizes every time a task is added (`/wa-task` with no argument reorders without creating anything).
 Each line links to its task file. `/wa-board` reads this to suggest the next action.
 
 ## In progress

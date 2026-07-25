@@ -9,6 +9,8 @@ Full coding pipeline, one task: **understand → code + test → review → veri
 
 Read `.whackagent/config.md` and task file `.whackagent/tasks/<slug>.md` first.
 
+Arg is a slug **or** a display index from the wa-board table (`/wa-code 3`) — resolve per **wa-board → Task indexes**, echo `3 → sync-offline` before starting.
+
 **Grill gate (soft):** if `grilled: false`, warn *"This task wasn't grilled — quick win, or run `/wa-task <slug>` first?"* Proceed if user confirm quick win.
 
 Set task `status: in-progress` (reflect in `BACKLOG.md`).
@@ -48,16 +50,18 @@ Static review says the code reads right; verify says it **works when used**. Run
    - `RESULT: blocked` (mobile-mcp absent, no device, won't install) → **stop and ask** the user; don't silently mark verified.
 3. Never claim a task works without the verifier's evidence when verify is enabled.
 
-## 4. Report + iterate
+## 4. Report + hand off to feedback
 
-- **Show** on-screen summary: what built, files/folders touched, key decisions, test + review results. Invite user iterate — apply requested changes (loop back into relevant phase).
+- **Show** on-screen summary: what built, files/folders touched, key decisions, test + review results.
 - **Save** caveman-compressed report to `.whackagent/reports/<slug>.md` (what / files / decisions / tests / review verdict / task link).
-- On user **validation**: set task `status: review` → `done` per convention, reflect in `BACKLOG.md`.
+- Set task `status: review`. Invite user to look and send notes — **`/wa-feedback`**.
+- **Iteration is `/wa-feedback`'s job, not yours.** User comes back with changes → invoke the **wa-feedback** skill and follow it. Do **not** patch code from this thread: conventions live in the subagents' context, not here, and an unreviewed touch-up undoes the review you just ran.
+- On user **validation**: set task `status: done`, reflect in `BACKLOG.md`.
 
 ## Never
 
-Never commit in normal flow — user validates first. Never let subagents touch backlog/wiki/reports — you own those here.
+Never commit in normal flow — user validates first. Never let subagents touch backlog/wiki/reports — you own those here. Never hand-edit code after the review phase — that's `/wa-feedback`.
 
 ## Next step
 
-After validation, suggest **`/wa-wiki`** to update wiki + code graph for what changed.
+Notes on what got built → **`/wa-feedback`**. After validation, suggest **`/wa-wiki`** to update wiki + code graph for what changed.

@@ -1,7 +1,7 @@
 {
   "name": "whackagent",
-  "description": "Orchestrated dev workflow: backlog + wiki + a task lifecycle (setup → task → prioritize → code → review → track → report) driven by isolated implementer/reviewer subagents, plus an overnight autopilot. Swift-first, language-template driven.",
-  "version": "0.3.0",
+  "description": "Orchestrated dev workflow: backlog + wiki + a task lifecycle (setup → task → code → review → track → report) driven by isolated implementer/reviewer subagents, plus an overnight autopilot. Backlog stays prioritized on its own. Swift-first, language-template driven.",
+  "version": "0.4.0",
   "author": {
     "name": "Benjamin Pisano"
   },
@@ -11,8 +11,8 @@
     "./skills/wa-setup",
     "./skills/wa-board",
     "./skills/wa-task",
-    "./skills/wa-prio",
     "./skills/wa-code",
+    "./skills/wa-feedback",
     "./skills/wa-review",
     "./skills/wa-wiki",
     "./skills/wa-autopilot"
