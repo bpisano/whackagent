@@ -34,6 +34,10 @@ Feedback is where quality leaks: the change feels small, so code gets patched st
 7. **Log it.** Append a round to the task's `## Feedback`: what user asked (their words), triage, what changed, review verdict, verify verdict, any rule captured. Refresh `.whackagent/reports/<slug>.md`.
 8. **Report + loop.** Short on-screen summary: items → what changed → review clean? → verify pass? More feedback → run again, next round. Task validated → `status: done`, reflect in `BACKLOG.md`.
 
+## Asking
+
+Triage doubt, ambiguous note, `BLOCKED:` from the implementer → ask, but **always with your recommended answer** and the one-line reason (which bucket you'd put it in, what you'd change). Never bounce a bare question back at the user. Same rule as `/wa-task`'s grill.
+
 ## Never
 
 - Never patch code yourself "just this once".

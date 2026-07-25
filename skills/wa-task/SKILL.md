@@ -17,7 +17,8 @@ Owns two things: **writing the task** (steps 1–5) and **placing it** (step 6).
    - **No arg → prioritization only.** Skip to step 6, whole backlog in scope, full pass (see *Explicit run* there).
 1. Read `.whackagent/config.md` + wiki index for project context.
 2. **Title first.** Distill request into SHORT explicit title — feature clear one glance ("Login Apple", not "improve auth"). Slug = kebab-case title (`login-apple`).
-3. **Grill.** Invoke **grill-me** skill: interview user relentlessly down design tree, one question at time, recommend answer each. Resolve scope with **YAGNI** — push back on speculative. If question answerable from code, **query graphify first** (code graph, if `graphify-out/` exists) to explore — no ask user what project already tells, no blind-Grep.
+3. **Grill.** Invoke **grill-me** skill: interview user relentlessly down design tree, one question at time. Resolve scope with **YAGNI** — push back on speculative. If question answerable from code, **query graphify first** (code graph, if `graphify-out/` exists) to explore — no ask user what project already tells, no blind-Grep.
+   - **Every question carries a recommendation. No exception.** See *Grill question format* below — a bare question is a bug, not a style choice.
    - **Cover architecture.** Grill must settle *where this lives*: which feature/folder, what new files/folders, how fits architecture module (group by feature, proper nesting — not flat), which layer boundaries touch. Read architecture module in `.whackagent/conventions/` first, so grill against real rules.
    - Exception: user flags trivial quick win → skip grill, create task `grilled: false`.
 4. **Write task file** at `.whackagent/tasks/<slug>.md` from `${CLAUDE_PLUGIN_ROOT}/templates/task.md`:
@@ -29,6 +30,26 @@ Owns two things: **writing the task** (steps 1–5) and **placing it** (step 6).
    - Fill `## Critères d'acceptation` — observable checks that mean "done" (what appears on screen, what an input must produce). These drive `wa-verifier`; keep them concrete, YAGNI. Skip only for tasks with no runnable surface (pure lib/logic).
 5. **Add to backlog.** Append task under **Todo** in `.whackagent/BACKLOG.md`, link file.
 6. **Prioritize.** Run the pass below — always, never ask permission, it's part of adding a task. Several tasks created in one go → one pass at the end, not one per task.
+
+## Grill question format
+
+**Never ask a bare question.** Every single grill question ships with the answer you'd pick and why. User's job is to confirm or correct — not to design the feature from a blank prompt. This is not "when you have an opinion": it's always.
+
+```
+**Where does the token live?**
+→ **Recommended: Keychain.** Refresh token survives reinstall-less relaunch, and
+  UserDefaults would put it in plaintext backups.
+  Alt: in-memory only — safer, but user re-logs at every cold start.
+```
+
+Rules:
+
+- **Recommendation, then one-line why.** The why is what makes it reviewable — a naked "I'd do X" tells user nothing to push against.
+- **Name the alternative you rejected** when there's a real one, in one line. Shows the fork was actually considered.
+- **Cite the ground.** Recommendation follows from something concrete: a convention module, existing code you found via graphify, the acceptance criteria, YAGNI. Never a coin flip dressed as advice.
+- **No basis to recommend?** Still recommend: give the least-risk / most-reversible default, and say plainly what you'd need to know to be sure. "It depends on your product intent" alone is a non-answer — pick the option that's cheapest to undo, flag it as a guess.
+- **One question at a time.** Recommendation attached to each. A batch of five bare questions is the exact failure this rule exists to stop.
+- Same rule applies to any question you ask outside the grill — architecture forks, `BLOCKED:` questions surfaced from subagents, `/wa-feedback` triage doubts.
 
 ## 6. Prioritization pass
 

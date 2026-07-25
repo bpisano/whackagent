@@ -48,5 +48,11 @@ Edit the frontmatter above to change behavior.
 Outside autopilot, the moment anything is unclear, ambiguous, or blocked beyond
 what the task spec covers: **stop and ask**. Never guess on scope.
 
+**Every question comes with a recommended answer** — always, no exception. One
+line for the pick, one line for why, plus the alternative when there's a real
+one. No basis to choose? Recommend the most reversible option and say it's a
+guess. A bare question with no proposal is never acceptable: answering must be
+a confirm-or-correct, not homework.
+
 Inside autopilot: never ask (nobody is watching) — freeze the task with the open
 question logged, and move to the next one.

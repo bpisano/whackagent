@@ -58,6 +58,10 @@ Static review says the code reads right; verify says it **works when used**. Run
 - **Iteration is `/wa-feedback`'s job, not yours.** User comes back with changes → invoke the **wa-feedback** skill and follow it. Do **not** patch code from this thread: conventions live in the subagents' context, not here, and an unreviewed touch-up undoes the review you just ran.
 - On user **validation**: set task `status: done`, reflect in `BACKLOG.md`.
 
+## Asking
+
+Any question you put to the user — a `BLOCKED:` from a subagent, an architecture fork, a verify failure needing a call — **always carries your recommended answer** plus the one-line reason. Never relay a bare `BLOCKED:` question: read it, form an opinion, propose it. Same rule as `/wa-task`'s grill.
+
 ## Never
 
 Never commit in normal flow — user validates first. Never let subagents touch backlog/wiki/reports — you own those here. Never hand-edit code after the review phase — that's `/wa-feedback`.
