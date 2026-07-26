@@ -11,6 +11,10 @@ conventions_dir: .whackagent/conventions   # per-category convention modules cop
 review:
   autofix: true                # wa-code's review phase re-dispatches the implementer until clean
   public_doc: true             # require doc on public API (style reviewer) — flip false per company
+  gate: auto                   # auto = drop reviewers a round's diff structurally can't trigger
+                               # (arborescence unless files move, architecture unless the diff is
+                               # small + single-layer + adds no type). always = the full five, every
+                               # round. Either way the recorded verdict is always full — see wa-code.
   categories:                  # each = ONE parallel reviewer; the listed module file(s) are all it loads.
     style: [style.md, swiftui.md, testing.md]   # setup drops swiftui.md if no SwiftUI
     elegance: [elegance.md]
@@ -28,12 +32,18 @@ commit:
   author_name: "Benjamin Pisano"        # commits ALWAYS use this — never "Claude"
   author_email: "benjamin.pisano@icloud.com"
 
+branch:
+  per_task: false              # /wa-code works on its own branch per task instead of current one
+  prefix: "wa/"                # branch name: <prefix><slug> → wa/login-apple
+  base: current                # fork point: current | main | <branch name>
+  checkout_next: true          # after validation + commit, hop onto next task's branch
+                               # (only when per_task AND commit.auto_commit_after_validation)
+
 autopilot:
-  branch_prefix: "wa/"         # one branch per task: wa/<slug>
   on_blocker: skip-and-log     # never invent; freeze the task, move on
+                               # autopilot ALWAYS branches per task, whatever branch.per_task says
 
 yagni: strict
-graphify: true                 # skills query the code graph instead of blind-scanning
 compress_wiki: true            # caveman-compress config + wiki pages to save re-read tokens
                                # (at /wa-setup and after every /wa-wiki wiki update; .original backups removed)
 ---

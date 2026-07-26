@@ -22,11 +22,13 @@ Run 5-category parallel review standalone — audit existing code, diff, or whol
 ## Do
 
 1. Resolve scope + changed/target files.
-2. **Fan out, parallel** — one **wa-reviewer** per category: `style`, `elegance`, `architecture`, `arborescence`, `correctness`. Pass each its `category`, its module path(s) only, target files, toggles. Each loads only its module → focused, forgets nothing.
+2. **Fan out, parallel** — one **wa-reviewer** per category: `style`, `elegance`, `architecture`, `arborescence`, `correctness`. **Name each `rev-<category>-<scope-key>`** (scope key = task slug when reviewing a task, else a short token for the scope: `diff`, the path basename, the branch name). Pass each its `category`, its module path(s) only, target files **plus diff hunks when the scope is a diff**, toggles. Each loads only its module → focused, forgets nothing.
+   - **Gate** (`review.gate: auto`, per **`/wa-code` → Gating the fan-out**) applies to **diff scopes only** — `/wa-review` and `/wa-review <branch>`. An explicit `<path>` or `--all` is an audit: the user asked for every lens, run the full five whatever the gate says. Announce any skip.
 3. **Aggregate** into one severity-ordered list, tagged by category; dedupe. Show grouped by category.
 4. **Fix?**
    - Default → **report only**. Don't mutate existing code unasked.
-   - `--fix` → spawn **wa-implementer** in **fix mode** with aggregated findings + conventions dir (tell it: fix only what findings name, re-read style, add no comments), then re-review. Loop until clean or no progress (cap 3 rounds). A `BLOCKED:` → stop and ask.
+   - `--fix` → dispatch **wa-implementer** named `impl-<scope-key>` in **fix mode** with aggregated findings + conventions dir (tell it: fix only what findings name, re-read style, add no comments), then re-review. Loop until clean or no progress (cap 3 rounds). A `BLOCKED:` → stop and ask.
+   - **Rounds 2+ resume the named agents** instead of respawning — per **`/wa-code` → Resuming agents between rounds** (delta only, anti-stale warning, skip `arborescence` unless files moved, respawn fresh past 3 rounds, fall back to a fresh spawn if a name is unreachable).
 5. If invoked on whackagent task (path is task's files), record findings in task's `## Review`.
 
 ## Categories

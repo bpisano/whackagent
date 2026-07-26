@@ -21,7 +21,7 @@ Add the marketplace, then install the plugin:
 
 | Command | Description |
 | --- | --- |
-| `/wa-setup` | Config + scaffolding (`.whackagent/`), runs graphify (once) |
+| `/wa-setup` | Config + scaffolding (`.whackagent/`) |
 | `/wa-board` | Dashboard: backlog table, suggests the next action |
 | `/wa-task <desc\|task>` | Creates a task + spec, grills it (grill-me, includes architecture), then re-prioritizes the backlog |
 | `/wa-task` | No argument: prioritization pass only — reorders, YAGNI, can split |
@@ -29,8 +29,8 @@ Add the marketplace, then install the plugin:
 | `/wa-feedback [task] <notes>` | Applies your notes on what was built — same isolated pipeline, so conventions are re-read and the change is re-reviewed and re-verified |
 | `/wa-autopilot [tasks]` | Applies wa-code on 1..n tasks autonomously, one branch per task |
 | `/wa-review [scope]` | Standalone 5-category review (diff / path / project) — audit, optional `--fix` |
-| `/wa-wiki` | Updates the wiki + graphify |
-| `/wa-wiki <feature>` | Looks up info in the wiki / the graph |
+| `/wa-wiki` | Updates the wiki |
+| `/wa-wiki <feature>` | Looks up info in the wiki, then the code |
 
 Each step suggests the next one. You never have to figure out what to run.
 
@@ -57,7 +57,7 @@ Bootstrap once, then loop through describe → code. Prioritization isn't a step
 /wa-setup
 ```
 
-Detects language + project kind, scaffolds `.whackagent/`, runs graphify to index the code.
+Detects language + project kind, scaffolds `.whackagent/`.
 
 **1. Describe a task — `/wa-task`**
 
@@ -85,9 +85,9 @@ Then it prioritizes on its own — there's no separate command for it: a product
 
 A single command runs the whole coding cycle, orchestrating isolated subagents:
 
-1. **Understand**: read the task, search the existing code (graphify) to avoid rewriting, break it down into small modules, plan the tests.
-2. **Code + test**: `wa-implementer` (sequential) writes the feature *and* the tests, then runs build/tests to prove it works.
-3. **Review**: 5 `wa-reviewer` in parallel, one per lens (**style · elegance · architecture · file tree · correctness**), each loading only its own module → focused, nothing forgotten. Aggregates → autofix in a loop until clean.
+1. **Understand**: read the task, search the existing code to avoid rewriting, write a **neighborhood brief** (existing files, what to reuse, layer boundaries, target layout) handed to every subagent so nobody re-explores the same ground, break it down into small modules, plan the tests.
+2. **Code + test**: one `wa-implementer` for the whole task, fed brick by brick (sequential) — it writes the feature *and* the tests, then runs build/tests to prove it works. Keeping the same agent across bricks means the conventions and the brief are read once, and brick 2 already knows what brick 1 built.
+3. **Review**: up to 5 `wa-reviewer` in parallel, one per lens (**style · elegance · architecture · file tree · correctness**), each loading only its own module → focused, nothing forgotten. Aggregates → autofix in a loop until clean. Two things keep the loop cheap without thinning it: every round resumes the *same* agents rather than spawning new ones (they already hold their module and the code, so round 2 costs a diff instead of a full re-read), and `review.gate: auto` drops the lenses a round's diff structurally can't trigger — no file moved, no file-tree review. The verdict you're shown is always the full five.
 4. **Report**: on-screen summary, report saved in `.whackagent/reports/login-apple.md`, task moved to `review` for you to look at.
 
 **3. Send your notes — `/wa-feedback`**
@@ -110,11 +110,13 @@ Updates the wiki + the graph after a feature lands. Never commits before your va
 
 > Prefer autonomy? `/wa-autopilot` runs the `/wa-code` cycle across the top backlog tasks on its own, one branch per task.
 
+> **Branch per task.** Set `branch.per_task: true` (asked at `/wa-setup`) and `/wa-code` codes on `wa/<slug>` instead of your current branch. Combine it with `commit.auto_commit_after_validation` and validating a task commits it, then checks out the next task's branch for you — chain tasks without touching git.
+
 ## File tree created in your project
 
 ```
 .whackagent/
-  config.md            # language, coding language, project_kind, review categories, commit permission
+  config.md            # language, coding language, project_kind, review categories, commit + branch policy
   conventions/         # copied convention modules (only the useful ones), editable per project
   BACKLOG.md           # task index (order = priority)
   tasks/<slug>.md      # one task = one file (frontmatter + body)
@@ -164,4 +166,3 @@ Each review category loads **only its own module** → focused context, nothing 
 
 - **grill-me**: task clarification in `/wa-task`
 - **caveman**: report compression (report phase of `/wa-code`) + config and wiki compression at setup and on each `/wa-wiki` (`compress_wiki: true`, saves re-reading tokens)
-- **graphify**: code index queried by the skills (created at setup, refreshed on `/wa-wiki`)

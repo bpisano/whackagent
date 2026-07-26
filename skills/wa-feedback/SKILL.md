@@ -11,15 +11,24 @@ Feedback is where quality leaks: the change feels small, so code gets patched st
 
 ## Hard rules
 
-1. **Never edit code from the main thread.** Every change — one line, one rename, one color — goes through **wa-implementer** in fix mode with the conventions dir. It re-reads every module before touching anything. You orchestrate, you don't type code.
+1. **Never edit code from the main thread.** Every change — one line, one rename, one color — goes through **wa-implementer** in fix mode. A fresh one gets the conventions dir and re-reads every module before touching anything; a resumed one already holds them (see *Reusing the coding run's agents*). You orchestrate, you don't type code.
 2. **Always re-review after changing.** Review fan-out is not optional, not skippable because "it was tiny". Tiny changes are exactly the ones that break style and architecture.
 3. **Always re-verify** when `verify.enabled: true` and the touched surface is runnable. Prior verification is void the moment the code changed.
 4. **Never re-mark a task done on your own word.** Only the reviewer + verifier evidence closes it.
 
+## Reusing the coding run's agents
+
+`/wa-code` named its agents `impl-<slug>`, `rev-<category>-<slug>`, `verify-<slug>`. Same session → they're still reachable by name, and they still hold the conventions, the neighborhood brief, the code, and the verify checklist. **Resume them** (`SendMessage`) instead of spawning fresh ones: a feedback round then costs a delta, not a full re-read of the whole feature.
+
+Rules are `/wa-code` → *Resuming agents between rounds*, in full — delta only, anti-stale warning every time, `arborescence` skipped unless files moved, respawn fresh past 3 rounds. Two things specific here:
+
+- **Name unreachable is normal, not an error.** New session, or the task was delivered by `/wa-autopilot` in another run → spawn fresh with the full inputs. The flow is identical either way; resume is only ever an optimization.
+- **A captured rule invalidates context.** Wrote a new line into a convention module (step 3)? The resumed agents hold the *old* module. Tell them explicitly which module changed and what the new rule says — or respawn them fresh. Never let a resumed agent work from a stale rulebook.
+
 ## Do
 
 1. **Resolve the task.** Arg = slug or display index (`/wa-feedback 2 the button should be secondary`), resolve per **wa-board → Task indexes**. No task given → the one `in-progress`, else most recent `review`. Ambiguous → ask, don't guess. Read `.whackagent/config.md` + task file (needs `## Critères d'acceptation`, `## Implémentation`, `## Review`, `## Vérification`).
-   - **Right branch first.** Task delivered by `/wa-autopilot` lives on `<branch_prefix><slug>`. Check current branch; if the work isn't here, say which branch it's on and switch **only after user confirms** (their tree may be dirty). Never apply feedback to a branch that doesn't hold the code.
+   - **Right branch first.** Task delivered by `/wa-autopilot` — or by `/wa-code` with `branch.per_task: true` — lives on `<branch.prefix><slug>`. Check current branch; if the work isn't here, say which branch it's on and switch **only after user confirms** (their tree may be dirty). Never apply feedback to a branch that doesn't hold the code.
 2. **Triage each feedback item** — say out loud which bucket, one line each:
    - **defect** — doesn't match acceptance criteria → fix, criteria unchanged.
    - **adjustment** — works, but not what user wants (naming, placement, wording, behavior detail) → fix, and **update `## Critères d'acceptation`** so the criteria match reality; otherwise verify re-fails on the old criterion forever.
@@ -27,12 +36,12 @@ Feedback is where quality leaks: the change feels small, so code gets patched st
    - **rule** — a durable preference ("always X", "never Y", "I told you this last time") → see *Capture the rule* below, then treat as adjustment.
    Unclear which bucket → **stop and ask**. Never silently widen scope.
 3. **Capture the rule.** Feedback that states a general preference must land in `.whackagent/conventions/<module>.md`, not just in this fix — that's how the rule stops being forgotten next round. Pick the module by category (style / elegance / architecture-\* / arborescence / testing), draft the line in the module's own voice, **show it and ask before writing**. Never rewrite unrelated parts of a module. If it belongs nowhere, put it in `.whackagent/config.md`'s free-form notes instead.
-4. **Fix.** Dispatch **wa-implementer** in **fix mode**, one dispatch per coherent batch (sequential — builds collide otherwise). Pass: task path, conventions dir, the feedback items **verbatim in the user's words** plus your triage, changed-files context from `## Implémentation`, `autopilot: false`. Tell it: fix only what's named, minimal diff, no explanatory comments, re-run build/tests.
+4. **Fix.** **wa-implementer** in **fix mode**, one dispatch per coherent batch (sequential — builds collide otherwise). Resume `impl-<slug>` when reachable: send the feedback items **verbatim in the user's words** plus your triage, and nothing else — it already has the task, the conventions and the code it wrote. Fresh spawn (named `impl-<slug>`) otherwise: task path, conventions dir, feedback + triage, changed-files context from `## Implémentation`, `autopilot: false`. Either way tell it: fix only what's named, minimal diff, no explanatory comments, re-run build/tests.
    - `RESULT: blocked` → **stop and ask** the `BLOCKED:` question. Don't guess what the user meant.
-5. **Re-review.** Fan out **wa-reviewer** in parallel, one per `review.categories` entry, scoped to the files this fix touched. Aggregate, dedupe, severity-order. Autofix loop per `review.autofix` (cap 3 rounds, same as `/wa-code`). Append to task's `## Review` under a dated feedback round — don't overwrite the original review.
-6. **Re-verify.** If `verify.enabled` and the touched surface runs: dispatch **wa-verifier** with the fresh `ARTIFACT:` and the **updated** acceptance criteria. `fail` → back through step 4 with the failed checks. `blocked` → stop and ask. Append to `## Vérification`, keep the previous round's entry.
+5. **Re-review.** Fan out **wa-reviewer** in parallel, one per `review.categories` entry the gate retains (`review.gate`, per **`/wa-code` → Gating the fan-out** — feedback rounds are small, so this is where it pays; the round that closes the feedback still gets the full five), scoped to the files this fix touched. Resume `rev-<category>-<slug>` when reachable — send the fix's diff hunks and its own earlier findings to re-state; fresh spawn with module + hunks otherwise. Aggregate, dedupe, severity-order. Autofix loop per `review.autofix` (cap 3 rounds, same as `/wa-code`). Append to task's `## Review` under a dated feedback round — don't overwrite the original review.
+6. **Re-verify.** If `verify.enabled` and the touched surface runs: **wa-verifier** with the fresh `ARTIFACT:` and the **updated** acceptance criteria. Resume `verify-<slug>` when reachable — device stays booted; say explicitly whether the criteria moved in triage, since it reuses its checklist otherwise. `fail` → back through step 4 with the failed checks. `blocked` → stop and ask. Append to `## Vérification`, keep the previous round's entry.
 7. **Log it.** Append a round to the task's `## Feedback`: what user asked (their words), triage, what changed, review verdict, verify verdict, any rule captured. Refresh `.whackagent/reports/<slug>.md`.
-8. **Report + loop.** Short on-screen summary: items → what changed → review clean? → verify pass? More feedback → run again, next round. Task validated → `status: done`, reflect in `BACKLOG.md`.
+8. **Report + loop.** Short on-screen summary: items → what changed → review clean? → verify pass? More feedback → run again, next round. Task validated → `status: done`, reflect in `BACKLOG.md`, then run **`/wa-code` § Validation handoff** (commit if `commit.auto_commit_after_validation`, then hop to the next task's branch when `branch.per_task` + `branch.checkout_next`). Same rules — no commit, no branch switch.
 
 ## Asking
 

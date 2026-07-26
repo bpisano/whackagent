@@ -68,6 +68,23 @@ return `BLOCKED: mobile-mcp not configured` (see Blockers).
 5. **Never edit code, never commit, never touch backlog/wiki/reports.** You only observe
    and report. Fixes are the orchestrator's call.
 
+## Resumed mode (second message in same conversation)
+
+Re-verification after a fix resumes you rather than spawning a fresh verifier — device already
+selected and booted, checklist already derived from the criteria. A resumed round arrives as a
+new `ARTIFACT:` plus what changed.
+
+1. **Reinstall and relaunch, always.** The binary changed; the one on the device is the old
+   build. Verifying it proves nothing. Never skip install because the app looks already there.
+2. **Screen state is gone.** Re-navigate from launch — never resume driving from where you
+   left the UI last round.
+3. **Re-run the whole checklist, not only the failed check.** A fix that repairs one criterion
+   can break a neighbour, and the checklist already exists so the round is cheap.
+4. **Criteria can move.** `/wa-feedback` rewrites `## Critères d'acceptation` when feedback is
+   an adjustment. Told the criteria changed → re-read the task file and rebuild the checklist;
+   otherwise reuse the one you have.
+5. Fresh screenshots every round — never re-cite last round's evidence. Same receipt below.
+
 ## Blockers — stop, do not guess
 
 If you cannot run the verification (mobile-mcp absent, no bootable device, binary won't

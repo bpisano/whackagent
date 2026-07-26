@@ -13,7 +13,7 @@ Architecture here = how feature **decomposed, made testable, kept modular** — 
   - *Liskov*: conforming types honor protocol contract — no surprise crashes or no-ops.
   - *Interface segregation*: small focused protocols over one fat protocol; client depend only on what it use.
   - *Dependency inversion*: depend on abstractions (`protocol`), never concretions.
-- **DRY** — no duplicated or re-implemented logic. Same block copy-pasted across files, or re-implementation of something already in codebase (graphify surface it) → factor it, reuse it.
+- **DRY** — no duplicated or re-implemented logic. Same block copy-pasted across files, or re-implementation of something already in codebase → factor it, reuse it.
 
 ## Design principles (general)
 

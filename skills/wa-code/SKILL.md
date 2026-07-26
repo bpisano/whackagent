@@ -15,16 +15,43 @@ Arg is a slug **or** a display index from the wa-board table (`/wa-code 3`) — 
 
 Set task `status: in-progress` (reflect in `BACKLOG.md`).
 
+## 0. Branch (only if `branch.per_task: true`)
+
+Skip whole step when `branch.per_task: false` — code lands on the current branch, as before.
+
+1. Branch name = `<branch.prefix><slug>` (default `wa/<slug>`). Legacy configs: fall back to `autopilot.branch_prefix` if `branch.prefix` absent.
+2. Already on it → nothing to do. Exists but not checked out (resumed task) → check out, don't recreate.
+3. Doesn't exist → create from `branch.base` (`current` = branch you're on now; else the named branch, fetched/updated first if it tracks a remote).
+4. **Dirty working tree → stop and ask** before any checkout: carry the changes over, stash them, or stay put? Never move a user's uncommitted work silently.
+5. Echo one line: `branche: wa/<slug> (base: main)`.
+
 ## 1. Understand
 
 - Read task + architecture decisions from its `## Contexte / Décisions`.
-- **Find the existing — graphify first, always.** If `graphify-out/` exists you MUST query the code graph (per **graphify** skill) to map task neighborhood: related code, callers, usages, layer boundaries. This how you wander project — not blind Grep, never skipped. Fall back to targeted Grep/Glob only when no graph exists. Goal: don't re-code what exists (DRY), understand surroundings before decomposing.
+- **Find the existing — one exploration pass, here, once.** Targeted Grep/Glob over the task neighborhood: related code, callers and usages, layer boundaries, what already does part of the job. Goal: don't re-code what exists (DRY), understand the surroundings before decomposing.
+- **Write the neighborhood brief.** This is what makes the pass pay off — every subagent below gets it **verbatim** instead of re-deriving the same map:
+
+  ```
+  BRIEF
+  FILES: <existing files the task touches or sits beside — path — what it does>
+  REUSE: <what already exists and must be reused, not rewritten>
+  BOUNDARIES: <layers/modules involved, dependency direction>
+  LAYOUT: <target files/folders to create, per the architecture module>
+  GAPS: <what you could not resolve — the only thing subagents explore themselves>
+  ```
+
+  Subagents explore only what `GAPS` names, or what their own findings force. Re-deriving the map costs the same pass 6 times over.
 - **Decompose** feature into small modules/bricks. Decide **file/folder layout up front** per architecture + arborescence modules (group by feature, proper nesting — never flat).
 - **Plan tests.** Sketch what to test (units, edge cases) before coding. YAGNI: only what task needs.
 
 ## 2. Code + test
 
-Dispatch **wa-implementer** sequentially, one brick at a time (builds must not collide). Pass: task path, brick (with target files/folders), conventions **dir**, test plan, `autopilot: false`.
+**One implementer for the whole task**, bricks fed to it one at a time (sequential — builds must not collide).
+
+- **Brick 1** — spawn **wa-implementer** named `impl-<slug>`. Pass: task path, the **BRIEF**, brick (with target files/folders), conventions **dir**, test plan, `autopilot: false`.
+- **Bricks 2..n** — `SendMessage` to `impl-<slug>` with the next brick **alone**. No conventions dir, no brief, no task re-read: it holds them. Respawning per brick re-reads every convention module and re-explores the tree each time, for nothing.
+- Bonus, not just tokens: the same agent built brick 1, so it *knows* what to reuse in brick 2. DRY stops being a rule it must rediscover.
+- Same fallbacks as *Resuming agents* below — unreachable name → fresh spawn with full inputs.
 
 Implementer code feature **and its tests**, then run build and/or tests to prove work. Handle each receipt:
 - `RESULT: done` → record files + build/test proof in task's `## Implémentation`, continue.
@@ -34,21 +61,49 @@ Implementer code feature **and its tests**, then run build and/or tests to prove
 
 When all bricks coded + green, run multi-category review:
 
-1. **Fan out, in parallel** — spawn one **wa-reviewer** per category: `style`, `elegance`, `architecture`, `arborescence`, `correctness`. Pass each its `category`, its module path(s) only (from `review.categories`), changed files, task path, toggles. Each load only its module → focused, forget nothing.
+1. **Fan out, in parallel** — one **wa-reviewer** per category retained by the gate below (default: all five — `style`, `elegance`, `architecture`, `arborescence`, `correctness`). **Name each `rev-<category>-<slug>`.** Pass each its `category`, its module path(s) only (from `review.categories`), changed files **plus the diff hunks**, the **BRIEF**, task path, toggles. Each load only its module → focused, forget nothing.
 2. **Aggregate** findings into one severity-ordered list, tagged by category; dedupe.
-3. **Autofix** (if `review.autofix: true`): spawn **wa-implementer** once in **fix mode** with aggregated findings + conventions dir (fix only what findings name, re-read style, add no comments), then **re-review** (back to step 1). Loop until clean or no progress. Cap 3 rounds; if not converging, stop and show remaining findings. A `BLOCKED:` from autofix → stop and ask.
+3. **Autofix** (if `review.autofix: true`): dispatch **wa-implementer** once in **fix mode** with aggregated findings + conventions dir (fix only what findings name, re-read style, add no comments), then **re-review** (back to step 1). Loop until clean or no progress. Cap 3 rounds; if not converging, stop and show remaining findings. A `BLOCKED:` from autofix → stop and ask.
 4. Record final per-category findings + what autofix changed in task's `## Review`.
+
+### Gating the fan-out (`review.gate`)
+
+Five reviewers means the diff is read five times. On a diff that *structurally cannot* contain a finding for a category, that reviewer is pure cost. `review.gate: always` → always five, current behavior. `review.gate: auto` → apply the rules below, **recomputed on every round** (a fix round's diff is usually tiny even when round 1's was big).
+
+**Always run, never gated:** `style`, `elegance`, `correctness`. Any changed line can carry a style slip, a non-idiomatic construct, or a bug.
+
+**Gated:**
+- **`arborescence`** — runs only if the round's diff **adds, deletes, moves or renames a file** (git status `A`/`D`/`R`, plus untracked new files). Editing inside existing files cannot change the tree.
+- **`architecture`** — runs unless the round's diff is **all of**: no file added/deleted/moved/renamed · no new type, protocol, class or module declared · touches ≤ 2 files · ≤ 60 changed lines · stays inside a single layer/feature directory. Any one of those false → it runs. Doubt → it runs.
+
+**Escalation valve — the gate is a default, not a verdict.** Re-open a skipped category the moment the round contradicts its premise: an autofix that ends up creating or moving a file → run `arborescence` on that round; a `correctness` or `style` finding that smells like a boundary or responsibility problem → run `architecture`. Cheaper to add one reviewer late than to ship a layering break.
+
+**Say what you skipped.** One line per round: `review: 3/5 (skipped arborescence, architecture — 1 file, 12 lines, no new type)`. A silent skip reads as "reviewed clean by five lenses" when it wasn't.
+
+**The verdict is never partial.** When the loop ends on a gated round, run the categories it skipped once — against the final state of the code — before recording `## Review` and telling the user it's clean. Gating saves intermediate rounds; it never buys a cheaper conclusion.
+
+### Resuming agents between rounds
+
+Round 1 spawns. **Rounds 2+ resume the same agents by name** (`SendMessage`) instead of spawning fresh ones — they still hold the conventions, the BRIEF, and the code they just saw, so a round costs a delta instead of a full re-read. This is an optimization, never a prerequisite: name unreachable (new session, agent gone) → spawn fresh, same inputs, flow unchanged.
+
+- **Implementer** — `SendMessage` to `impl-<slug>` with the aggregated findings alone. No conventions dir, no task re-read: it has them.
+- **Reviewers** — `SendMessage` to each `rev-<category>-<slug>` with (a) the fix's diff hunks only and (b) its own previous findings, asking it to re-state each as *fixed* or *still open* before looking for new ones.
+- **Verifier** — same pattern, see §3.5 step 3.
+- **Anti-stale, always say it:** "files changed since your last turn — re-read the ones listed; your memory of their content is stale."
+- **Which categories run at all** is the gate's call, above — resume only the ones the gate retained this round.
+- **Cap resume at the 3-round autofix cap.** Past that a transcript (build logs especially) outweighs the re-read it saves — respawn fresh.
 
 ## 3.5 Verify (runtime)
 
 Static review says the code reads right; verify says it **works when used**. Run only when `verify.enabled: true` and the task has a runnable UI surface (skip pure-logic/lib tasks — nothing to drive).
 
-1. Dispatch **wa-verifier** once. Pass: task path (for acceptance criteria), the implementer's `ARTIFACT:` (binary path + bundle id/package), `verify.platform` + `verify.target`, `autopilot` flag.
+1. Dispatch **wa-verifier** once, **named `verify-<slug>`**. Pass: task path (for acceptance criteria), the implementer's `ARTIFACT:` (binary path + bundle id/package), `verify.platform` + `verify.target`, `autopilot` flag.
 2. Verifier installs the built binary via **mobile-mcp**, drives the task's acceptance criteria with real inputs (tap/type/swipe), screenshots each checkpoint. Handle receipt:
    - `RESULT: pass` → record checks + screenshot paths in task's `## Verification`, continue.
    - `RESULT: fail` → treat like a critical finding: feed the failed checks back through the review autofix loop (Review step 3) if `review.autofix`, else **stop and show** the user what broke. Re-verify after a fix.
    - `RESULT: blocked` (mobile-mcp absent, no device, won't install) → **stop and ask** the user; don't silently mark verified.
-3. Never claim a task works without the verifier's evidence when verify is enabled.
+3. **Re-verify resumes `verify-<slug>`** (same rules as *Resuming agents*): send the fresh `ARTIFACT:` + what the fix changed, nothing else — device stays booted, checklist stays derived. Tell it if the acceptance criteria moved.
+4. Never claim a task works without the verifier's evidence when verify is enabled.
 
 ## 4. Report + hand off to feedback
 
@@ -56,7 +111,18 @@ Static review says the code reads right; verify says it **works when used**. Run
 - **Save** caveman-compressed report to `.whackagent/reports/<slug>.md` (what / files / decisions / tests / review verdict / task link).
 - Set task `status: review`. Invite user to look and send notes — **`/wa-feedback`**.
 - **Iteration is `/wa-feedback`'s job, not yours.** User comes back with changes → invoke the **wa-feedback** skill and follow it. Do **not** patch code from this thread: conventions live in the subagents' context, not here, and an unreviewed touch-up undoes the review you just ran.
-- On user **validation**: set task `status: done`, reflect in `BACKLOG.md`.
+- On user **validation**: set task `status: done`, reflect in `BACKLOG.md`, then run **Validation handoff** below.
+
+## 5. Validation handoff (commit + next branch)
+
+Runs only on user validation, in order. Each sub-step is conditional — skip silently when its toggle is off.
+
+1. **Commit** — if `commit.auto_commit_after_validation: true`, commit the task's work using `commit.author_name` / `commit.author_email`. Never as Claude, never merge to base, never push unless the user asks.
+2. **Hop to next task** — if `branch.per_task` **and** `commit.auto_commit_after_validation` **and** `branch.checkout_next: true`:
+   - Next task = top `todo` in `BACKLOG.md` order (same order `/wa-board` renders). None → say backlog empty, stay put, done.
+   - Create/check out `<branch.prefix><next-slug>` from `branch.base`, same rules as step 0 — including the dirty-tree stop-and-ask (nothing should be dirty right after a commit; if it is, ask).
+   - Echo: `✅ <slug> committed → branche wa/<next-slug> prête · /wa-code <next-slug>`.
+3. Nothing committed (toggle off) → **don't switch branches**: the work is still uncommitted on this one. Say so and stop there.
 
 ## Asking
 
@@ -64,8 +130,8 @@ Any question you put to the user — a `BLOCKED:` from a subagent, an architectu
 
 ## Never
 
-Never commit in normal flow — user validates first. Never let subagents touch backlog/wiki/reports — you own those here. Never hand-edit code after the review phase — that's `/wa-feedback`.
+Never commit before validation — commit only in step 5, and only if `commit.auto_commit_after_validation`. Never switch branches with a dirty tree or uncommitted task work. Never let subagents touch backlog/wiki/reports — you own those here. Never hand-edit code after the review phase — that's `/wa-feedback`.
 
 ## Next step
 
-Notes on what got built → **`/wa-feedback`**. After validation, suggest **`/wa-wiki`** to update wiki + code graph for what changed.
+Notes on what got built → **`/wa-feedback`**. After validation, suggest **`/wa-wiki`** to update the wiki for what changed.
