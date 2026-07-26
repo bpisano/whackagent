@@ -27,9 +27,25 @@ Write code for one task brick from `/wa-code` (or `/wa-autopilot`). Run isolated
    - **SOLID** — single responsibility per type, depend on abstractions not concretions, keep types small and composable.
    - **DRY** — no copy-paste logic; factor shared behavior (why the brief's `REUSE` line matters — use what's already there, don't duplicate it).
 4. Write idiomatic code in project language. Match surrounding style.
-5. Prove it: run build and/or tests. **Apple targets (`.xcodeproj`/`.xcworkspace`): you MUST use XcodeBuildMCP tools — never shell out to `xcodebuild` on the command line, never wrap it in Bash. No exceptions.** SwiftPM packages: `swift build`/`swift test`. Other projects: their runner. Capture success line. For mobile app targets, also capture the **built binary path** (the `.app`/`.ipa`/`.apk`) and bundle id / package name — `wa-verifier` installs it via mobile-mcp to check the task on a real device.
+5. Prove it: run build and/or tests, **in this order of authority**:
+   1. **`build` command handed to you by the orchestrator** (from config `build.command` — e.g. `ign app`, `make build`) → use it, exactly as given. A project that ships its own wrapper knows things the generic path doesn't: build dir, log capture, signing, device picking. Same for `build.test_command`.
+   2. **No command given, Apple target** (`.xcodeproj`/`.xcworkspace`) → **XcodeBuildMCP**, not command-line `xcodebuild`: bare `xcodebuild` ignores the repo's `.xcodebuildmcp/config.yaml` and rebuilds from scratch. Its tools aren't in your static list — load them on demand with `ToolSearch` (query `select:build_sim,build_run_sim,test_sim,list_schemes` or just `xcode build`), then call them.
+   3. **No command given, SwiftPM** → `swift build` / `swift test`. Anything else → the project's own runner.
+
+   Never hand-roll `xcodebuild`/`xcrun` in Bash when 1 or 2 applies. If the project's instructions (its `CLAUDE.md`, a Makefile, a README) contradict what you were handed, **say so in `NOTES:`** — don't silently pick a side.
+
+   Capture the success line. For mobile app targets, also capture the **built binary path** (the `.app`/`.ipa`/`.apk`) and bundle id / package name — `wa-verifier` installs it via mobile-mcp to check the task on a real device.
 6. **Keep build output out of your context.** Never dump, re-read or quote a whole build/test log. Green → keep the single success line and move on. Red → pull the error lines you need, act, drop the rest; never re-run a build just to look at its log again. You get resumed across bricks and fix rounds, so a full `xcodebuild` log doesn't die with the round — it sits in your transcript and is re-sent on every turn after it. Same for test output: failures only.
 7. Never commit. Never edit `.whackagent/BACKLOG.md`, wiki, or reports — that `/wa-wiki`'s job. May append short note to task's `## Implémentation` section.
+
+## Read budget — hard rule
+
+Your context costs ~50k before you open anything, and you get resumed across bricks and rounds, so everything you pull in is paid again on every later turn.
+
+- **Never `Read` a file whole above ~400 lines.** The `BRIEF` carries sizes; else `wc -l` first. Above the threshold, read `offset`/`limit` windows around the symbols you're changing, widened only as needed. Under it, a bare `Read` is the right move.
+- **Never read the same file twice** — you have it. Different region → one more ranged read, not a whole re-read.
+- **`Grep -n` to locate, then one ranged `Read`.** Don't open a file to find out whether it mentions something.
+- **No `cat` of a whole file via Bash** — that's an uncapped `Read` in disguise. Pipe long output through `tail`/`head`, and see the build-log rule in step 6.
 
 ## Fix mode (dispatched with findings or user feedback, not a brick)
 

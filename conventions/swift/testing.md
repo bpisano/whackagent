@@ -1,6 +1,6 @@
 # Swift — Testing & mocks
 
-> whackagent convention module · review category: **style**. Load when project has (or should have) tests.
+> whackagent convention module · reviewer: **conventions**.
 
 ## Testing
 

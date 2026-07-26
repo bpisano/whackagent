@@ -1,6 +1,6 @@
 # Conventions — Generic
 
-Language-agnostic fallback copied into `.whackagent/conventions/` by `/wa-setup` when no template match. Replace or extend with project real conventions.
+> whackagent convention module · language-agnostic fallback, read by all three reviewers (`conventions`, `structure`, `correctness`). Replace or extend with the project's real conventions.
 
 ## Toggles
 

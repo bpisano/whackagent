@@ -13,18 +13,20 @@ Detect first, ask second. Scan repo to guess:
 - **primary language** — `Package.swift`/`*.xcodeproj` → swift; `tsconfig.json`/`package.json` → typescript; else generic.
 - **project kind** (Swift) — `*.xcodeproj`/`*.xcworkspace` with app target, or `@main App`/UIKit lifecycle → `app`; `Package.swift` library/executable → `package`; CLI/server as applicable.
 - **SwiftUI usage** — any `import SwiftUI` in source.
+- **Its own build wrapper** — a repo-local CLI (`cli/`, `bin/`, `scripts/`), a `Makefile` with a build target, or — the strongest signal — the project's own `CLAUDE.md`/README saying *"ALWAYS use X to build"*. Read that instruction if it exists: a project that mandates a wrapper mandates it for the implementer too.
 
 Then confirm with user:
 
 1. **Discussion language** — which language to talk in? (default: detect from user; fr/en)
 2. **Primary language + project kind** — confirm detected language and kind (app / package / cli / server). Kind picks architecture module.
-3. **Review toggles** — surface public-doc one explicitly, varies by company: _"Require `///` documentation on every public API? (some teams skip this)"_ → sets `review.public_doc`. Offer to flip other toggles, `review.gate` included (`auto` skips the lenses a diff can't trigger; `always` runs the five every round — pick `always` if the user wants belt-and-braces over speed).
-4. **Commit policy** — _"Once YOU validate a feature, may I commit it myself, or always wait for you to commit?"_ → sets `auto_commit_after_validation`. Remind: commits always use your name, never Claude's. Outside autopilot, nothing committed before you validate.
-5. **Branch policy** — _"Should `/wa-code` work on its own branch per task (`wa/<slug>`), or code straight on the current branch?"_ → sets `branch.per_task`. If yes, confirm `branch.prefix` and `branch.base` (`current`, or a fixed base like `main`). Mention the pairing: with per-task branches **and** auto-commit on, validating a task commits it and checks out the next task's branch for you (`branch.checkout_next`, on by default) — offer to turn that off. `/wa-autopilot` branches per task regardless.
+3. **Review toggles** — surface public-doc one explicitly, varies by company: _"Require `///` documentation on every public API? (some teams skip this)"_ → sets `review.public_doc`. Offer to flip other toggles, `review.gate` included (`auto` skips the lenses a diff can't trigger; `always` runs all three every round — pick `always` if the user wants belt-and-braces over speed) and `review.conventions_model` (the checklist reviewer runs on `sonnet` by default; `haiku` is cheaper, `inherit` keeps the session model).
+4. **Build command** — only ask when detection found a wrapper: _"I see `<X>` — should the implementer build with it, or use XcodeBuildMCP / the language default?"_ → sets `build.command` (+ `build.test_command` if there's a test target). Nothing detected → leave both empty, don't ask. **The project wins over the plugin's default**: a repo that documents its own build path documents it for the agents too, and an implementer torn between two mandates picks one silently.
+5. **Commit policy** — _"Once YOU validate a feature, may I commit it myself, or always wait for you to commit?"_ → sets `auto_commit_after_validation`. Remind: commits always use your name, never Claude's. Outside autopilot, nothing committed before you validate.
+6. **Branch policy** — _"Should `/wa-code` work on its own branch per task (`wa/<slug>`), or code straight on the current branch?"_ → sets `branch.per_task`. If yes, confirm `branch.prefix` and `branch.base` (`current`, or a fixed base like `main`). Mention the pairing: with per-task branches **and** auto-commit on, validating a task commits it and checks out the next task's branch for you (`branch.checkout_next`, on by default) — offer to turn that off. `/wa-autopilot` branches per task regardless.
 
-Keep short — 5 questions. Rest take template default.
+Keep short — 5 to 6 questions (the build one only fires on a detected wrapper). Rest take template default.
 
-**Only if project kind is `app`:** offer runtime verify — _"Drive the built app on a simulator/device after review to confirm the task actually works (taps + screenshots via mobile-mcp)?"_ → sets `verify.enabled` + `verify.platform`/`verify.target`. If yes, tell user it needs the **mobile-mcp** server (`mobile-next/mobile-mcp`) configured; build itself stays XcodeBuildMCP (iOS) / gradle (Android).
+**Only if project kind is `app`:** offer runtime verify — _"Drive the built app on a simulator/device after review to confirm the task actually works (taps + screenshots via mobile-mcp)?"_ → sets `verify.enabled` + `verify.platform`/`verify.target`. If yes, tell user it needs the **mobile-mcp** server (`mobile-next/mobile-mcp`) configured; build itself stays whatever `build.command` says, else XcodeBuildMCP (iOS) / gradle (Android).
 
 ## 2. Scaffold `.whackagent/`
 
@@ -34,13 +36,13 @@ Create directory and files (do not overwrite existing without asking):
 - `conventions/` — copy **only relevant** convention modules into `.whackagent/conventions/`:
   - **Swift** (`${CLAUDE_PLUGIN_ROOT}/conventions/swift/`): always `style.md`, `elegance.md`, `testing.md`, and `architecture-global.md` (platform-agnostic YAGNI/SOLID/DRY/DI — every Swift project). Kind module: `architecture-app.md` if kind is `app`, else `architecture-package.md`. Add `swiftui.md` **only if SwiftUI used** (skip for package/CLI with no SwiftUI — whole point).
   - **TypeScript / generic**: copy single `${CLAUDE_PLUGIN_ROOT}/conventions/<lang>.md` and point every `review.categories` entry at it.
-  - Set `review.categories` in config to match what you copied: `architecture` loads `[architecture-global.md, <kind module>]`, `arborescence` loads just the kind module; drop `swiftui.md` from `style` if not copied.
+  - Set `review.categories` in config to match what you copied: `conventions` loads `[style.md, elegance.md]` plus `swiftui.md`/`testing.md` when they exist, `structure` loads `[architecture-global.md, <kind module>]`, `correctness` loads nothing.
 - **Xcode projects only** (repo has `.xcodeproj`/`.xcworkspace`): create `.xcodebuildmcp/config.yaml` at repo root (not in `.whackagent/`) so XcodeBuildMCP builds incrementally instead of full-rebuilding every time. Content:
   ```yaml
   schemaVersion: 1
   incrementalBuildsEnabled: true
   ```
-  Skip if the file already exists (don't clobber a user's config). This is why the implementer must always build through XcodeBuildMCP — command-line `xcodebuild` ignores this and rebuilds from scratch.
+  Skip if the file already exists (don't clobber a user's config). This is why an implementer with no `build.command` builds through XcodeBuildMCP — command-line `xcodebuild` ignores this file and rebuilds from scratch. With a `build.command` set, the wrapper owns the build dir instead, and this file is just harmless.
 - `BACKLOG.md` — copy `${CLAUDE_PLUGIN_ROOT}/templates/BACKLOG.md`.
 - `wiki/index.md` — copy `${CLAUDE_PLUGIN_ROOT}/templates/wiki-index.md`.
 - Create empty `tasks/` and `reports/` directories (`.gitkeep` fine).

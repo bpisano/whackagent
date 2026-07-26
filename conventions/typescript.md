@@ -1,6 +1,6 @@
 # Conventions — TypeScript
 
-Base template copied into `.whackagent/conventions/` by `/wa-setup`. Edit **Toggles** block per project. `wa-implementer` writes against these rules; `wa-reviewer` checks each category.
+> whackagent convention module · single file, read by all three reviewers (`conventions`, `structure`, `correctness`). `wa-implementer` writes against it. Edit the **Toggles** block per project.
 
 ## Toggles
 

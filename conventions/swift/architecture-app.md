@@ -1,6 +1,6 @@
 # Swift — Architecture (iOS app)
 
-> whackagent convention module · review category: **architecture**. Copied when project **iOS/app** target, next to `architecture-global.md` (platform-agnostic principles — YAGNI/SOLID/DRY, composition, DI, testability). This file hold **iOS-specific** part: layers + file tree. Library/CLI/server use `architecture-package.md`. Edit project copy in `.whackagent/conventions/` to adapt.
+> whackagent convention module · reviewer: **structure**. iOS app: layers + file tree. Pairs with `architecture-global.md` (platform-agnostic principles).
 
 ## Layers
 

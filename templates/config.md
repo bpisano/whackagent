@@ -11,16 +11,26 @@ conventions_dir: .whackagent/conventions   # per-category convention modules cop
 review:
   autofix: true                # wa-code's review phase re-dispatches the implementer until clean
   public_doc: true             # require doc on public API (style reviewer) — flip false per company
-  gate: auto                   # auto = drop reviewers a round's diff structurally can't trigger
-                               # (arborescence unless files move, architecture unless the diff is
-                               # small + single-layer + adds no type). always = the full five, every
-                               # round. Either way the recorded verdict is always full — see wa-code.
+  gate: auto                   # auto = skip `structure` when a round's diff can't move it
+                               # (no file added/moved/renamed, no new type, small + single-layer).
+                               # always = all three, every round. Either way the recorded verdict
+                               # is always full — see wa-code.
+  conventions_model: sonnet    # model for the `conventions` reviewer only — it compares code to an
+                               # explicit checklist, which doesn't need the session model. `haiku` is
+                               # the cheaper end, `inherit` keeps the session model. `structure` and
+                               # `correctness` always inherit: they judge, they don't match patterns.
   categories:                  # each = ONE parallel reviewer; the listed module file(s) are all it loads.
-    style: [style.md, swiftui.md, testing.md]   # setup drops swiftui.md if no SwiftUI
-    elegance: [elegance.md]
-    architecture: [architecture-global.md, architecture-app.md]  # global = YAGNI/SOLID/DRY/DI; app = layers/naming — or architecture-package.md
-    arborescence: [architecture-app.md]         # file tree/folders section of the kind module — or architecture-package.md
+                               # Three, not one per rule set: an isolated agent costs ~50k tokens of
+                               # context before reading a line, so lenses that share a rulebook share
+                               # an agent. Splitting further buys focus you already have.
+    conventions: [style.md, elegance.md, swiftui.md, testing.md]  # how it's written — setup drops swiftui.md if no SwiftUI
+    structure: [architecture-global.md, architecture-app.md]      # where it lives: layers/naming AND file tree — or architecture-package.md
     correctness: []            # pure bug hunt — no module
+
+build:                         # how THIS project builds — the project wins over the plugin's default
+  command: ""                  # e.g. "ign app", "make build", "./scripts/build.sh". Empty → XcodeBuildMCP
+                               # for Apple targets, `swift build` for SwiftPM, the project's runner otherwise.
+  test_command: ""             # e.g. "make test". Empty → the language default (`swift test`, …).
 
 verify:                        # wa-code's runtime check — drives the built app via mobile-mcp
   enabled: false               # set true for app targets with a UI to exercise (needs mobile-mcp)

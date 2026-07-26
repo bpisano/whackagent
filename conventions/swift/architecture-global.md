@@ -1,6 +1,6 @@
 # Swift — Architecture (global)
 
-> whackagent convention module · review category: **architecture**. Copied on **every** Swift project (app, library, CLI, server) alongside kind-specific module (`architecture-app.md` or `architecture-package.md`). This file hold platform-agnostic principles; kind-specific module hold layers + file-tree rules. Edit project copy in `.whackagent/conventions/` to adapt.
+> whackagent convention module · reviewer: **structure**. Platform-agnostic principles; the kind module (`architecture-app.md` / `architecture-package.md`) carries layers + file tree.
 
 Architecture here = how feature **decomposed, made testable, kept modular** — not how code reads (that elegance module).
 

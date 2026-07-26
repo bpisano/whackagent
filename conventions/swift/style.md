@@ -1,6 +1,6 @@
 # Swift — Coding style
 
-> whackagent convention module · review category: **style**. Load every Swift project. `wa-reviewer` (style) and `wa-implementer` obey.
+> whackagent convention module · reviewer: **conventions**. `wa-implementer` obeys it too.
 
 ## One type per file
 
@@ -57,28 +57,16 @@ Members fixed order. Within each section, order by access: `public` → internal
 5. Instance methods
 
 ```swift
-@MainActor
-@Observable
 final class UserStore {
-    static let shared: UserStore = .init()
-
-    private(set) var users: [User] = []
-
+    static let shared: UserStore = .init()   // 1 static stored
+    private(set) var users: [User] = []      // 2 instance stored
     private let repository: any UserRepository
 
-    init(repository: any UserRepository) {
-        self.repository = repository
-    }
+    init(repository: any UserRepository) { ... }   // 3
 
-    static func live() -> UserStore {
-        .init(repository: LiveUserRepository())
-    }
-
-    func load() async throws {
-        users = try await repository.fetchAll()
-    }
-
-    private func broadcast() { /* ... */ }
+    static func live() -> UserStore { ... }        // 4
+    func load() async throws { ... }               // 5 instance methods
+    private func broadcast() { ... }               //   private last
 }
 ```
 

@@ -1,6 +1,6 @@
 # Swift — SwiftUI
 
-> whackagent convention module · review category: **style** (loaded by style + elegance reviewers). **Only copied into project when SwiftUI actually used.** SwiftPM library or CLI with no SwiftUI never see this file.
+> whackagent convention module · reviewer: **conventions**. Only present when the project actually uses SwiftUI.
 
 ## View structure
 
