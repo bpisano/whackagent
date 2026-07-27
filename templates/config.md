@@ -9,33 +9,26 @@ project_kind: app              # app | package | cli | server  (picks the archit
 conventions_dir: .whackagent/conventions   # per-category convention modules copied here by /wa-setup
 
 review:
-  autofix: true                # wa-code's review phase re-dispatches the implementer until clean
-  public_doc: true             # require doc on public API (style reviewer) — flip false per company
-  gate: auto                   # auto = skip `structure` when a round's diff can't move it
-                               # (no file added/moved/renamed, no new type, small + single-layer).
-                               # always = all three, every round. Either way the recorded verdict
-                               # is always full — see wa-code.
-  conventions_model: sonnet    # model for the `conventions` reviewer only — it compares code to an
-                               # explicit checklist, which doesn't need the session model. `haiku` is
-                               # the cheaper end, `inherit` keeps the session model. `structure` and
-                               # `correctness` always inherit: they judge, they don't match patterns.
-  categories:                  # each = ONE parallel reviewer; the listed module file(s) are all it loads.
-                               # Three, not one per rule set: an isolated agent costs ~50k tokens of
-                               # context before reading a line, so lenses that share a rulebook share
+  autofix: true                # wa-code's verify phase re-dispatches the implementer until clean
+  public_doc: true             # require doc on public API — flip false per company
+  categories:                  # each = ONE parallel wa-verifier; the listed modules are all it loads.
+                               # Two, not one per rule set: an isolated agent costs ~50k tokens of
+                               # context before reading a line, so lenses sharing a rulebook share
                                # an agent. Splitting further buys focus you already have.
-    conventions: [style.md, elegance.md, swiftui.md, testing.md]  # how it's written — setup drops swiftui.md if no SwiftUI
-    structure: [architecture-global.md, architecture-app.md]      # where it lives: layers/naming AND file tree — or architecture-package.md
-    correctness: []            # pure bug hunt — no module
+    conventions: [style.md, elegance.md, swiftui.md, testing.md, architecture-global.md, architecture-app.md]
+                               # how it's written AND where it lives — setup drops swiftui.md if no
+                               # SwiftUI, and swaps architecture-app.md for architecture-package.md
+    correctness: []            # bugs + acceptance criteria — pure reasoning, no module
 
 build:                         # how THIS project builds — the project wins over the plugin's default
   command: ""                  # e.g. "ign app", "make build", "./scripts/build.sh". Empty → XcodeBuildMCP
                                # for Apple targets, `swift build` for SwiftPM, the project's runner otherwise.
   test_command: ""             # e.g. "make test". Empty → the language default (`swift test`, …).
 
-verify:                        # wa-code's runtime check — drives the built app via mobile-mcp
-  enabled: false               # set true for app targets with a UI to exercise (needs mobile-mcp)
-  platform: ios                # ios | android | both
-  target: simulator            # simulator | emulator | device (build stays XcodeBuildMCP/gradle)
+verify:                        # runtime check — the implementer drives the app it just built
+  enabled: false               # set true for app targets with a UI to exercise
+  platform: ios                # ios | android | both  (ios drives via XcodeBuildMCP, else mobile-mcp)
+  target: simulator            # simulator | emulator | device
 
 commit:
   auto_commit_after_validation: false   # may Claude commit once YOU validate a feature?

@@ -99,7 +99,7 @@ Button("Save") { save() }
 
 ## Accessibility identifiers (targetable UI)
 
-Every **interactive** or **asserted** element carries a stable `.accessibilityIdentifier(_:)` — buttons, text fields, toggles, tappable rows, and any view a test or the runtime verifier must find or assert on. `wa-verifier` drives the app through mobile-mcp, which targets elements by the accessibility tree; without identifiers it falls back to raw coordinates — brittle, breaks on layout change. Missing identifier on an interactive element = style finding.
+Every **interactive** or **asserted** element carries a stable `.accessibilityIdentifier(_:)` — buttons, text fields, toggles, tappable rows, and any view a test or the runtime check must find or assert on. `wa-implementer` drives the built app by the accessibility tree; without identifiers it falls back to raw coordinates — brittle, breaks on layout change. Missing identifier on an interactive element = style finding.
 
 Rules:
 - Identifier is **stable and semantic**, not positional: `"login.submitButton"`, not `"button2"`. Namespace by screen/feature.

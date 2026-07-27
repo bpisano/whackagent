@@ -1,6 +1,6 @@
 # Conventions — TypeScript
 
-> whackagent convention module · single file, read by all three reviewers (`conventions`, `structure`, `correctness`). `wa-implementer` writes against it. Edit the **Toggles** block per project.
+> whackagent convention module · single file, read by both verifiers (`conventions`, `correctness`). `wa-implementer` writes against it. Edit the **Toggles** block per project.
 
 ## Toggles
 

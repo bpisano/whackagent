@@ -1,6 +1,6 @@
 # Conventions — Generic
 
-> whackagent convention module · language-agnostic fallback, read by all three reviewers (`conventions`, `structure`, `correctness`). Replace or extend with the project's real conventions.
+> whackagent convention module · language-agnostic fallback, read by both verifiers (`conventions`, `correctness`). Replace or extend with the project's real conventions.
 
 ## Toggles
 

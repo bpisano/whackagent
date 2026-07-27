@@ -5,7 +5,7 @@ description: Make a code review. --fix to autofix.
 
 # /wa-review
 
-Run the 3-lens parallel review standalone — audit existing code, diff, or whole project. Same engine as `/wa-code` review phase, usable anywhere.
+Run the parallel review standalone — audit existing code, a diff, or the whole project. Same engine as `/wa-code`'s verify phase, usable anywhere.
 
 ## Scope (argument)
 
@@ -22,19 +22,18 @@ Run the 3-lens parallel review standalone — audit existing code, diff, or whol
 ## Do
 
 1. Resolve scope + changed/target files.
-2. **Fan out, parallel** — one **wa-reviewer** per category: `conventions`, `structure`, `correctness`. **Note each `agentId`** — that's how later rounds resume them. Spawn `conventions` with `model: <review.conventions_model>` per **`/wa-code` → step 1**; the other two inherit. Pass each its `category`, its module path(s) only, target files **plus diff hunks when the scope is a diff**, toggles. Each loads only its own modules → focused, forgets nothing.
-   - **Gate** (`review.gate: auto`, per **`/wa-code` → Gating the fan-out**) applies to **diff scopes only** — `/wa-review` and `/wa-review <branch>`. An explicit `<path>` or `--all` is an audit: the user asked for every lens, run all three whatever the gate says. Announce any skip.
+2. **Fan out, parallel** — two **wa-verifier**, one per category: `conventions`, `correctness`. **Note each `agentId`** — that's how later rounds resume them. Pass each its `category`, its module path(s) only, the target files **plus the diff hunks when the scope is a diff**, and the toggles. Each loads only its own modules → focused, forgets nothing.
 3. **Aggregate** into one severity-ordered list, tagged by category; dedupe. Show grouped by category.
 4. **Fix?**
    - Default → **report only**. Don't mutate existing code unasked.
    - `--fix` → dispatch **wa-implementer** in **fix mode** with aggregated findings + conventions dir (tell it: fix only what findings name, re-read style, add no comments), note its `agentId`, then re-review. Loop until clean or no progress (cap 3 rounds). A `BLOCKED:` → stop and ask.
-   - **Rounds 2+ resume the same agents by id** instead of respawning — per **`/wa-code` → Resuming agents between rounds** (delta only, anti-stale warning, gate recomputed per round, respawn fresh past 3 rounds, fall back to a fresh spawn if an id is lost).
+   - **Rounds 2+ resume the same agents by id** instead of respawning — per **`/wa-code` → step 3** (delta only, anti-stale warning, respawn fresh past 3 rounds, fall back to a fresh spawn if an id is lost).
 5. If invoked on whackagent task (path is task's files), record findings in task's `## Review`.
 
 ## Categories
 
-**conventions** (how it's written — style + idiomatic Swift, not C-in-Swift) · **structure** (where it lives — layers/boundaries/naming *and* the file tree) · **correctness** (real bugs). One reviewer each, three agents: rule sets that belong together share a reviewer, because an isolated agent costs ~50k tokens of context before it reads a line.
+**conventions** — how it's written *and* where it lives: style, idiomatic Swift, layers, boundaries, naming, file tree. **correctness** — real bugs and whether the code does what it claims. Two agents, not five: rule sets that belong together share one, because an isolated agent costs ~50k tokens of context before it reads a line.
 
 ## Note
 
-For in-flow review of task you building, use **`/wa-code`** — its phase 3 is this same review with autofix on. `/wa-review` is standalone entry point.
+For in-flow review of a task you're building, use **`/wa-code`** — its step 3 is this same review with autofix on. `/wa-review` is the standalone entry point.

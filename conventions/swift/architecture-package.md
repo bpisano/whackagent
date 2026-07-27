@@ -1,6 +1,6 @@
 # Swift — Architecture (package / non-app)
 
-> whackagent convention module · reviewer: **structure**. SwiftPM library / CLI / server: module + file-tree rules. Pairs with `architecture-global.md` (platform-agnostic principles). Freer than an app — not free-for-all.
+> whackagent convention module · verifier: **conventions**. SwiftPM library / CLI / server: module + file-tree rules. Pairs with `architecture-global.md` (platform-agnostic principles). Freer than an app — not free-for-all.
 
 No Coordinator-Store mandate here (app-only). Surviving discipline:
 
