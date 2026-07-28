@@ -42,7 +42,7 @@ Each task gets its own checkout, so parallel implementers never see each other's
    git worktree add ../.wa-worktrees/<slug> -b <branch.prefix><slug> <branch.base>
    ```
 2. **Spawn one `wa-implementer` per task in the wave, in a single message** so they actually run concurrently. Each gets the standard `/wa-code` step 2 payload **plus its worktree path**, and the instruction: *work only under `<worktree>`, absolute paths, never touch the main checkout or another worktree.*
-3. **Verify each task** per `/wa-code` step 3 — two `wa-verifier`, diff hunks from that worktree only. Verifiers are read-only, so they parallelize freely across tasks.
+3. **Verify each task** per `/wa-code` step 3 — two `wa-verifier`, diff hunks from that worktree only. Verifiers are read-only, so they parallelize freely across tasks. **`review.when` doesn't apply here**: nobody validates, there are no feedback rounds, so the close of the task *is* the validation point — every task gets its one fan-out before its commit, whatever the setting says.
 4. **Keep every agent alive** — `agentId` per role **per task**. Autopilot is where this pays most: a batch of 5 tasks × 3 rounds is 45 spawns if you forget, 15 if you don't.
 
 **One device, one queue.** Builds run fine in parallel (separate worktrees, separate build dirs), but the **runtime check does not** — there's a single simulator. Serialize it: implementers in a wave build concurrently, then drive the app one at a time. Tell each implementer to hold its runtime check until you say go, or accept that a wave's runtime checks are sequential tail work.

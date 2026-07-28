@@ -57,7 +57,9 @@ Receipts:
 
 The implementer also **drives the app** after a green build when `verify.enabled` — it already holds the build session, so runtime proof costs it almost nothing. Its `CHECKS:` lines land in `## Vérification`.
 
-## 3. Verify
+## 3. Verify — only when `review.when: each_round`
+
+`review.when: on_validation` (default) → **skip this step entirely.** Echo `review: reporté à la validation` and go to step 4: the fan-out runs once in step 5, over the whole task diff, feedback rounds included. Nothing is lost — no code reaches a commit unreviewed — but a note doesn't cost a review round.
 
 All bricks green → spawn **two `wa-verifier` in parallel**, `conventions` and `correctness`. Note both `agentId`s.
 
@@ -78,16 +80,24 @@ Then:
 
 ## 4. Report
 
-- **Show**: what built, files/folders touched, key decisions, test + run + review results.
+- **Show**: what built, files/folders touched, key decisions, test + run + review results — `review: à la validation` when step 3 was skipped, so the user knows what's still owed.
 - **Save** a caveman-compressed report to `.whackagent/reports/<slug>.md`.
 - Set `status: review`. Invite notes → **`/wa-feedback`**.
-- **Iteration is `/wa-feedback`'s job.** Never patch code from this thread: the conventions live in the subagents' context, not here, and an unreviewed touch-up undoes the review you just ran.
+- **Iteration is `/wa-feedback`'s job.** Never patch code from this thread — even a one-liner. `/wa-feedback` is the only place inline fixes are bounded, tagged, built, and flagged to the verifiers (see its *Micro-fix or implementer*); an untracked touch-up here undoes the review you just ran.
 - User validates → `status: done`, reflect in `BACKLOG.md`, run step 5.
 
 ## 5. Validation handoff
 
 Only on validation, in order. Each sub-step skips silently when its toggle is off.
 
+0. **Review gate** — if `review.when: on_validation`. **The whole point of deferring: this is not optional and it runs before the commit.**
+   - Say it first: *"validé — je passe la review sur l'ensemble du diff avant de clore."*
+   - **Scope = the full task diff**, not the last round: `branch.base..HEAD` + working tree when `branch.per_task`, else the accumulated files from `## Implémentation` + every `## Feedback` round. Hand the hunks inline, same as step 3.
+   - Fan out the two `wa-verifier` (resume by `agentId` when the ids are still live — send the cumulative hunks and the anti-stale warning; fresh spawn otherwise), then aggregate / autofix / re-verify exactly per step 3, cap 3 rounds.
+   - Autofix touched code **and** `verify.enabled` → the implementer re-drives the app; prior runtime proof died with the edit.
+   - Record in `## Review` under a `validation` round.
+   - **Blocking findings left after the cap → stop. Don't commit, don't switch branch.** Show what's open with your recommendation (fix now / accept and commit / new task) and wait. Validation is the user's call on the feature, not a waiver on broken code.
+   - Clean → continue.
 1. **Commit** — if `commit.auto_commit_after_validation`, using `commit.author_name` / `commit.author_email`. Never as Claude, never merge to base, never push unless asked.
 2. **Next branch** — if `branch.per_task` **and** `commit.auto_commit_after_validation` **and** `branch.checkout_next`: next task = top `todo` in `BACKLOG.md` order. Create/check out its branch, same rules as step 0 (dirty tree → ask). Echo `✅ <slug> committed → branche wa/<next-slug> prête · /wa-code <next-slug>`.
 3. Nothing committed → **don't switch branches**; the work is still uncommitted here. Say so, stop.

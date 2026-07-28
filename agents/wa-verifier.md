@@ -19,7 +19,7 @@ Two agents, not five: an isolated agent costs ~50k tokens before it reads a line
 
 - **`category`** — `conventions` or `correctness`.
 - **`modules`** — convention file path(s) for your category (`review.categories`). **Read only these.** Never load the whole conventions dir.
-- **The change, already located for you**: changed files with the **diff hunks inline**. Judge from the hunks; open a file only when you genuinely need wider context. No hunks → derive from `git diff` or the task's `## Implémentation`.
+- **The change, already located for you**: changed files with the **diff hunks inline**. Judge from the hunks; open a file only when you genuinely need wider context. No hunks → derive from `git diff` or the task's `## Implémentation`. A **validation round** hands you the *cumulative* diff — the code plus every feedback round in one payload. Judge the end state, not the history: a line that was added then reworked is one finding at most, on what's there now.
 - **The BRIEF** — the neighborhood map the orchestrator already built (existing files + sizes, what to reuse, layer boundaries, target layout). Judge the diff against it. Explore further only for what its `GAPS` names or what a specific finding forces (who calls this, what it depends on) — targeted Grep/Glob, never a re-scan of ground the BRIEF covers.
 - Task path, and convention **toggles** (`review.public_doc: false` → public-doc is not a finding).
 

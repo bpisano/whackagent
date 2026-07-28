@@ -9,6 +9,18 @@ project_kind: app              # app | package | cli | server  (picks the archit
 conventions_dir: .whackagent/conventions   # per-category convention modules copied here by /wa-setup
 
 review:
+  when: on_validation          # WHEN the wa-verifier fan-out runs.
+                               #   on_validation — once, when YOU validate the task: the whole diff
+                               #     (code + every feedback round) gets reviewed in one pass. Feedback
+                               #     rounds stay fast — no verify between each note.
+                               #   each_round — after /wa-code and after every /wa-feedback fix.
+                               #     Catches drift earlier, costs a fan-out per round.
+                               # Either way the review happens before any commit: nothing closes unreviewed.
+  inline_micro_fixes: true     # /wa-feedback may apply a MICRO-fix itself instead of spawning an
+                               # implementer (~50k tokens of context for a one-liner). Bounded: ≤2 files,
+                               # ≤~20 lines, no new file/type/folder, no layer or public-API change.
+                               # Anything bigger, or any doubt, still goes to wa-implementer.
+                               # false → every change goes through the implementer, whatever its size.
   autofix: true                # wa-code's verify phase re-dispatches the implementer until clean
   public_doc: true             # require doc on public API — flip false per company
   categories:                  # each = ONE parallel wa-verifier; the listed modules are all it loads.

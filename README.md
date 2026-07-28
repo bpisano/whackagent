@@ -26,7 +26,7 @@ Add the marketplace, then install the plugin:
 | `/wa-task <desc\|task>` | Creates a task + spec, grills it (grill-me, includes architecture), then re-prioritizes the backlog |
 | `/wa-task` | No argument: prioritization pass only — reorders, YAGNI, can split |
 | `/wa-code <task>` | Full pipeline: understand → code + test → review → verify → report |
-| `/wa-feedback [task] <notes>` | Applies your notes on what was built — same isolated pipeline, so conventions are re-read and the change is re-reviewed and re-verified |
+| `/wa-feedback [task] <notes>` | Applies your notes on what was built — micro-fix inline, bigger changes through the isolated pipeline; re-verified and reviewed before any commit |
 | `/wa-autopilot [tasks]` | Applies wa-code on 1..n tasks autonomously, one branch per task, independent ones in parallel |
 | `/wa-review [scope]` | Standalone 2-lens review (diff / path / project) — audit, optional `--fix` |
 | `/wa-wiki` | Updates the wiki |
@@ -88,6 +88,8 @@ A single command runs the whole coding cycle, orchestrating isolated subagents:
 1. **Plan**: read the task, search the existing code to avoid rewriting, write a **BRIEF** (existing files + their sizes, what to reuse, layer boundaries, target layout) handed to every subagent so nobody re-explores the same ground, break it into bricks, plan the tests.
 2. **Code**: one `wa-implementer` for the whole task, fed brick by brick (sequential) — it writes the feature *and* the tests, proves the build, then **drives the app on a simulator** to prove the feature actually works, screenshots included. It already holds the build session, so runtime proof costs almost nothing. Keeping the same agent across bricks means the conventions and the BRIEF are read once, and brick 2 already knows what brick 1 built.
 3. **Verify**: two `wa-verifier` in parallel — **conventions** (how it's written *and* where it lives: style, idiomatic Swift, layers, boundaries, file tree) and **correctness** (real bugs, plus whether the diff meets the acceptance criteria). Each loads only its own modules → focused, nothing forgotten. They're handed the diff hunks, so they judge the change instead of hunting for it. Aggregate → autofix in a loop until clean. Two agents rather than one per rule set is a measured call: an isolated agent costs ~50k tokens of context before it reads a line, so rule sets that belong together share one. And every round resumes the *same* agents rather than spawning new ones — they already hold their modules and the code, so round 2 costs a diff instead of a full re-read.
+
+   **When this runs is yours to pick** (`review.when`, asked at `/wa-setup`). Default `on_validation`: the fan-out fires **once, when you validate the task**, over the whole diff — code plus every feedback round — so sending three notes costs three fixes, not three reviews. `each_round` keeps the old behavior (a review after the code, and after each `/wa-feedback`). Either way the review lands **before any commit**: deferring is a schedule, not a skip, and blocking findings stop the commit until you say what to do with them.
 4. **Report**: on-screen summary, report saved in `.whackagent/reports/login-apple.md`, task moved to `review` for you to look at.
 
 **3. Send your notes — `/wa-feedback`**
@@ -96,7 +98,7 @@ A single command runs the whole coding cycle, orchestrating isolated subagents:
 /wa-feedback the button should be secondary, and the error toast is too aggressive
 ```
 
-Feedback is where quality usually leaks: the change looks small, so it gets patched inline — outside the conventions, outside the review, and nothing gets re-run. This command refuses to work that way. Every note, however small, goes back through `wa-implementer` (which re-reads every convention module first), then through the full review fan-out and the runtime verification again.
+Feedback is where quality usually leaks: the change looks small, so it gets patched inline — outside the conventions, outside the review, and nothing gets re-run. This command refuses to work that way, without making a one-liner cost an agent either. Each note is **routed by size**: a **micro-fix** (≤2 files, ≤~20 lines, no new file/type, no layer or public-API change) is applied straight away — convention module read first, build + tests re-run, hunks tagged so the reviewers look at them harder. Anything bigger goes back through `wa-implementer`, which re-reads every convention module before touching a line. Both paths then hit the runtime verification and the review fan-out — right away or in the single pass at validation, per `review.when`. Nothing is committed unreviewed, whichever route it took.
 
 It also triages what you said: a **defect** gets fixed, an **adjustment** updates the acceptance criteria too, a **new feature** in disguise is sent back to `/wa-task` instead of being silently built — and a **rule** ("always do X") is offered up for your conventions file, so it stops being forgotten on the next task.
 
@@ -116,7 +118,7 @@ Updates the wiki after a feature lands. Never commits before your validation.
 
 ```
 .whackagent/
-  config.md            # language, coding language, project_kind, review categories, commit + branch policy
+  config.md            # language, coding language, project_kind, review timing + categories, commit + branch policy
   conventions/         # copied convention modules (only the useful ones), editable per project
   BACKLOG.md           # task index (order = priority)
   tasks/<slug>.md      # one task = one file (frontmatter + body)
