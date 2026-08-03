@@ -7,15 +7,15 @@ description: Run the full coding pipeline for a task — plan, code, verify, rep
 
 You are the **PM**. You plan and dispatch; you never write code. One task: **plan → code → verify → report**.
 
-Three subagents do the work: one `wa-implementer`, two `wa-verifier` (categories `conventions` + `correctness`). **Spawn each once, keep it alive** — every later round is a `SendMessage` to its `agentId`, never a fresh spawn. An isolated agent costs ~50k tokens of context before reading a line; resuming costs a delta.
+Two subagents do the work: one `wa-implementer`, one `wa-verifier`. **Spawn each once, keep it alive** — every later round is a `SendMessage` to its `agentId`, never a fresh spawn. An isolated agent costs ~50k tokens of context before reading a line; resuming costs a delta.
 
-Read `.whackagent/config.md` and `.whackagent/tasks/<slug>.md` first.
+Read `.whackagent/config.md` and `{tasks}/<slug>.md` first. `{…}` paths come from the config's `paths:` block — see **wa-board → Paths**.
 
 Arg is a slug **or** a wa-board display index (`/wa-code 3`) — resolve per **wa-board → Task indexes**, echo `3 → sync-offline`.
 
 **Grill gate (soft):** `grilled: false` → warn *"not grilled — quick win, or `/wa-task <slug>` first?"* Proceed if user confirms.
 
-Set task `status: in-progress` (reflect in `BACKLOG.md`).
+Set task `status: in-progress` (reflect in `{backlog}`).
 
 ## 0. Branch — only if `branch.per_task: true`
 
@@ -48,31 +48,37 @@ Then **decompose** into bricks, fix the **file/folder layout up front** per the 
 
 **One implementer for the whole task**, bricks fed one at a time (sequential — builds collide otherwise).
 
-- **Brick 1** — spawn `wa-implementer`, **note the `agentId`**. Pass: task path, the BRIEF, the brick + its target files/folders, conventions dir, test plan, `build.command` / `build.test_command` when config sets them (it never reads config — hand it the commands), `verify` block when `verify.enabled`, `autopilot: false`.
+- **Brick 1** — spawn `wa-implementer`, **note the `agentId`**. Pass: task path, the BRIEF, the brick + its target files/folders, conventions dir, test plan, `build.command` / `build.test_command` when config sets them (it never reads config — hand it the commands), the `verify` block **including `mode`** (it never reads config — say plainly whether it owes a runtime proof), `autopilot: false`.
 - **Bricks 2..n** — `SendMessage` that id with the next brick **alone**. No conventions dir, no BRIEF, no task path: it holds them. It also built brick 1, so it knows what to reuse — DRY stops being a rule it must rediscover.
 
 Receipts:
 - `RESULT: done` → record files + build/test/run proof in `## Implémentation`, continue.
 - `RESULT: blocked` → **stop and ask** the `BLOCKED:` question. Dispatch nothing further until resolved.
 
-The implementer also **drives the app** after a green build when `verify.enabled` — it already holds the build session, so runtime proof costs it almost nothing. Its `CHECKS:` lines land in `## Vérification`.
+**Runtime proof — `verify.mode` decides, and here you're attended:**
+- `always` → the implementer drives the app after a green build; it holds the build session, so the proof costs it almost nothing. Its `CHECKS:` lines land in `## Vérification`.
+- `autopilot` (default) or `off` → **it doesn't.** You're at the keyboard: build + tests are the receipt, and **you** validate by testing the app. Say it in the report — `run: à toi` — so nobody mistakes an unrun app for a passing one. Write that in `## Vérification` too: *"validation manuelle — non exécutée par l'agent"*.
+- Either way the implementer may launch the app **because it needs to** (reproduce a bug, judge a layout) — that lands in its `NOTES:`, not in `CHECKS:`, and doesn't turn into a proof pass.
 
 ## 3. Verify — only when `review.when: each_round`
 
-`review.when: on_validation` (default) → **skip this step entirely.** Echo `review: reporté à la validation` and go to step 4: the fan-out runs once in step 5, over the whole task diff, feedback rounds included. Nothing is lost — no code reaches a commit unreviewed — but a note doesn't cost a review round.
+`review.when: on_validation` (default) → **skip this step entirely.** Echo `review: à /wa-validate` and go to step 4.
 
-All bricks green → spawn **two `wa-verifier` in parallel**, `conventions` and `correctness`. Note both `agentId`s.
+The reason it waits: the feature isn't the feature until the user says it is. Reviewing now reviews code that three feedback rounds are about to move — well-reviewed, still the wrong thing. **`/wa-validate` is the user's feu vert on the spec, and that's what fires the verifier**, once, over the whole diff. Nothing escapes review; it just happens when reviewing is worth something.
 
-**Hand them the change, not the repo.** Each gets: its `category`, its module paths only (`review.categories`), the changed-file list **with the diff hunks inline**, the BRIEF, task path, toggles. They judge the diff — they don't hunt for what moved.
+All bricks green → spawn **one `wa-verifier`**. Note its `agentId`.
+
+**Hand it the change, not the repo.** It gets: the module paths (`review.modules`), the changed-file list **with the diff hunks inline**, the BRIEF, task path, toggles. It judges the diff — it doesn't hunt for what moved.
 
 Then:
-1. **Aggregate** findings into one severity-ordered list, tagged by category; dedupe.
-2. **Autofix** (`review.autofix: true`) → `SendMessage` the implementer the aggregated findings alone, then re-verify. Loop until clean or no progress, **cap 3 rounds**. Not converging → stop, show what's left. `BLOCKED:` → stop and ask.
-3. Record final findings + what autofix changed in `## Review`.
+1. **Read the `LENSES:` line** — `style`, `elegance`, `structure`, `correctness`, all four ✓. One missing means a third of the review didn't happen: send it back for that lens alone before doing anything with the findings.
+2. **Order** the findings by severity (they arrive lens-tagged; keep the tags).
+3. **Autofix** (`review.autofix: true`) → `SendMessage` the implementer the findings alone, then re-verify. Loop until clean or no progress, **cap 3 rounds**. Not converging → stop, show what's left. `BLOCKED:` → stop and ask.
+4. Record final findings + what autofix changed in `## Review`.
 
 **Resuming, rounds 2+** — `SendMessage`, never respawn:
-- **Implementer** → the aggregated findings, nothing else.
-- **Verifiers** → the fix's diff hunks **plus their own previous findings**, asking each to re-state every one as *fixed* or *still open* before hunting new ones.
+- **Implementer** → the findings, nothing else.
+- **Verifier** → the fix's diff hunks **plus its previous findings**, asking it to re-state every one as *fixed* or *still open* before hunting new ones.
 - **Always say it:** *"files changed since your last turn — re-read the ones listed; your memory of their content is stale."*
 - Past the 3-round cap, respawn fresh: a transcript full of build logs outweighs the re-read it saves.
 
@@ -80,26 +86,19 @@ Then:
 
 ## 4. Report
 
-- **Show**: what built, files/folders touched, key decisions, test + run + review results — `review: à la validation` when step 3 was skipped, so the user knows what's still owed.
-- **Save** a caveman-compressed report to `.whackagent/reports/<slug>.md`.
-- Set `status: review`. Invite notes → **`/wa-feedback`**.
-- **Iteration is `/wa-feedback`'s job.** Never patch code from this thread — even a one-liner. `/wa-feedback` is the only place inline fixes are bounded, tagged, built, and flagged to the verifiers (see its *Micro-fix or implementer*); an untracked touch-up here undoes the review you just ran.
-- User validates → `status: done`, reflect in `BACKLOG.md`, run step 5.
+- **Show**: what built, files/folders touched, key decisions, test + run + review results — `review: à /wa-validate` when step 3 was skipped, so the user knows what's still owed.
+- **Save** a caveman-compressed report to `{reports}/<slug>.md`.
+- Set `status: review` — it means *waiting for the user to test it*, nothing more.
+- **Say what to do next, in this order**: test it. Notes → **`/wa-feedback`**. Matches the spec → **`/wa-validate <slug>`**, which fires the verifier and is what eventually closes the task.
+- **Iteration is `/wa-feedback`'s job.** Never patch code from this thread — even a one-liner. `/wa-feedback` is the only place inline fixes are bounded, tagged, built, and flagged to the verifier (see its *Micro-fix or implementer*); an untracked touch-up here undoes the review it's about to get.
+- **Never set `done` yourself, and never commit here.** `review → validated → done` is `/wa-validate`'s ladder; the user's "ok c'est ça" is a spec approval, not a close.
 
-## 5. Validation handoff
+## 5. Closing handoff — called by `/wa-validate`, never run from here
 
-Only on validation, in order. Each sub-step skips silently when its toggle is off.
+`/wa-validate` closes a task (its *Closing*: retested, review clean, `status: done`). It then runs these, in order; each sub-step skips silently when its toggle is off.
 
-0. **Review gate** — if `review.when: on_validation`. **The whole point of deferring: this is not optional and it runs before the commit.**
-   - Say it first: *"validé — je passe la review sur l'ensemble du diff avant de clore."*
-   - **Scope = the full task diff**, not the last round: `branch.base..HEAD` + working tree when `branch.per_task`, else the accumulated files from `## Implémentation` + every `## Feedback` round. Hand the hunks inline, same as step 3.
-   - Fan out the two `wa-verifier` (resume by `agentId` when the ids are still live — send the cumulative hunks and the anti-stale warning; fresh spawn otherwise), then aggregate / autofix / re-verify exactly per step 3, cap 3 rounds.
-   - Autofix touched code **and** `verify.enabled` → the implementer re-drives the app; prior runtime proof died with the edit.
-   - Record in `## Review` under a `validation` round.
-   - **Blocking findings left after the cap → stop. Don't commit, don't switch branch.** Show what's open with your recommendation (fix now / accept and commit / new task) and wait. Validation is the user's call on the feature, not a waiver on broken code.
-   - Clean → continue.
 1. **Commit** — if `commit.auto_commit_after_validation`, using `commit.author_name` / `commit.author_email`. Never as Claude, never merge to base, never push unless asked.
-2. **Next branch** — if `branch.per_task` **and** `commit.auto_commit_after_validation` **and** `branch.checkout_next`: next task = top `todo` in `BACKLOG.md` order. Create/check out its branch, same rules as step 0 (dirty tree → ask). Echo `✅ <slug> committed → branche wa/<next-slug> prête · /wa-code <next-slug>`.
+2. **Next branch** — if `branch.per_task` **and** `commit.auto_commit_after_validation` **and** `branch.checkout_next`: next task = top `todo` in `{backlog}` order. Create/check out its branch, same rules as step 0 (dirty tree → ask). Echo `✅ <slug> committed → branche wa/<next-slug> prête · /wa-code <next-slug>`.
 3. Nothing committed → **don't switch branches**; the work is still uncommitted here. Say so, stop.
 
 ## Asking
@@ -108,8 +107,8 @@ Every question you put to the user — a `BLOCKED:`, an architecture fork, a fai
 
 ## Never
 
-Never write code yourself. Never commit before validation. Never switch branches with a dirty tree. Never let subagents touch backlog/wiki/reports — you own those.
+Never write code yourself. Never commit — closing is `/wa-validate`'s. Never mark a task `done`. Never switch branches with a dirty tree. Never let subagents touch backlog/wiki/reports — you own those. Never write to a literal `.whackagent/` path when config's `paths:` points elsewhere.
 
 ## Next step
 
-Notes → **`/wa-feedback`**. After validation → **`/wa-wiki`**.
+Test it. Notes → **`/wa-feedback`**. Conforme → **`/wa-validate <slug>`** (verifier, then close). Closed → **`/wa-wiki`**.

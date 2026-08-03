@@ -16,14 +16,14 @@ Run the parallel review standalone — audit existing code, a diff, or the whole
 
 ## Conventions
 
-- If `.whackagent/` exists: use `review.categories` + project's `.whackagent/conventions/` (project copies + toggles win).
+- If `.whackagent/config.md` exists: use its `review.modules` + the project's `{conventions}/` — `paths.conventions`, default `.whackagent/conventions/` (project copies + toggles win).
 - If not (review on fresh existing project): detect language + kind, fall back to plugin defaults in `${CLAUDE_PLUGIN_ROOT}/conventions/` — load `swift/` modules (style, elegance, matching architecture-\*, swiftui if SwiftUI, testing) or single `<lang>.md`. Tell user it running on defaults; suggest `/wa-setup` to customize.
 
 ## Do
 
 1. Resolve scope + changed/target files.
-2. **Fan out, parallel** — two **wa-verifier**, one per category: `conventions`, `correctness`. **Note each `agentId`** — that's how later rounds resume them. Pass each its `category`, its module path(s) only, the target files **plus the diff hunks when the scope is a diff**, and the toggles. Each loads only its own modules → focused, forgets nothing.
-3. **Aggregate** into one severity-ordered list, tagged by category; dedupe. Show grouped by category.
+2. **Dispatch one **wa-verifier**.** **Note its `agentId`** — that's how later rounds resume it. Pass the module paths (`review.modules`), the target files **plus the diff hunks when the scope is a diff**, and the toggles.
+3. **Check its `LENSES:` line** — `style`, `elegance`, `structure`, `correctness`, all four ✓; a missing one goes back for that lens alone. Then show findings severity-ordered, grouped by lens tag.
 4. **Fix?**
    - Default → **report only**. Don't mutate existing code unasked.
    - `--fix` → dispatch **wa-implementer** in **fix mode** with aggregated findings + conventions dir (tell it: fix only what findings name, re-read style, add no comments), note its `agentId`, then re-review. Loop until clean or no progress (cap 3 rounds). A `BLOCKED:` → stop and ask.

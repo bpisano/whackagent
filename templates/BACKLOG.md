@@ -13,6 +13,12 @@ Each line links to its task file. `/wa-board` reads this to suggest the next act
 
 ## Review
 
+<!-- coded, waiting for you to test it — /wa-feedback for notes, /wa-validate when it matches the spec -->
+<!-- - [Login Apple](tasks/login-apple.md) -->
+
+## Validated
+
+<!-- spec approved + verifier passed, waiting for your retest — /wa-validate again to close -->
 <!-- - [Login Apple](tasks/login-apple.md) -->
 
 ## Done

@@ -6,16 +6,32 @@ ui_strings_language: en        # user-facing strings
 primary_language: swift        # swift | typescript | generic | ...
 project_kind: app              # app | package | cli | server  (picks the architecture module)
 
-conventions_dir: .whackagent/conventions   # per-category convention modules copied here by /wa-setup
+paths:                         # WHERE whackagent keeps each kind of file. Skills refer to these as
+                               # {backlog} {tasks} {wiki} {reports} {conventions} — never a literal path.
+                               # Relative paths resolve from the repo root; absolute ones are allowed
+                               # (a wiki living in a sibling repo, say).
+                               # Point them at committed, human-browsable folders when the team shares
+                               # them — `docs/wiki` reads on GitHub, `.whackagent/wiki` doesn't.
+                               # Missing key → the default below, so an older config keeps working.
+  backlog: .whackagent/BACKLOG.md
+  tasks: .whackagent/tasks
+  wiki: .whackagent/wiki
+  reports: .whackagent/reports          # run reports — usually keep local, gitignore-able
+  conventions: .whackagent/conventions  # convention modules copied here by /wa-setup
+                               # `.whackagent/config.md` itself is NOT configurable: it's the file that
+                               # carries these paths, so it has to sit at a known spot.
+                               # Moving a path after setup → move the files too; nothing back-fills.
 
 review:
-  when: on_validation          # WHEN the wa-verifier fan-out runs.
-                               #   on_validation — once, when YOU validate the task: the whole diff
-                               #     (code + every feedback round) gets reviewed in one pass. Feedback
-                               #     rounds stay fast — no verify between each note.
-                               #   each_round — after /wa-code and after every /wa-feedback fix.
-                               #     Catches drift earlier, costs a fan-out per round.
-                               # Either way the review happens before any commit: nothing closes unreviewed.
+  when: on_validation          # WHEN the wa-verifier runs.
+                               #   on_validation — once, when you run /wa-validate: your feu vert says the
+                               #     feature matches the spec, and THAT fires the review, over the whole
+                               #     diff (code + every feedback round). Coding and feedback rounds stay
+                               #     fast; nothing gets reviewed while it's still moving.
+                               #   each_round — also after /wa-code and after every /wa-feedback fix.
+                               #     Catches drift earlier, costs a verifier round each time. /wa-validate
+                               #     still runs the final pass.
+                               # Either way no task closes unreviewed — /wa-validate is the only door.
   inline_micro_fixes: true     # /wa-feedback may apply a MICRO-fix itself instead of spawning an
                                # implementer (~50k tokens of context for a one-liner). Bounded: ≤2 files,
                                # ≤~20 lines, no new file/type/folder, no layer or public-API change.
@@ -23,14 +39,17 @@ review:
                                # false → every change goes through the implementer, whatever its size.
   autofix: true                # wa-code's verify phase re-dispatches the implementer until clean
   public_doc: true             # require doc on public API — flip false per company
-  categories:                  # each = ONE parallel wa-verifier; the listed modules are all it loads.
-                               # Two, not one per rule set: an isolated agent costs ~50k tokens of
-                               # context before reading a line, so lenses sharing a rulebook share
-                               # an agent. Splitting further buys focus you already have.
-    conventions: [style.md, elegance.md, swiftui.md, testing.md, architecture-global.md, architecture-app.md]
-                               # how it's written AND where it lives — setup drops swiftui.md if no
-                               # SwiftUI, and swaps architecture-app.md for architecture-package.md
-    correctness: []            # bugs + acceptance criteria — pure reasoning, no module
+  modules: [style.md, elegance.md, swiftui.md, testing.md, architecture-global.md, architecture-app.md]
+                               # what the single wa-verifier loads before judging. Setup drops
+                               # swiftui.md if no SwiftUI, and swaps architecture-app.md for
+                               # architecture-package.md. Paths are relative to {conventions}.
+                               # ONE verifier, not one per lens: an isolated agent costs ~50k tokens
+                               # of context before reading a line, and every lens judges the same diff
+                               # against the same rulebook — splitting paid twice for that and left
+                               # duplicate findings to dedupe. It sweeps style, elegance, structure and
+                               # correctness in one pass and reports which ran.
+                               # Legacy `categories: {conventions: [...], correctness: []}` reads as the
+                               # union of its lists.
 
 build:                         # how THIS project builds — the project wins over the plugin's default
   command: ""                  # e.g. "ign app", "make build", "./scripts/build.sh". Empty → XcodeBuildMCP
@@ -38,7 +57,17 @@ build:                         # how THIS project builds — the project wins ov
   test_command: ""             # e.g. "make test". Empty → the language default (`swift test`, …).
 
 verify:                        # runtime check — the implementer drives the app it just built
-  enabled: false               # set true for app targets with a UI to exercise
+  mode: autopilot              # WHO exercises the app after a green build:
+                               #   autopilot — the agent drives it in /wa-autopilot only (nobody's there
+                               #     to test); attended /wa-code + /wa-feedback stop at build + tests and
+                               #     YOU validate by testing the app yourself. Default for app targets.
+                               #   always — the agent drives it on every run, attended or not.
+                               #   off — the agent never drives it; build + tests are the whole proof.
+                               # Under `autopilot` and `off` the implementer may STILL launch the app when
+                               # it can't write the feature without seeing it run (reproduce a bug, judge a
+                               # layout, follow a nav flow). That's implementation, not proof: it drives the
+                               # minimum it needs and says so in NOTES.
+                               # Legacy `enabled: true` / `false` reads as `always` / `off`.
   platform: ios                # ios | android | both  (ios drives via XcodeBuildMCP, else mobile-mcp)
   target: simulator            # simulator | emulator | device
 

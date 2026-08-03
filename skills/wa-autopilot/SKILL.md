@@ -42,18 +42,20 @@ Each task gets its own checkout, so parallel implementers never see each other's
    git worktree add ../.wa-worktrees/<slug> -b <branch.prefix><slug> <branch.base>
    ```
 2. **Spawn one `wa-implementer` per task in the wave, in a single message** so they actually run concurrently. Each gets the standard `/wa-code` step 2 payload **plus its worktree path**, and the instruction: *work only under `<worktree>`, absolute paths, never touch the main checkout or another worktree.*
-3. **Verify each task** per `/wa-code` step 3 — two `wa-verifier`, diff hunks from that worktree only. Verifiers are read-only, so they parallelize freely across tasks. **`review.when` doesn't apply here**: nobody validates, there are no feedback rounds, so the close of the task *is* the validation point — every task gets its one fan-out before its commit, whatever the setting says.
-4. **Keep every agent alive** — `agentId` per role **per task**. Autopilot is where this pays most: a batch of 5 tasks × 3 rounds is 45 spawns if you forget, 15 if you don't.
+3. **No verifier here** — `review.when: on_validation` holds, and unattended is exactly where it holds hardest: the user's review is **async**, so a task that gets reworked tomorrow morning would have been reviewed tonight for nothing. Autopilot delivers *code*, built and run; the verifier runs later, when the user runs **`/wa-validate <slug>`** on the branch. `review.when: each_round` → then yes, one per task per `/wa-code` step 3 (diff hunks from that worktree only; verifiers are read-only, so they parallelize freely across tasks).
+4. **Keep every agent alive** — `agentId` per role **per task**. Autopilot is where this pays most: a batch of 5 tasks × 3 rounds is 15 spawns if you forget, 5 if you don't.
+
+**The runtime check is on by default here** — `verify.mode: autopilot` (the default) means the implementer drives the app it just built. Nobody is at the keyboard to catch a green build that doesn't work, so unattended is exactly where that proof is worth its cost. Only `verify.mode: off` skips it; `always` behaves the same as here. Non-runnable project (no app target, no device, no MCP server) → build + tests are the proof, say so in the report rather than claiming a check nobody ran.
 
 **One device, one queue.** Builds run fine in parallel (separate worktrees, separate build dirs), but the **runtime check does not** — there's a single simulator. Serialize it: implementers in a wave build concurrently, then drive the app one at a time. Tell each implementer to hold its runtime check until you say go, or accept that a wave's runtime checks are sequential tail work.
 
 ## 3. Close each task
 
-1. **Commit in its worktree**, on its branch, with the configured author name/email. **Never as Claude. Never merge to base. Never touch another branch.**
-2. Update the task's status + notes. **Don't** sync wiki/graph unattended — that's `/wa-wiki` after you validate.
+1. **Commit in its worktree**, on its branch, with the configured author name/email. **Never as Claude. Never merge to base. Never touch another branch.** The commit is the delivery, not a close: the code is unreviewed by the verifier and unseen by the user, sitting on a branch nobody merged.
+2. **`status: review`** + notes — never `done`, never `validated`. A task leaves autopilot waiting for the user to test it, exactly like one from `/wa-code`. **Don't** sync wiki/graph unattended — that's `/wa-wiki` after it closes.
 3. **Remove the worktree** (`git worktree remove ../.wa-worktrees/<slug>`) — the branch survives, that's what you review later. A blocked task keeps its worktree; say so in the report.
 
-Skip the report-and-iterate phase entirely — nobody's there to iterate with. Save the report to `.whackagent/reports/<slug>.md`.
+Skip the report-and-iterate phase entirely — nobody's there to iterate with. Save the report to `{reports}/<slug>.md` (`{…}` from the config's `paths:` block, see **wa-board → Paths**) — **in the main checkout, never inside a worktree**: the worktree gets removed and the report with it.
 
 ## Blockers — skip and log, never ask, never guess
 
@@ -66,20 +68,20 @@ A blocker in one task **does not** stall its wave — the others keep going.
 
 ## Final report
 
-Print and save `.whackagent/reports/autopilot-<date>.md`:
+Print and save `{reports}/autopilot-<date>.md`:
 
 ```
 # Autopilot run
 
-## Delivered
-- <slug> — branch wa/<slug> — <commits> — review: clean · run: pass
+## Delivered — à tester, review en attente
+- <slug> — branch wa/<slug> — <commits> — build: green · run: pass · review: /wa-validate
 
 ## Blocked
 - <slug> — <the open question> — needs your input
 ```
 
-Obvious at a glance: what's ready to merge, what needs you.
+Obvious at a glance: what's ready to look at, what needs you. Never write "review: clean" for a task the verifier never saw.
 
 ## Next step
 
-Review the delivered branches. Notes on one → **`/wa-feedback <slug> <notes>`** (checks it out, applies them through the same reviewed pipeline). Then **`/wa-wiki`** per validated feature.
+Test the delivered branches. Notes on one → **`/wa-feedback <slug> <notes>`** (checks it out, applies them through the same pipeline). Conforme → **`/wa-validate <slug>`**, which runs the verifier on the whole branch and closes it after your retest. Then **`/wa-wiki`**.
