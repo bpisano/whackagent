@@ -1,32 +1,32 @@
 ---
 name: wa-autopilot
-description: Auto mode — runs a batch of tasks unattended, in parallel when they don't collide.
+description: Auto mode — runs batch of tasks unattended, in parallel when they don't collide.
 ---
 
 # /wa-autopilot
 
-`/wa-code` unattended, over a batch. Same PM role, same pipeline, one addition: **independent tasks run in parallel, each in its own git worktree.** Give it a batch, walk away, read the report.
+`/wa-code` unattended, over batch. Same PM role, same pipeline, one addition: **independent tasks run parallel, each in own git worktree.** Give batch, walk away, read report.
 
 ## Scope
 
-Given tasks, or every `todo` task if none (confirm the list first if the user is present). Best on small, well-scoped tasks — say so if one looks large or is `grilled: false`.
+Given tasks, or every `todo` task if none (confirm list first if user present). Best on small, well-scoped tasks — say so if one look large or `grilled: false`.
 
-**Args take slugs or display indexes**, mixed, any order: `/wa-autopilot login-apple`, `/wa-autopilot 2,4,5`, `/wa-autopilot 2-5`, `/wa-autopilot 3 sync-offline`. Indexes are the `#` from the wa-board table — resolve per **wa-board → Task indexes**. Always **echo the resolved list** (`2 → login-apple`). Bad index → stop, say which, don't guess.
+**Args take slugs or display indexes**, mixed, any order: `/wa-autopilot login-apple`, `/wa-autopilot 2,4,5`, `/wa-autopilot 2-5`, `/wa-autopilot 3 sync-offline`. Indexes = `#` from wa-board table — resolve per **wa-board → Task indexes**. Always **echo resolved list** (`2 → login-apple`). Bad index → stop, say which, no guess.
 
 ## 1. Plan the batch — what can run at once
 
-Do `/wa-code` step 1 (**Plan**) for **every** task in the batch, up front, in the main thread. You now hold one BRIEF per task — which is exactly what tells you whether two tasks can share the clock.
+Do `/wa-code` step 1 (**Plan**) for **every** task in batch, up front, in main thread. Now hold one BRIEF per task — that what tells you if two tasks can share clock.
 
-**Two tasks are independent when all of these hold:**
-- their `FILES` + `LAYOUT` sets don't intersect — no shared file, no shared target folder;
-- neither's `REUSE` names something the other creates;
-- they sit in different features/modules (`BOUNDARIES` don't overlap).
+**Two tasks independent when all hold:**
+- `FILES` + `LAYOUT` sets don't intersect — no shared file, no shared target folder;
+- neither's `REUSE` names something other creates;
+- different features/modules (`BOUNDARIES` don't overlap).
 
-Any doubt → **sequential**. A merge conflict at 3am costs more than the wall-clock you saved.
+Any doubt → **sequential**. Merge conflict at 3am cost more than wall-clock saved.
 
-Group the batch into **waves**: everything in a wave runs in parallel, waves run one after another. **Cap a wave at 3** — beyond that, builds queue on the machine anyway and the report gets unreadable.
+Group batch into **waves**: everything in wave runs parallel, waves run one after another. **Cap wave at 3** — beyond that, builds queue on machine anyway and report get unreadable.
 
-Echo the plan before starting:
+Echo plan before start:
 
 ```
 vague 1 (∥) : login-apple · export-csv
@@ -35,9 +35,9 @@ vague 2      : sync-offline   (touche AuthStore, comme login-apple)
 
 ## 2. Run a wave — one worktree per task
 
-Each task gets its own checkout, so parallel implementers never see each other's edits.
+Each task get own checkout, so parallel implementers never see each other's edits.
 
-1. **Create the worktree**, from `branch.base`, always branching whatever `branch.per_task` says:
+1. **Create worktree**, from `branch.base`, always branching whatever `branch.per_task` says:
    ```
    git worktree add ../.wa-worktrees/<slug> -b <branch.prefix><slug> <branch.base>
    ```

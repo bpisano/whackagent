@@ -7,13 +7,13 @@ description: Interactively bootstrap the whackagent workflow in a project — or
 
 Set up orchestrated dev flow for project. Short interactive setup, then scaffold, then index.
 
-Runs on a fresh project **and** on one already set up. Second time it's a **reconfigure**, not a re-install: current values become the defaults, and nothing you edited gets overwritten.
+Runs on fresh project **and** on one already set up. Second time = **reconfigure**, not re-install: current values become defaults, nothing you edited get overwritten.
 
 ## 0. Which mode
 
-`.whackagent/config.md` exists → **reconfigure** (jump to *Reconfigure mode*). Absent → **first setup**, steps 1–4 below.
+`.whackagent/config.md` exists → **reconfigure** (jump to *Reconfigure mode*). Absent → **first setup**, steps 1–4.
 
-Optional arg narrows the scope: `/wa-setup paths`, `/wa-setup review`, `/wa-setup build`, `/wa-setup branch`, `/wa-setup commit`, `/wa-setup verify`, `/wa-setup languages`. Reconfigure only — on a fresh project the arg is meaningless, say so and run the full setup.
+Optional arg narrow scope: `/wa-setup paths`, `/wa-setup review`, `/wa-setup build`, `/wa-setup branch`, `/wa-setup commit`, `/wa-setup verify`, `/wa-setup languages`. Reconfigure only — on fresh project arg meaningless, say so and run full setup.
 
 ## 1. Interactive config (ask one at a time, propose a default)
 
@@ -21,38 +21,38 @@ Detect first, ask second. Scan repo to guess:
 - **primary language** — `Package.swift`/`*.xcodeproj` → swift; `tsconfig.json`/`package.json` → typescript; else generic.
 - **project kind** (Swift) — `*.xcodeproj`/`*.xcworkspace` with app target, or `@main App`/UIKit lifecycle → `app`; `Package.swift` library/executable → `package`; CLI/server as applicable.
 - **SwiftUI usage** — any `import SwiftUI` in source.
-- **Its own build wrapper** — a repo-local CLI (`cli/`, `bin/`, `scripts/`), a `Makefile` with a build target, or — the strongest signal — the project's own `CLAUDE.md`/README saying *"ALWAYS use X to build"*. Read that instruction if it exists: a project that mandates a wrapper mandates it for the implementer too.
+- **Its own build wrapper** — repo-local CLI (`cli/`, `bin/`, `scripts/`), `Makefile` with build target, or strongest signal — project's own `CLAUDE.md`/README saying *"ALWAYS use X to build"*. Read that instruction if exists: project that mandates wrapper mandates it for implementer too.
 
 Then confirm with user:
 
 1. **Discussion language** — which language to talk in? (default: detect from user; fr/en)
 2. **Primary language + project kind** — confirm detected language and kind (app / package / cli / server). Kind picks architecture module.
-3. **When to review** — _"Review the code at every step (after coding, and after each feedback round), or once when you run `/wa-validate` — your green light saying the feature matches the spec? (recommended: at `/wa-validate` — you iterate fast, and the review reads the final diff instead of code that's still moving)"_ → sets `review.when` (`each_round` | `on_validation`). Say the trade plainly: `each_round` catches drift earlier but adds a verifier round to every note; `on_validation` reviews the whole diff in one pass. Either way `/wa-validate` is the only thing that closes a task.
-4. **Review toggles** — surface the public-doc one explicitly, it varies by company: _"Require `///` documentation on every public API? (some teams skip this)"_ → sets `review.public_doc`. Offer to flip the other toggles too.
-5. **Build command** — only ask when detection found a wrapper: _"I see `<X>` — should the implementer build with it, or use XcodeBuildMCP / the language default?"_ → sets `build.command` (+ `build.test_command` if there's a test target). Nothing detected → leave both empty, don't ask. **The project wins over the plugin's default**: a repo that documents its own build path documents it for the agents too, and an implementer torn between two mandates picks one silently.
+3. **When to review** — _"Review the code at every step (after coding, and after each feedback round), or once when you run `/wa-validate` — your green light saying the feature matches the spec? (recommended: at `/wa-validate` — you iterate fast, and the review reads the final diff instead of code that's still moving)"_ → sets `review.when` (`each_round` | `on_validation`). Say trade plainly: `each_round` catch drift earlier but add verifier round to every note; `on_validation` review whole diff one pass. Either way `/wa-validate` only thing that close task.
+4. **Review toggles** — surface public-doc one explicitly, vary by company: _"Require `///` documentation on every public API? (some teams skip this)"_ → sets `review.public_doc`. Offer flip other toggles too.
+5. **Build command** — ask only when detection found wrapper: _"I see `<X>` — should the implementer build with it, or use XcodeBuildMCP / the language default?"_ → sets `build.command` (+ `build.test_command` if test target exists). Nothing detected → leave both empty, don't ask. **Project win over plugin default**: repo that documents own build path documents it for agents too, and implementer torn between two mandates pick one silently.
 6. **Commit policy** — _"Once YOU validate a feature, may I commit it myself, or always wait for you to commit?"_ → sets `auto_commit_after_validation`. Remind: commits always use your name, never Claude's. Outside autopilot, nothing committed before you validate.
-7. **Branch policy** — _"Should `/wa-code` work on its own branch per task (`wa/<slug>`), or code straight on the current branch?"_ → sets `branch.per_task`. If yes, confirm `branch.prefix` and `branch.base` (`current`, or a fixed base like `main`). Mention the pairing: with per-task branches **and** auto-commit on, validating a task commits it and checks out the next task's branch for you (`branch.checkout_next`, on by default) — offer to turn that off. `/wa-autopilot` branches per task regardless.
-8. **Where things live** — _"Keep the backlog, tasks and wiki inside `.whackagent/`, or put some of them somewhere the team already reads — `docs/wiki/`, say? (recommended: `.whackagent/` — one folder, nothing to wire up; move them if teammates who don't run whackagent need to read them)"_ → sets `paths.*`. Ask **once, as one question**; only split into per-path answers if they say "some of them". Two things to say when they move something:
-   - a shared wiki or backlog wants a **committed, browsable** folder (`docs/`) — `.whackagent/` reads fine for the agents and badly for a human on GitHub;
-   - `paths.reports` is run output, not knowledge — leave it local (and gitignore-able) unless they ask.
-   Absolute paths work too (a wiki in a sibling repo). `.whackagent/config.md` itself never moves — it's what carries the paths.
+7. **Branch policy** — _"Should `/wa-code` work on its own branch per task (`wa/<slug>`), or code straight on the current branch?"_ → sets `branch.per_task`. If yes, confirm `branch.prefix` and `branch.base` (`current`, or fixed base like `main`). Mention pairing: with per-task branches **and** auto-commit on, validating task commits it and checks out next task's branch for you (`branch.checkout_next`, on by default) — offer turn off. `/wa-autopilot` branch per task regardless.
+8. **Where things live** — _"Keep the backlog, tasks and wiki inside `.whackagent/`, or put some of them somewhere the team already reads — `docs/wiki/`, say? (recommended: `.whackagent/` — one folder, nothing to wire up; move them if teammates who don't run whackagent need to read them)"_ → sets `paths.*`. Ask **once, as one question**; split into per-path answers only if they say "some of them". Two things to say when they move something:
+   - shared wiki or backlog want **committed, browsable** folder (`docs/`) — `.whackagent/` read fine for agents, bad for human on GitHub;
+   - `paths.reports` = run output, not knowledge — leave local (and gitignore-able) unless asked.
+   Absolute paths work too (wiki in sibling repo). `.whackagent/config.md` itself never move — it carry the paths.
 
-Keep short — 7 to 8 questions (the build one only fires on a detected wrapper). Rest take template default.
+Keep short — 7 to 8 questions (build one fire only on detected wrapper). Rest take template default.
 
-**Only if project kind is `app`:** ask **who tests the app** after a green build — _"In autopilot the agent drives the app itself (taps + screenshots) since nobody's watching. When you're at the keyboard, should it do the same, or stop at build + tests and let you test? (recommended: you test — you'll open the app anyway, and driving it costs a few minutes per round)"_ → sets `verify.mode` (`autopilot` | `always` | `off`) + `verify.platform`/`verify.target`. Name the third option only if they push back on autopilot driving at all: `off` means nobody drives it, ever. iOS drives through **XcodeBuildMCP** (same server it builds with, nothing extra to install); Android or a physical device needs the **mobile-mcp** server (`mobile-next/mobile-mcp`) configured — say so.
+**Only if project kind is `app`:** ask **who tests the app** after green build — _"In autopilot the agent drives the app itself (taps + screenshots) since nobody's watching. When you're at the keyboard, should it do the same, or stop at build + tests and let you test? (recommended: you test — you'll open the app anyway, and driving it costs a few minutes per round)"_ → sets `verify.mode` (`autopilot` | `always` | `off`) + `verify.platform`/`verify.target`. Name third option only if they push back on autopilot driving at all: `off` = nobody drives it, ever. iOS drive through **XcodeBuildMCP** (same server it builds with, nothing extra to install); Android or physical device need **mobile-mcp** server (`mobile-next/mobile-mcp`) configured — say so.
 
 ## 2. Scaffold
 
 Create directory and files (do not overwrite existing without asking).
 
-**Everything below lands at its `paths.*` value, not at the literal path written here** — `{tasks}`, `{wiki}`, `{backlog}`, `{reports}`, `{conventions}` are whatever step 1 question 8 settled on. Create parent folders as needed; a path outside `.whackagent/` is normal, not a mistake. `config.md` is the one exception: always `.whackagent/config.md`.
+**Everything below land at its `paths.*` value, not at literal path written here** — `{tasks}`, `{wiki}`, `{backlog}`, `{reports}`, `{conventions}` = whatever step 1 question 8 settled on. Create parent folders as needed; path outside `.whackagent/` normal, not mistake. `config.md` one exception: always `.whackagent/config.md`.
 
-- `.whackagent/config.md` — copy `${CLAUDE_PLUGIN_ROOT}/templates/config.md`, fill answers above (including the `paths:` block), set `review.modules` to the modules you actually copy (next bullet).
+- `.whackagent/config.md` — copy `${CLAUDE_PLUGIN_ROOT}/templates/config.md`, fill answers above (including `paths:` block), set `review.modules` to modules you actually copy (next bullet).
 - `{conventions}/` — copy **only relevant** convention modules there:
   - **Swift** (`${CLAUDE_PLUGIN_ROOT}/conventions/swift/`): always `style.md`, `elegance.md`, `testing.md`, and `architecture-global.md` (platform-agnostic YAGNI/SOLID/DRY/DI — every Swift project). Kind module: `architecture-app.md` if kind is `app`, else `architecture-package.md`. Add `swiftui.md` **only if SwiftUI used** (skip for package/CLI with no SwiftUI — whole point).
   - **TypeScript / generic**: copy single `${CLAUDE_PLUGIN_ROOT}/conventions/<lang>.md` and set `review.modules` to it alone.
-  - Set `review.modules` in config to exactly what you copied — the verifier reads that list and nothing else, so a module you copied but left out of the list is a rulebook nobody opens.
-- **Xcode projects only** (repo has `.xcodeproj`/`.xcworkspace`): create `.xcodebuildmcp/config.yaml` at repo root (not in `.whackagent/`) so XcodeBuildMCP builds incrementally instead of full-rebuilding every time. Content:
+  - Set `review.modules` in config to exactly what you copied — verifier read that list and nothing else, so module copied but left out of list = rulebook nobody opens.
+- **Xcode projects only** (repo has `.xcodeproj`/`.xcworkspace`): create `.xcodebuildmcp/config.yaml` at repo root (not in `.whackagent/`) so XcodeBuildMCP build incrementally instead of full-rebuild every time. Content:
   ```yaml
   schemaVersion: 1
   incrementalBuildsEnabled: true

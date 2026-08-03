@@ -1,91 +1,91 @@
 ---
 # whackagent config — written by /wa-setup, edit freely.
-discussion_language: fr        # language Claude talks to you in
+discussion_language: fr        # language Claude talk to you in
 code_language: en              # identifiers, comments, log messages, commits
 ui_strings_language: en        # user-facing strings
 primary_language: swift        # swift | typescript | generic | ...
-project_kind: app              # app | package | cli | server  (picks the architecture module)
+project_kind: app              # app | package | cli | server  (pick architecture module)
 
-paths:                         # WHERE whackagent keeps each kind of file. Skills refer to these as
-                               # {backlog} {tasks} {wiki} {reports} {conventions} — never a literal path.
-                               # Relative paths resolve from the repo root; absolute ones are allowed
-                               # (a wiki living in a sibling repo, say).
-                               # Point them at committed, human-browsable folders when the team shares
-                               # them — `docs/wiki` reads on GitHub, `.whackagent/wiki` doesn't.
-                               # Missing key → the default below, so an older config keeps working.
+paths:                         # WHERE whackagent keep each kind of file. Skills refer as
+                               # {backlog} {tasks} {wiki} {reports} {conventions} — never literal path.
+                               # Relative path resolve from repo root; absolute allowed
+                               # (wiki in sibling repo, say).
+                               # Point at committed, human-browsable folder when team share
+                               # them — `docs/wiki` read on GitHub, `.whackagent/wiki` no.
+                               # Missing key → default below, so old config still work.
   backlog: .whackagent/BACKLOG.md
   tasks: .whackagent/tasks
   wiki: .whackagent/wiki
   reports: .whackagent/reports          # run reports — usually keep local, gitignore-able
   conventions: .whackagent/conventions  # convention modules copied here by /wa-setup
-                               # `.whackagent/config.md` itself is NOT configurable: it's the file that
-                               # carries these paths, so it has to sit at a known spot.
-                               # Moving a path after setup → move the files too; nothing back-fills.
+                               # `.whackagent/config.md` itself NOT configurable: it carry these
+                               # paths, so must sit at known spot.
+                               # Move path after setup → move files too; nothing back-fill.
 
 review:
-  when: on_validation          # WHEN the wa-verifier runs.
-                               #   on_validation — once, when you run /wa-validate: your feu vert says the
-                               #     feature matches the spec, and THAT fires the review, over the whole
-                               #     diff (code + every feedback round). Coding and feedback rounds stay
-                               #     fast; nothing gets reviewed while it's still moving.
+  when: on_validation          # WHEN wa-verifier run.
+                               #   on_validation — once, when you run /wa-validate: your feu vert say
+                               #     feature match spec, and THAT fire review, over whole
+                               #     diff (code + every feedback round). Coding and feedback round stay
+                               #     fast; nothing reviewed while still moving.
                                #   each_round — also after /wa-code and after every /wa-feedback fix.
-                               #     Catches drift earlier, costs a verifier round each time. /wa-validate
-                               #     still runs the final pass.
-                               # Either way no task closes unreviewed — /wa-validate is the only door.
-  inline_micro_fixes: true     # /wa-feedback may apply a MICRO-fix itself instead of spawning an
-                               # implementer (~50k tokens of context for a one-liner). Bounded: ≤2 files,
+                               #     Catch drift earlier, cost verifier round each time. /wa-validate
+                               #     still run final pass.
+                               # Either way no task close unreviewed — /wa-validate only door.
+  inline_micro_fixes: true     # /wa-feedback may apply MICRO-fix itself instead of spawn
+                               # implementer (~50k tokens context for one-liner). Bounded: ≤2 files,
                                # ≤~20 lines, no new file/type/folder, no layer or public-API change.
-                               # Anything bigger, or any doubt, still goes to wa-implementer.
-                               # false → every change goes through the implementer, whatever its size.
-  autofix: true                # wa-code's verify phase re-dispatches the implementer until clean
+                               # Anything bigger, or any doubt, still go to wa-implementer.
+                               # false → every change go through implementer, whatever size.
+  autofix: true                # wa-code verify phase re-dispatch implementer until clean
   public_doc: true             # require doc on public API — flip false per company
   modules: [style.md, elegance.md, swiftui.md, testing.md, architecture-global.md, architecture-app.md]
-                               # what the single wa-verifier loads before judging. Setup drops
-                               # swiftui.md if no SwiftUI, and swaps architecture-app.md for
-                               # architecture-package.md. Paths are relative to {conventions}.
-                               # ONE verifier, not one per lens: an isolated agent costs ~50k tokens
-                               # of context before reading a line, and every lens judges the same diff
-                               # against the same rulebook — splitting paid twice for that and left
-                               # duplicate findings to dedupe. It sweeps style, elegance, structure and
-                               # correctness in one pass and reports which ran.
-                               # Legacy `categories: {conventions: [...], correctness: []}` reads as the
+                               # what single wa-verifier load before judging. Setup drop
+                               # swiftui.md if no SwiftUI, and swap architecture-app.md for
+                               # architecture-package.md. Paths relative to {conventions}.
+                               # ONE verifier, not one per lens: isolated agent cost ~50k tokens
+                               # context before reading a line, and every lens judge same diff
+                               # against same rulebook — splitting paid twice for that and left
+                               # duplicate findings to dedupe. It sweep style, elegance, structure and
+                               # correctness in one pass and report which ran.
+                               # Legacy `categories: {conventions: [...], correctness: []}` read as
                                # union of its lists.
 
-build:                         # how THIS project builds — the project wins over the plugin's default
+build:                         # how THIS project build — project win over plugin default
   command: ""                  # e.g. "ign app", "make build", "./scripts/build.sh". Empty → XcodeBuildMCP
-                               # for Apple targets, `swift build` for SwiftPM, the project's runner otherwise.
-  test_command: ""             # e.g. "make test". Empty → the language default (`swift test`, …).
+                               # for Apple targets, `swift build` for SwiftPM, project runner otherwise.
+  test_command: ""             # e.g. "make test". Empty → language default (`swift test`, …).
 
-verify:                        # runtime check — the implementer drives the app it just built
-  mode: autopilot              # WHO exercises the app after a green build:
-                               #   autopilot — the agent drives it in /wa-autopilot only (nobody's there
+verify:                        # runtime check — implementer drive app it just built
+  mode: autopilot              # WHO exercise app after green build:
+                               #   autopilot — agent drive it in /wa-autopilot only (nobody there
                                #     to test); attended /wa-code + /wa-feedback stop at build + tests and
-                               #     YOU validate by testing the app yourself. Default for app targets.
-                               #   always — the agent drives it on every run, attended or not.
-                               #   off — the agent never drives it; build + tests are the whole proof.
-                               # Under `autopilot` and `off` the implementer may STILL launch the app when
-                               # it can't write the feature without seeing it run (reproduce a bug, judge a
-                               # layout, follow a nav flow). That's implementation, not proof: it drives the
-                               # minimum it needs and says so in NOTES.
-                               # Legacy `enabled: true` / `false` reads as `always` / `off`.
-  platform: ios                # ios | android | both  (ios drives via XcodeBuildMCP, else mobile-mcp)
+                               #     YOU validate by testing app yourself. Default for app targets.
+                               #   always — agent drive it every run, attended or not.
+                               #   off — agent never drive it; build + tests whole proof.
+                               # Under `autopilot` and `off` implementer may STILL launch app when
+                               # it can't write feature without seeing it run (reproduce bug, judge
+                               # layout, follow nav flow). That implementation, not proof: it drive
+                               # minimum it need and say so in NOTES.
+                               # Legacy `enabled: true` / `false` read as `always` / `off`.
+  platform: ios                # ios | android | both  (ios drive via XcodeBuildMCP, else mobile-mcp)
   target: simulator            # simulator | emulator | device
 
 commit:
-  auto_commit_after_validation: false   # may Claude commit once YOU validate a feature?
+  auto_commit_after_validation: false   # may Claude commit once YOU validate feature?
   author_name: "Benjamin Pisano"        # commits ALWAYS use this — never "Claude"
   author_email: "benjamin.pisano@icloud.com"
 
 branch:
-  per_task: false              # /wa-code works on its own branch per task instead of current one
+  per_task: false              # /wa-code work on own branch per task instead of current one
   prefix: "wa/"                # branch name: <prefix><slug> → wa/login-apple
   base: current                # fork point: current | main | <branch name>
-  checkout_next: true          # after validation + commit, hop onto next task's branch
+  checkout_next: true          # after validation + commit, hop onto next task branch
                                # (only when per_task AND commit.auto_commit_after_validation)
 
 autopilot:
-  on_blocker: skip-and-log     # never invent; freeze the task, move on
-                               # autopilot ALWAYS branches per task, whatever branch.per_task says
+  on_blocker: skip-and-log     # never invent; freeze task, move on
+                               # autopilot ALWAYS branch per task, whatever branch.per_task say
 
 yagni: strict
 compress_wiki: true            # caveman-compress config + wiki pages to save re-read tokens
@@ -94,19 +94,18 @@ compress_wiki: true            # caveman-compress config + wiki pages to save re
 
 # Project config
 
-Free-form notes about this project that every skill should keep in mind.
-Edit the frontmatter above to change behavior.
+Free-form notes about this project every skill should keep in mind.
+Edit frontmatter above to change behavior.
 
 ## Core rule — stop and ask
 
-Outside autopilot, the moment anything is unclear, ambiguous, or blocked beyond
-what the task spec covers: **stop and ask**. Never guess on scope.
+Outside autopilot, moment anything unclear, ambiguous, or blocked beyond
+what task spec cover: **stop and ask**. Never guess on scope.
 
-**Every question comes with a recommended answer** — always, no exception. One
-line for the pick, one line for why, plus the alternative when there's a real
-one. No basis to choose? Recommend the most reversible option and say it's a
-guess. A bare question with no proposal is never acceptable: answering must be
-a confirm-or-correct, not homework.
+**Every question come with recommended answer** — always, no exception. One
+line for pick, one line for why, plus alternative when real one exist. No basis
+to choose? Recommend most reversible option and say it guess. Bare question with
+no proposal never acceptable: answering must be confirm-or-correct, not homework.
 
-Inside autopilot: never ask (nobody is watching) — freeze the task with the open
-question logged, and move to the next one.
+Inside autopilot: never ask (nobody watching) — freeze task with open
+question logged, move to next one.

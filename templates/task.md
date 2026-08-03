@@ -1,11 +1,11 @@
 ---
-title:                  # SHORT, explicit — the feature in one glance ("Login Apple", not "Auth work")
-summary:                # one short sentence: what this task is about, for the backlog table
-size: medium            # quickwin | medium | large  → 🟢 | 🟡 | 🔴 in the backlog table
+title:                  # SHORT, explicit — feature in one glance ("Login Apple", not "Auth work")
+summary:                # one short sentence: what task about, for backlog table
+size: medium            # quickwin | medium | large  → 🟢 | 🟡 | 🔴 in backlog table
 status: todo            # todo | in-progress | review | validated | done | canceled
-                        #   review    = coded, waiting for YOU to test it
-                        #   validated = you said it matches the spec, verifier ran, waiting your retest
-                        #   done       = retested and closed by /wa-validate
+                        #   review    = coded, wait YOU test it
+                        #   validated = you say match spec, verifier ran, wait your retest
+                        #   done       = retested + closed by /wa-validate
 grilled: false          # set true once clarified via /wa-task (grill-me)
 wiki:                   # [[page]] refs, comma-separated
 note:                   # free-form trigger / context (optional, not auto-evaluated)
@@ -18,8 +18,8 @@ created:                # YYYY-MM-DD
 
 ## Critères d'acceptation
 
-<!-- Filled by /wa-task. Observable checks that mean "done" — each one a thing you can see
-     on screen or a state an input must produce. wa-verifier drives these on device. -->
+<!-- Filled by /wa-task. Observable checks meaning "done" — each one thing you see
+     on screen or state input must produce. wa-verifier drives these on device. -->
 
 ## Implémentation
 
@@ -39,5 +39,4 @@ created:                # YYYY-MM-DD
 
 <!-- Filled by /wa-feedback, one block per round: what you asked (your words), triage
      (defect / adjustment / new scope / rule), what changed, review + verify verdicts,
-     any rule promoted into a convention module. Rounds append, never overwrite. -->
-
+     any rule promoted into convention module. Rounds append, never overwrite. -->

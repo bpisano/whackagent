@@ -1,6 +1,6 @@
 # Swift — Architecture (package / non-app)
 
-> whackagent convention module · verifier: **conventions**. SwiftPM library / CLI / server: module + file-tree rules. Pairs with `architecture-global.md` (platform-agnostic principles). Freer than an app — not free-for-all.
+> whackagent convention module · verifier: **conventions**. SwiftPM library / CLI / server: module + file-tree rules. Pair with `architecture-global.md` (platform-agnostic principles). Freer than app — not free-for-all.
 
 No Coordinator-Store mandate here (app-only). Surviving discipline:
 
@@ -38,10 +38,10 @@ Tests/<Target>Tests/              # mirrors Sources/<Target>/
 > Platform-agnostic checks (YAGNI/SOLID/DRY, composition, protocol-driven, enum-vs-struct, testability) live in `architecture-global.md`. Below = package-specific only.
 
 - No flat dump of files at target root.
-- Grouping by domain, not file type.
+- Group by domain, not file type.
 - Folder nesting reflect size of each area; large areas get sub-folders.
 - Target/module boundaries coherent; dependency direction clean.
 - `public` intentional and minimal; internals `internal`.
 - Tests mirror source structure.
 
-> **Project override.** This default for non-app Swift. If repo has own structural rules, edit this file in the project's conventions dir (`paths.conventions`, default `.whackagent/conventions/`) to match — reviewer reads project copy.
+> **Project override.** This default for non-app Swift. If repo has own structural rules, edit this file in project's conventions dir (`paths.conventions`, default `.whackagent/conventions/`) to match — reviewer read project copy.
