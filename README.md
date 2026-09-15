@@ -23,12 +23,14 @@ Add the marketplace, then install the plugin:
 | --- | --- |
 | `/wa-setup` | Config + scaffolding (`.whackagent/`) |
 | `/wa-board` | Dashboard: backlog table, suggests the next action |
+| `/wa-board <sprint>` | Same, filtered to one sprint, with its progress |
 | `/wa-task <desc\|task>` | Creates a task + spec, grills it (grill-me, includes architecture), then re-prioritizes the backlog |
 | `/wa-task` | No argument: prioritization pass only — reorders, YAGNI, can split |
 | `/wa-code <task>` | Full pipeline: understand → code + test → review → verify → report |
 | `/wa-feedback [task] <notes>` | Applies your notes on what was built — micro-fix inline, bigger changes through the isolated pipeline |
-| `/wa-validate [task]` | Your feu vert: "this is the feature I asked for" → runs the verifier on the whole diff. Run it again after retesting to close the task |
-| `/wa-autopilot [tasks]` | Applies wa-code on 1..n tasks autonomously, one branch per task, independent ones in parallel |
+| `/wa-validate [task]` | Your feu vert: "this is the feature I asked for" → runs the verifier on the whole diff. Doesn't close, doesn't touch git |
+| `/wa-close [task]` | Ends the task: commit, land the branch (sprint merge, PR, or nothing — `close.strategy`), delete branch + worktree, `done` |
+| `/wa-autopilot [tasks\|sprint]` | Applies wa-code on 1..n tasks autonomously, one branch per task, independent ones in parallel |
 | `/wa-review [scope]` | Standalone review, 4 lenses (diff / path / project) — audit, optional `--fix` |
 | `/wa-wiki` | Updates the wiki |
 | `/wa-wiki <feature>` | Looks up info in the wiki, then the code |
@@ -47,6 +49,27 @@ Each step suggests the next one. You never have to figure out what to run.
 ```
 
 The number is display-only: it comes from the current backlog order, so it changes whenever the backlog is reordered (which happens on its own each time a task is added). The command always echoes what it resolved (`3 → sync-offline`) before doing any work, so a stale number can't silently run the wrong task.
+
+### Sprints
+
+A big piece of work rarely fits in one task. Refactoring the login screen is four or five of them, and you want to see them as one thing. That's a **sprint**: an optional label on a task.
+
+```yaml
+sprint: login-refacto
+```
+
+There is no sprint file and no command to create one. A sprint exists the moment a task names it, and stops existing when its last task closes. Most tasks never get one — it's there for the big ones.
+
+Where it shows up:
+
+- **`/wa-board`** grows a `Sprint` column (only when at least one task has a sprint) and prints progress per sprint: `🏁 login-refacto — 2/5 (1 en review, 2 todo)`. `/wa-board login-refacto` narrows the whole board to that sprint.
+- **`/wa-task`** sets it: when you name one, or when the grill splits a `large` task — the children are born into the same sprint, which is the case sprints exist for. It never invents one silently; it proposes in one line.
+- **Prioritization** keeps a sprint's tasks contiguous in the backlog. The sprint moves as a block, and you order tasks inside it (dependencies first). Pulling one out of the block is allowed, and it says why.
+- **`/wa-autopilot login-refacto`** batches the sprint's `todo` tasks — leaving alone the ones already in review or validated, and echoing what it skipped.
+
+- **`/wa-close`** merges the task branch into the sprint branch, and notices when the sprint's last task closes — then it offers to land the sprint branch itself.
+
+Sprints deliberately aren't a status and aren't a backlog section: a sprint cuts across statuses (some tasks done, some in review, some untouched), and status sections are what tells you what to do next. There's no sprint status to set either — a sprint is complete when its tasks are. `/wa-code`, `/wa-feedback`, `/wa-validate` and `/wa-close` stay per task — one task at a time is how you review and merge.
 
 ## Typical flow
 
@@ -102,9 +125,9 @@ The order matters, and it's the whole point of the flow: **code → you test →
 
 2. The scope is the **whole diff** — the code plus every feedback round, in one pass. Sending three notes costs three fixes, not three reviews.
 3. Findings are severity-ordered, autofixed in a loop, and written to the task's `## Review`. The task moves to `validated`, **not** `done` — the autofix just changed code you'd tested, so you get to retest.
-4. `/wa-validate` again, once you've retested → the task closes: `done`, commit if `commit.auto_commit_after_validation`, and the next task's branch checked out if you asked for that.
+4. `/wa-validate` never touches git and never closes anything. Retest, then **`/wa-close`** — next section.
 
-`review.when: each_round` restores a review after `/wa-code` and after every `/wa-feedback` if you'd rather catch drift early — `/wa-validate` still runs the final pass. **No task closes unreviewed either way: `/wa-validate` is the only door.**
+`review.when: each_round` restores a review after `/wa-code` and after every `/wa-feedback` if you'd rather catch drift early — `/wa-validate` still runs the final pass. **No task closes unreviewed either way: `/wa-close` refuses a task the verifier never saw.**
 
 Iterating before that green light is `/wa-feedback`:
 
@@ -116,7 +139,53 @@ Feedback is where quality usually leaks: the change looks small, so it gets patc
 
 It also triages what you said: a **defect** gets fixed, an **adjustment** updates the acceptance criteria too, a **new feature** in disguise is sent back to `/wa-task` instead of being silently built — and a **rule** ("always do X") is offered up for your conventions file, so it stops being forgotten on the next task.
 
-**5. Keep knowledge fresh — `/wa-wiki`**
+**5. Close it — `/wa-close <task>`**
+
+```
+/wa-close login-apple
+```
+
+Retested and still good? This ends the task and puts the branch where it belongs. It's a separate command from `/wa-validate` because it answers a different question — not *"is this code good"* but *"where does this work land"* — and half of what it does to git can't be undone.
+
+So it always shows the plan first and waits for a yes:
+
+```
+Fermeture login-apple
+
+commit    : 2 fichiers non commités → commit (Benjamin Pisano)
+sprint    : merge wa/login-apple → sprint/login-refacto
+branche   : wa/login-apple supprimée (mergée)
+worktree  : ../.wa-worktrees/login-apple supprimé
+après     : 🏁 login-refacto — 3/5
+
+ok ? [o/n]
+```
+
+Where the work lands depends on one thing: whether the task is in a sprint.
+
+- **In a sprint** → merged into the sprint branch. Always, no config involved.
+- **Standalone** → `close.strategy` in your config, asked at `/wa-setup`:
+
+```yaml
+close:
+  strategy: nothing   # nothing | pr | merge
+  target: main        # where pr/merge lands
+  delete_branch: auto # auto = only once the code lives elsewhere
+```
+
+`nothing` is the default and stops after the commit — the branch stays, you open the PR yourself. `pr` pushes and runs `gh pr create` onto `target`, and asks every single time, because a PR is visible to other people the moment it opens. `merge` merges locally without pushing.
+
+A branch is only deleted once its code exists somewhere else: merged into its sprint branch, or merged into `target`. `pr` and `nothing` keep it — a PR needs its branch, and so do you. A leftover autopilot worktree gets removed with it, and if it's dirty the command stops and asks.
+
+When the **last task of a sprint** closes, the sprint branch becomes the thing to deliver, so the same `close.strategy` is offered for it — proposed, never done silently:
+
+```
+🏁 login-refacto — 5/5, dernière tâche fermée.
+→ Recommandé : PR sprint/login-refacto → main   (close.strategy: pr)
+  Sinon : garder la branche, tu la livres toi-même.
+```
+
+**6. Keep knowledge fresh — `/wa-wiki`**
 
 ```
 /wa-wiki
@@ -126,13 +195,15 @@ Updates the wiki after a feature lands. Never commits before your validation.
 
 > Prefer autonomy? `/wa-autopilot` runs the `/wa-code` cycle across the top backlog tasks on its own, one branch per task — and tasks whose files don't overlap run **at the same time**, each implementer in its own git worktree. It delivers **code**: built, run on the simulator, committed on its branch, task left at `review`. The verifier doesn't run there — your review is asynchronous, so it waits for your `/wa-validate` on each branch, exactly like an attended run.
 
-> **Branch per task.** Set `branch.per_task: true` (asked at `/wa-setup`) and `/wa-code` codes on `wa/<slug>` instead of your current branch. Combine it with `commit.auto_commit_after_validation` and validating a task commits it, then checks out the next task's branch for you — chain tasks without touching git.
+> **Branch per task.** Set `branch.per_task: true` (asked at `/wa-setup`) and `/wa-code` codes on `wa/<slug>` instead of your current branch. Combine it with `commit.auto_commit_after_validation` and `/wa-close` commits the task, then checks out the next task's branch for you — chain tasks without touching git.
+>
+> **Branch per sprint.** A task carrying a `sprint:` doesn't fork off `branch.base` — it forks off `sprint/<sprint>`, created from the base the first time a task of that sprint is coded (by `/wa-code` or by an `/wa-autopilot` wave). `/wa-close` merges each task back into it. That's the point: the third task of a login refacto starts from the first two instead of rediscovering them as a merge conflict. Nothing lands on a sprint branch before its task is reviewed and closed, so the base of the sprint stays code you approved. `branch.sprint_prefix: ""` turns it off.
 
 ## File tree created in your project
 
 ```
 .whackagent/
-  config.md            # language, coding language, project_kind, review timing + modules, paths, commit + branch policy
+  config.md            # language, coding language, project_kind, review timing + modules, paths, commit + branch + close policy
   conventions/         # copied convention modules (only the useful ones), editable per project
   BACKLOG.md           # task index (order = priority)
   tasks/<slug>.md      # one task = one file (frontmatter + body)
@@ -161,6 +232,7 @@ Relative resolves from the repo root, absolute works too (a wiki in a sibling re
 title: Login Apple          # short, explicit — the feature at a glance
 summary: Sign in with Apple on the login screen   # one line, for the board
 size: quickwin             # quickwin 🟢 | medium 🟡 | large 🔴
+sprint: login-refacto       # optional — groups the tasks of one bigger piece of work
 status: todo                # todo | in-progress | review | validated | done | canceled
                             # review = coded, waiting for your test · validated = spec approved,
                             # verifier passed, waiting for your retest

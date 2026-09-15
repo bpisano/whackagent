@@ -10,13 +10,13 @@ paths:                         # WHERE whackagent keep each kind of file. Skills
                                # {backlog} {tasks} {wiki} {reports} {conventions} — never literal path.
                                # Relative path resolve from repo root; absolute allowed
                                # (wiki in sibling repo, say).
-                               # Point at committed, human-browsable folder when team share
-                               # them — `docs/wiki` read on GitHub, `.whackagent/wiki` no.
+                               # Point at committed, human-browsable folder when team share them —
+                               # `docs/wiki` read on GitHub, `.whackagent/wiki` no.
                                # Missing key → default below, so old config still work.
   backlog: .whackagent/BACKLOG.md
   tasks: .whackagent/tasks
   wiki: .whackagent/wiki
-  reports: .whackagent/reports          # run reports — usually keep local, gitignore-able
+  reports: .whackagent/reports          # run reports — usually local, gitignore-able
   conventions: .whackagent/conventions  # convention modules copied here by /wa-setup
                                # `.whackagent/config.md` itself NOT configurable: it carry these
                                # paths, so must sit at known spot.
@@ -24,18 +24,19 @@ paths:                         # WHERE whackagent keep each kind of file. Skills
 
 review:
   when: on_validation          # WHEN wa-verifier run.
-                               #   on_validation — once, when you run /wa-validate: your feu vert say
-                               #     feature match spec, and THAT fire review, over whole
-                               #     diff (code + every feedback round). Coding and feedback round stay
-                               #     fast; nothing reviewed while still moving.
+                               #   on_validation — once, at /wa-validate: your feu vert say feature
+                               #     match spec, and THAT fire review over whole diff (code + every
+                               #     feedback round). Coding and feedback round stay fast; nothing
+                               #     reviewed while still moving.
                                #   each_round — also after /wa-code and after every /wa-feedback fix.
                                #     Catch drift earlier, cost verifier round each time. /wa-validate
                                #     still run final pass.
-                               # Either way no task close unreviewed — /wa-validate only door.
+                               # Either way no task close unreviewed — /wa-close refuse task the
+                               # verifier never saw.
   inline_micro_fixes: true     # /wa-feedback may apply MICRO-fix itself instead of spawn
                                # implementer (~50k tokens context for one-liner). Bounded: ≤2 files,
                                # ≤~20 lines, no new file/type/folder, no layer or public-API change.
-                               # Anything bigger, or any doubt, still go to wa-implementer.
+                               # Bigger, or any doubt → wa-implementer.
                                # false → every change go through implementer, whatever size.
   autofix: true                # wa-code verify phase re-dispatch implementer until clean
   public_doc: true             # require doc on public API — flip false per company
@@ -45,8 +46,8 @@ review:
                                # architecture-package.md. Paths relative to {conventions}.
                                # ONE verifier, not one per lens: isolated agent cost ~50k tokens
                                # context before reading a line, and every lens judge same diff
-                               # against same rulebook — splitting paid twice for that and left
-                               # duplicate findings to dedupe. It sweep style, elegance, structure and
+                               # against same rulebook — splitting pay twice, leave duplicate
+                               # findings to dedupe. It sweep style, elegance, structure and
                                # correctness in one pass and report which ran.
                                # Legacy `categories: {conventions: [...], correctness: []}` read as
                                # union of its lists.
@@ -73,6 +74,7 @@ verify:                        # runtime check — implementer drive app it just
 
 commit:
   auto_commit_after_validation: false   # may Claude commit once YOU validate feature?
+                               # (name kept for old configs: it gate the commit /wa-close make)
   author_name: "Benjamin Pisano"        # commits ALWAYS use this — never "Claude"
   author_email: "benjamin.pisano@icloud.com"
 
@@ -80,8 +82,32 @@ branch:
   per_task: false              # /wa-code work on own branch per task instead of current one
   prefix: "wa/"                # branch name: <prefix><slug> → wa/login-apple
   base: current                # fork point: current | main | <branch name>
-  checkout_next: true          # after validation + commit, hop onto next task branch
+  sprint_prefix: "sprint/"     # task carrying `sprint:` branch off SPRINT branch, not base:
+                               #   sprint/login-refacto ← created from base: on first task of sprint
+                               #   wa/login-apple       ← forked from it, merged back by /wa-close
+                               # So task 3 of sprint see task 1 work — same screen, no blind conflict.
+                               # Created by whoever need it first: /wa-code step 0 or /wa-autopilot
+                               # wave setup. Empty string → sprint get no branch, tasks use base:.
+  checkout_next: true          # after /wa-close commit, hop onto next task branch
                                # (only when per_task AND commit.auto_commit_after_validation)
+
+close:                         # WHERE work land when /wa-close finish a task. Task in a sprint
+                               # always merge into its sprint branch first — this block say what
+                               # happen to branch that has nowhere left to go (standalone task,
+                               # or sprint branch itself once its last task close).
+  strategy: nothing            # nothing — /wa-close stop after commit, branch left alone.
+                               #   YOU open the PR. Safest, and default.
+                               # pr     — push branch + open PR onto target: (`gh pr create`).
+                               #   Outward-facing: /wa-close ALWAYS confirm before, every time.
+                               # merge  — merge branch into target: locally, no push.
+  target: main                 # where pr/merge land. Ignored by `nothing`.
+  delete_branch: auto          # auto   — delete only once code live elsewhere (merged into sprint
+                               #   branch, or merged into target). `pr` and `nothing` keep it:
+                               #   PR need its branch, and so do you.
+                               # always — delete after close whatever happen. Ask first when
+                               #   branch unmerged — that throw work away.
+                               # never  — /wa-close never delete a branch.
+                               # Worktree for the slug (autopilot leftover) removed with it.
 
 autopilot:
   on_blocker: skip-and-log     # never invent; freeze task, move on
@@ -89,7 +115,7 @@ autopilot:
 
 yagni: strict
 compress_wiki: true            # caveman-compress config + wiki pages to save re-read tokens
-                               # (at /wa-setup and after every /wa-wiki wiki update; .original backups removed)
+                               # (at /wa-setup and after every /wa-wiki update; .original backups removed)
 ---
 
 # Project config
@@ -99,13 +125,8 @@ Edit frontmatter above to change behavior.
 
 ## Core rule — stop and ask
 
-Outside autopilot, moment anything unclear, ambiguous, or blocked beyond
-what task spec cover: **stop and ask**. Never guess on scope.
+Outside autopilot, moment anything unclear, ambiguous, or blocked beyond what task spec cover: **stop and ask**. Never guess on scope.
 
-**Every question come with recommended answer** — always, no exception. One
-line for pick, one line for why, plus alternative when real one exist. No basis
-to choose? Recommend most reversible option and say it guess. Bare question with
-no proposal never acceptable: answering must be confirm-or-correct, not homework.
+**Every question come with recommended answer** — always, no exception. One line for pick, one line for why, plus alternative when real one exist. No basis to choose? Recommend most reversible option and say it guess. Bare question with no proposal never acceptable: answering must be confirm-or-correct, not homework.
 
-Inside autopilot: never ask (nobody watching) — freeze task with open
-question logged, move to next one.
+Inside autopilot: never ask (nobody watching) — freeze task with open question logged, move to next one.

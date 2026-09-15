@@ -1,11 +1,11 @@
 ---
 name: wa-feedback
-description: Apply your feedback on a task just coded — routed by size (micro-fix here, bigger through same isolated pipeline as /wa-code), then re-verified and reviewed before any commit. Use after /wa-code or /wa-autopilot when you want changes to what was built.
+description: Apply your feedback on task just coded — routed by size (micro-fix here, bigger through same isolated pipeline as /wa-code), then re-verified and reviewed before any commit. Use after /wa-code or /wa-autopilot when you want changes to what was built.
 ---
 
 # /wa-feedback
 
-You saw what got built. You have notes. This applies them **without losing rules**.
+You saw build. You have notes. This apply them **without losing rules**.
 
 Feedback where quality leak: change feel small, so code patched straight from main thread — no convention modules loaded, no reviewer look, nothing re-run. Three rounds later feature drift off style, off architecture, nobody re-check it work. This skill make that impossible: **inline fix safe because reviewer still see it before commit** — never because it looked small.
 
@@ -13,18 +13,18 @@ Feedback where quality leak: change feel small, so code patched straight from ma
 
 1. **Route fix by size, not by feel.** **Micro-fix** (see *Micro-fix or implementer*) you apply yourself, here. Anything else — and anything unsure — go through **wa-implementer** in fix mode. Fresh one get conventions dir and re-read every module before touching; resumed one already hold them (see *Reusing the coding run's agents*).
 2. **Always re-verify before task close.** *When* depend on `review.when`: `each_round` → verifier round after every fix; `on_validation` (default) → none here, one pass over whole diff at `/wa-validate`. Never allowed: zero. Tiny changes exactly ones that break style and architecture. None reach commit unreviewed.
-3. **Re-run app per `verify.mode`.** `always` → re-drive it every round: prior runtime proof void moment code changed. `autopilot` (attended here) or `off` → nobody drive; say `run: à toi`, user re-test. Never allowed: claim check that wasn't run.
-4. **Never mark task done, ever.** This command iterate; **`/wa-validate`** only thing that review and close. Round end at `review`, waiting user next test.
+3. **Re-run app per `verify.mode`.** `always` → re-drive every round: prior runtime proof void moment code changed. `autopilot` (attended here) or `off` → nobody drive; say `run: à toi`, user re-test. Never allowed: claim check that wasn't run.
+4. **Never mark task done, ever.** This command iterate; **`/wa-validate`** review, **`/wa-close`** close. Round end at `review`, waiting user next test.
 
 ## Micro-fix or implementer
 
-Isolated agent cost ~50k tokens before reading a line. For "make button secondary" that absurd — **review still run before commit anyway** (always: `review.when: each_round` review the round, `on_validation` review cumulative diff at `/wa-validate`). So main thread may apply fix itself, under bounded definition.
+Isolated agent cost ~50k tokens before reading line. For "make button secondary" that absurd — **review still run before commit anyway** (always: `review.when: each_round` review the round, `on_validation` review cumulative diff at `/wa-validate`). So main thread may apply fix itself, under bounded definition.
 
 **Micro-fix — all of these, no exception:**
 - ≤ 2 files touched, ≤ ~20 changed lines total;
 - **no new file, no new type, no new folder** — nothing touching file/folder layout;
 - no layer/boundary decision, no public API change, no concurrency or async change, no new dependency;
-- local edits only: wording, string, color, spacing, constant, rename inside a file, condition tweak, parameter default, swap component variant;
+- local edits only: wording, string, color, spacing, constant, rename inside file, condition tweak, parameter default, swap component variant;
 - triage said **defect** or **adjustment** — never *new scope*.
 
 Anything else → **implementer**. Doubt → **implementer**. `review.inline_micro_fixes: false` in config → implementer, always.
@@ -50,7 +50,7 @@ Rules = `/wa-code` → *Resuming, rounds 2+*, in full — delta only, anti-stale
 ## Do
 
 1. **Resolve task.** Arg = slug or display index (`/wa-feedback 2 the button should be secondary`), resolve per **wa-board → Task indexes**. No task given → the `in-progress` one, else most recent `review`. Ambiguous → ask, don't guess. Read `.whackagent/config.md` + task file at `{tasks}/<slug>.md` (need `## Critères d'acceptation`, `## Implémentation`, `## Review`, `## Vérification`). `{…}` paths come from config `paths:` block — see **wa-board → Paths**.
-   - **`status: validated` → review it passed now stale.** Apply notes as usual, then set back to `review`: task need fresh `/wa-validate` before close. Never close on review predating last edit.
+   - **`status: validated` → review it passed now stale.** Apply notes as usual, then set back to `review`: task need fresh `/wa-validate` before `/wa-close`. Never close on review predating last edit.
    - **Right branch first.** Task delivered by `/wa-autopilot` — or `/wa-code` with `branch.per_task: true` — live on `<branch.prefix><slug>`. Check current branch; if work not here, say which branch it on and switch **only after user confirms** (their tree may be dirty). Never apply feedback to branch that don't hold the code.
 2. **Triage each feedback item** — say out loud which bucket, one line each:
    - **defect** — don't match acceptance criteria → fix, criteria unchanged.
@@ -68,7 +68,7 @@ Rules = `/wa-code` → *Resuming, rounds 2+*, in full — delta only, anti-stale
 6. **Re-run it — only when `verify.mode: always`.** Re-driven in step 4 — by you for inline fix, by implementer otherwise — against **updated** acceptance criteria; tell it explicit when triage moved them, it reuse its checklist otherwise. Failed checks → back through step 4. Can't run → stop and ask. Append to `## Vérification`, keep previous round entry.
    Other modes → append `round <n> : validation manuelle — non exécutée par l'agent` and hand ball back: summary in step 8 say what to test, one line, so user know exactly what changed under their fingers.
 7. **Log it.** Append round to task `## Feedback`: what user asked (their words), triage, what changed, review verdict (`différée` when `review.when: on_validation`), verify verdict, any rule captured. Refresh `{reports}/<slug>.md`.
-8. **Report + loop.** Short on-screen summary: items → what changed → review clean (or `à /wa-validate`) → what to retest. More notes → run again, next round. Feature match spec now → **`/wa-validate <slug>`**: that fire verifier and, after your retest, close task. **Never set `done` here, never commit** — say next command instead.
+8. **Report + loop.** Short on-screen summary: items → what changed → review clean (or `à /wa-validate`) → what to retest. More notes → run again, next round. Feature match spec now → **`/wa-validate <slug>`**: that fire verifier; **`/wa-close <slug>`** end it after your retest. **Never set `done` here, never commit** — say next command instead.
 
 ## Asking
 
@@ -80,9 +80,9 @@ Triage doubt, ambiguous note, `BLOCKED:` from implementer → ask, but **always 
 - Never skip review or verify because change small — deferring to validation is schedule, not skip. Inline fix *more* review-bound than dispatched one, not less: no convention module in context when typed.
 - Never leave inline fix unbuilt, untested, or untagged.
 - Never implement new feature arriving disguised as feedback.
-- Never add comments explaining a fix (`style.md` — code carry meaning, task file carry rationale).
-- Never commit and never close — `/wa-validate` own both ends.
+- Never add comments explaining fix (`style.md` — code carry meaning, task file carry rationale).
+- Never commit and never close — `/wa-validate` own review, `/wa-close` own commit and branch.
 
 ## Next step
 
-More notes → run again. Feature conforme au cahier des charges → **`/wa-validate <slug>`** (verifier on whole diff, then close after your retest). Closed → **`/wa-wiki`**.
+More notes → run again. Feature conforme au cahier des charges → **`/wa-validate <slug>`** (verifier on whole diff), puis **`/wa-close <slug>`** after your retest. Closed → **`/wa-wiki`**.
