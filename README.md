@@ -22,7 +22,7 @@ Add the marketplace, then install the plugin:
 | Command | Description |
 | --- | --- |
 | `/wa-setup` | Config + scaffolding (`.whackagent/`) |
-| `/wa-board` | Dashboard: backlog table, suggests the next action |
+| `/wa-board` | Dashboard: backlog list, suggests the next action |
 | `/wa-board <sprint>` | Same, filtered to one sprint, with its progress |
 | `/wa-task <desc\|task>` | Creates a task + spec, grills it (grill-me, includes architecture), then re-prioritizes the backlog |
 | `/wa-task` | No argument: prioritization pass only — reorders, YAGNI, can split |
@@ -94,11 +94,16 @@ Grills the idea (grill-me) until it's clear, plans the architecture, and writes 
 Then it prioritizes on its own — there's no separate command for it: a product-owner pass slots the new task where it belongs, applies YAGNI, and flags anything too big to split (asking first). You end up looking at a fresh, ordered board — top of the list is what to code next:
 
 ```
-| # | Taille | Tâche          | Résumé                                | Grillée |
-|:-:|:------:|----------------|---------------------------------------|:-------:|
-| 1 | 🟢     | Login Apple    | Sign in with Apple on the login screen | ✅      |
-| 2 | 🟡     | Offline cache  | Cache the feed for offline reads       | ✅      |
-| 3 | 🔴     | Payments       | Stripe checkout + receipts             | ⚠️      |
+### Todo
+
+1 · 🟢 **Login Apple**
+    Sign in with Apple on login screen
+2 · 🟡 **Offline cache** · `feed-offline`
+    Cache the feed for offline reads
+3 · 🔴 **Payments** ⚠
+    Stripe checkout + receipts
+
+🟢 quick win · 🟡 medium · 🔴 large · ⚠ not grilled
 ```
 
 **2. Code it — `/wa-code <task>`**
@@ -113,7 +118,7 @@ A single command runs the whole coding cycle, orchestrating isolated subagents:
 2. **Code**: one `wa-implementer` for the whole task, fed brick by brick (sequential) — it writes the feature *and* the tests and proves the build. Keeping the same agent across bricks means the conventions and the BRIEF are read once, and brick 2 already knows what brick 1 built.
 
    **Who tests the app is a setting** (`verify.mode`). Default `autopilot`: unattended runs get driven by the agent — taps, screenshots, acceptance criteria checked on screen, because nobody else is there — while an attended `/wa-code` stops at build + tests and **you** validate by using the app. `always` drives it every time; `off` never. Whatever the mode, the implementer may still launch the app when it can't write the feature without seeing it run (reproduce a bug, judge a layout) — that's implementation, and it says so rather than passing it off as proof.
-3. **Report**: on-screen summary, report saved in `.whackagent/reports/login-apple.md`, task moved to `review` — meaning *waiting for you to test it*.
+3. **Report**: same card every time — **Problem**, **Goal**, **Done**, **To test** (checklist of what the agent didn't prove + regression zones), then a build · tests · run · review status line. Saved in `.whackagent/reports/login-apple.md`, task moved to `review` — meaning *waiting for you to test it*. `/wa-autopilot` and `/wa-feedback` use the same card.
 
 **3. Test it, iterate — `/wa-feedback`**, then **4. give the green light — `/wa-validate`**
 
@@ -268,4 +273,4 @@ The copied list lands in `review.modules` — the verifier reads exactly that, a
 ## Skill dependencies
 
 - **grill-me**: task clarification in `/wa-task`
-- **caveman**: report compression (report phase of `/wa-code`) + config and wiki compression at setup and on each `/wa-wiki` (`compress_wiki: true`, saves re-reading tokens)
+- **caveman**: config and wiki compression at setup and on each `/wa-wiki` (`compress_wiki: true`, saves re-reading tokens)

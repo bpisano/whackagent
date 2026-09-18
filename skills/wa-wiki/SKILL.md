@@ -7,6 +7,8 @@ description: Keep the wiki up to date, or look up project knowledge. /wa-wiki up
 
 Two modes, picked by argument.
 
+Wording (screen + reports): **wa-board → Voice** — telegraphic, tech terms stay English.
+
 - **`/wa-wiki`** (no arg) → **update** mode: sync wiki with changes.
 - **`/wa-wiki <feature or question>`** → **query** mode: look up project knowledge, answer.
 

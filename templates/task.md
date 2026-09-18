@@ -1,7 +1,7 @@
 ---
 title:                  # SHORT, explicit — feature one glance ("Login Apple", not "Auth work")
-summary:                # one short sentence: what task about, for backlog table
-size: medium            # quickwin | medium | large  → 🟢 | 🟡 | 🔴 in backlog table
+summary:                # ≤ 8 words, what task about — never repeat title. Line 2 of backlog list
+size: medium            # quickwin | medium | large  → 🟢 | 🟡 | 🔴 in backlog list
 sprint:                 # OPTIONAL kebab-case label group big work ("login-refacto").
                         # Empty = standalone task. Sprint exist because task name it —
                         # no sprint file, no create command. See /wa-task → Sprints.

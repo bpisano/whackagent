@@ -7,6 +7,8 @@ description: Apply your feedback on task just coded — routed by size (micro-fi
 
 You saw build. You have notes. This apply them **without losing rules**.
 
+Wording (screen + reports): **wa-board → Voice** — telegraphic, tech terms stay English.
+
 Feedback where quality leak: change feel small, so code patched straight from main thread — no convention modules loaded, no reviewer look, nothing re-run. Three rounds later feature drift off style, off architecture, nobody re-check it work. This skill make that impossible: **inline fix safe because reviewer still see it before commit** — never because it looked small.
 
 ## Hard rules
@@ -68,7 +70,7 @@ Rules = `/wa-code` → *Resuming, rounds 2+*, in full — delta only, anti-stale
 6. **Re-run it — only when `verify.mode: always`.** Re-driven in step 4 — by you for inline fix, by implementer otherwise — against **updated** acceptance criteria; tell it explicit when triage moved them, it reuse its checklist otherwise. Failed checks → back through step 4. Can't run → stop and ask. Append to `## Vérification`, keep previous round entry.
    Other modes → append `round <n> : validation manuelle — non exécutée par l'agent` and hand ball back: summary in step 8 say what to test, one line, so user know exactly what changed under their fingers.
 7. **Log it.** Append round to task `## Feedback`: what user asked (their words), triage, what changed, review verdict (`différée` when `review.when: on_validation`), verify verdict, any rule captured. Refresh `{reports}/<slug>.md`.
-8. **Report + loop.** Short on-screen summary: items → what changed → review clean (or `à /wa-validate`) → what to retest. More notes → run again, next round. Feature match spec now → **`/wa-validate <slug>`**: that fire verifier; **`/wa-close <slug>`** end it after your retest. **Never set `done` here, never commit** — say next command instead.
+8. **Report + loop.** **wa-code → Report card**, feedback variant: header `## 🟢 <title> · feedback #<n>`, **Demandé** (user words, short) replaces Problème + Objectif, rest identical — Fait, À tester, status line, next. More notes → run again, next round. Feature match spec now → **`/wa-validate <slug>`**: that fire verifier; **`/wa-close <slug>`** end it after your retest. **Never set `done` here, never commit** — say next command instead.
 
 ## Asking
 

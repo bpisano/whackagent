@@ -7,6 +7,8 @@ description: Close validated task — record done, commit, land branch (sprint m
 
 **Task finished.** You retested reviewed code, still does what you asked. `/wa-close` write that down, put branch where belong.
 
+Wording (screen + reports): **wa-board → Voice** — telegraphic, tech terms stay English.
+
 Where sit: `/wa-task` → `/wa-code` → *you test, `/wa-feedback`* → `/wa-validate` (verifier) → *you retest* → **`/wa-close`**.
 
 `/wa-validate` = **review** door — judge code, set `validated`. `/wa-close` = **landing** door — end task, move branch. Two commands, two questions. Second one touch git in ways you want see coming.

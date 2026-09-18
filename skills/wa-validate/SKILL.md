@@ -7,6 +7,8 @@ description: Your green light on coded feature — "this is what I asked for". R
 
 **Your feu vert on spec, not code.** You tested feature, does what cahier des charges says. That statement unlock verification pass: verifier judge *how* written, over whole diff, once.
 
+Wording (screen + reports): **wa-board → Voice** — telegraphic, tech terms stay English.
+
 Does **not** set task `done`, never touch git. You probably retest after review touch things — closing separate deliberate step: **`/wa-close`**.
 
 Where it sit: `/wa-task` → `/wa-code` → *you test, `/wa-feedback`, you test again* → **`/wa-validate`** → verifier → *you retest* → **`/wa-close`**.

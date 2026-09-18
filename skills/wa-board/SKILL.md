@@ -12,7 +12,7 @@ Dashboard. Lift lid on backlog, point next move.
 0. **Read arg.** None → whole backlog. Sprint name (`/wa-board login-refacto`) → **filtered view**: only that sprint tasks, plus progress line. Resolve per **Sprints** below; unknown name → say so, list known sprints, stop.
 1. Read `.whackagent/config.md` (respect discussion language). Missing → tell user run `/wa-setup`, stop.
 2. Read `{backlog}` + referenced task files (need each task `summary`, `size`, `grilled`, `sprint`).
-3. Render backlog as **table**, one section per status (see Display format below), priority order within each.
+3. Render backlog as **list**, one section per status (see Display format below), priority order within each.
 4. Suggest exactly **one** next action, by state (filtered run → scope suggestion to sprint):
    - something in `validated` → reviewed, wait user retest: `/wa-close <slug>` to finish (or `/wa-feedback` if retest found something). Highest precedence — one step from done.
    - something in `review` → coded, wait user test: `/wa-feedback <slug> <notes>` if notes, else `/wa-validate <slug>` to fire verifier. Beats starting new work.
@@ -24,41 +24,50 @@ Dashboard. Lift lid on backlog, point next move.
 
 ## Display format
 
-Canonical way tasks shown anywhere in flow (here + `/wa-task` prioritization pass). One table per non-empty status section, tasks priority order:
+Canonical way tasks shown anywhere in flow (here, `/wa-task` prioritization pass, `/wa-autopilot` recap). **List, never table.** One section per non-empty status, tasks priority order, two lines per task:
 
 ```
 ### In progress
 
-| # | Taille | Tâche | Sprint | Résumé | Grillée |
-|:-:|:------:|-------|--------|--------|:-------:|
-| 1 | 🟡 | Export CSV | — | Export des rapports en CSV | ✅ |
+1 · 🟡 **Export CSV**
+    Export des reports en CSV
 
 ### Todo
 
-| # | Taille | Tâche | Sprint | Résumé | Grillée |
-|:-:|:------:|-------|--------|--------|:-------:|
-| 2 | 🟢 | Login Apple | login-refacto | Sign in with Apple sur l'écran de connexion | ✅ |
-| 3 | 🟡 | Login layout | login-refacto | Refonte du formulaire de connexion | ✅ |
-| 4 | 🔴 | Sync offline | — | File d'attente + résolution de conflits hors-ligne | ⚠️ |
+2 · 🟢 **Login Apple** · `login-refacto`
+    Sign in with Apple sur l'écran de login
+3 · 🟡 **Login layout** · `login-refacto`
+    Refonte du form de login
+4 · 🔴 **Sync offline** ⚠
+    Queue + conflits offline
 
-🟢 quick win · 🟡 moyen · 🔴 gros
+🟢 quick win · 🟡 moyen · 🔴 gros · ⚠ pas grillée
 🏁 login-refacto — 0/2 (2 todo)
 ```
 
-Sprint column here because two tasks have one. No sprint anywhere → same tables without it, exactly as before.
-
 Rules:
 
-- **#** column = display index. Number **continuously across sections**, top to bottom in render order (In progress → Todo → Review → Validated → Done → Canceled). **Review** = coded, wait your test. **Validated** = you said it match spec, verifier passed, wait your retest to close. Never restart per section — index must be unique in render so user cite it without ambiguity.
-- **Taille** column maps `size`: 🟢 `quickwin` · 🟡 `medium` · 🔴 `large`.
-- **Grillée** column maps `grilled`: ✅ true · ⚠️ false.
-- **Sprint** column = task `sprint`, `—` when empty. All-or-nothing across whole render, never per section: **drop it entirely when no task in render has sprint**, keep it in every table otherwise. Filtered run (`/wa-board <sprint>`) drops it too — every row is that sprint.
-- **Résumé** = task `summary` (one line). Never dump full task body.
-- **Tâche** = title. Keep rows scannable.
+- **Line 1** = `<#> · <size> **<title>**`, then `` · `<sprint>` `` when task has one, then ` ⚠` when `grilled: false`.
+- **Line 2** = task `summary`, indented 4 spaces. Never dump task body.
+- **#** = display index, written `2 ·` — never `2.`: markdown list syntax gets renumbered by renderer. Number **continuously across sections**, top to bottom in render order (In progress → Todo → Review → Validated → Done → Canceled). **Review** = coded, wait your test. **Validated** = you said it match spec, verifier passed, wait your retest to close. Never restart per section — index must be unique in render so user cite it without ambiguity.
+- **Size** maps `size`: 🟢 `quickwin` · 🟡 `medium` · 🔴 `large`.
+- **⚠** only on non-grilled tasks. Grilled = nothing — no ✅ on every line.
+- **Sprint tag** only on tasks that have one. Filtered run (`/wa-board <sprint>`) drops it — every task is that sprint.
 - Skip empty sections. Show only few recent under **Done**.
-- Put size legend (🟢 quick win · 🟡 moyen · 🔴 gros) once below tables.
+- Legend once below list; `⚠ pas grillée` only when a ⚠ is on screen.
 - At least one sprint in play → one **progress line per sprint** under legend, done+canceled excluded from numerator only:
-  `🏁 login-refacto — 2/5 (1 en review, 2 todo)`. Filtered run → that single line, above tables.
+  `🏁 login-refacto — 2/5 (1 en review, 2 todo)`. Filtered run → that single line, above list.
+
+## Voice
+
+Canonical, every whackagent skill. Applies to **screen output and `{reports}`**.
+
+- **Telegraphic.** Fragments OK. No articles filler, no pleasantries, no hedging, no re-explaining the flow. One idea per line.
+- **Tech terms stay English** — build, branch, merge, commit, review, worktree, simulator, entitlement, loading, fix… Never translate them. Franglais welcome: `bouton Apple pas disabled pendant loading`.
+- **Short common words.** `fix` not `procéder à la correction`, `teste` not `procédez au test`.
+- **Clarity beats brevity.** Fragment readable two ways → write the full sentence.
+- **Task files are the exception** — `## Contexte / Décisions`, `## Critères d'acceptation` in full simple sentences (franglais OK): verifier and user reread them months later, fragments there get misread.
+- Headings and labels follow `discussion_language`.
 
 ## Paths
 
@@ -97,4 +106,4 @@ Any skill taking task can take indexes instead of slugs: `/wa-code 3`, `/wa-auto
 
 ## Output
 
-Tables, then one bold **→ next:** line. No re-explain whole flow each time.
+List, then one bold **→ next:** line. No re-explain whole flow each time. Wording per **Voice**.

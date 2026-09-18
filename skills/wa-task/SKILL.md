@@ -7,13 +7,15 @@ description: Turn fuzzy idea into clear grilled task, then re-prioritize backlog
 
 Fuzzy idea → clear grilled task, backlog ordered. Clarity before code.
 
+Wording (screen + reports): **wa-board → Voice** — telegraphic, tech terms stay English.
+
 Owns two things: **writing task** (steps 1–5), **placing it** (step 6). Prioritization not separate command — task not ordered isn't landed.
 
 ## Do
 
 0. **Read arg.**
    - Free text → new task, steps below.
-   - Slug or display index from wa-board table (`/wa-task 3`) → resolve per **wa-board → Task indexes**, echo `3 → sync-offline`, grill that existing task instead of creating, then step 6.
+   - Slug or display index from wa-board list (`/wa-task 3`) → resolve per **wa-board → Task indexes**, echo `3 → sync-offline`, grill that existing task instead of creating, then step 6.
    - Bare arg matches **live sprint**, no task slug → ambiguous, ask which (recommend: new task inside that sprint, since `/wa-task` creates): `login-refacto est un sprint. Nouvelle tâche dedans (recommandé), ou tu veux la vue ? → /wa-board login-refacto`.
    - **No arg → prioritization only.** Skip to step 6, whole backlog in scope, full pass (see *Explicit run* there).
 1. Read `.whackagent/config.md` + `{wiki}/index.md` for project context. `{…}` paths come from its `paths:` block — see **wa-board → Paths**.
@@ -24,7 +26,7 @@ Owns two things: **writing task** (steps 1–5), **placing it** (step 6). Priori
    - Exception: user flags trivial quick win → skip grill, create task `grilled: false`.
 4. **Write task file** at `{tasks}/<slug>.md` from `${CLAUDE_PLUGIN_ROOT}/templates/task.md`:
    - `title`, `status: todo`, `grilled: true` (or false if skipped), `created` = today.
-   - `summary` — one short sentence what task about (shown in backlog table). More descriptive than title, still one line.
+   - `summary` — **≤ 8 words**, what task about (line 2 of wa-board list). Adds what title doesn't say — never repeats it. What, not how.
    - `size` — effort estimate: `quickwin` (🟢, hour or less), `medium` (🟡), `large` (🔴, multi-session / probably split). Base on what grill surfaced.
    - `sprint` — kebab-case label, or **empty**. Rules in *Sprints* below. Default empty: most tasks stand alone.
    - `wiki:` — link relevant existing wiki pages with `[[page]]`; note any page to create.
@@ -83,7 +85,8 @@ Product-owner hat: what matters now, what order. New task(s) from this run = **f
 4. **Re-estimate size** when picture changed (`large` 🔴 task split may now be `medium`/`quickwin`). Update each task `size`.
 5. **Reorder.** Order in **Todo** section = priority (top = next). No numeric labels in `{backlog}` — order alone carries priority. Reflect new order in `{backlog}`.
    - **Sprint moves as block.** Its tasks stay contiguous in section, own internal order (dependencies first). Prioritize *sprint* against rest, then tasks inside. Splitting sprint across order needs reason — say out loud (*"j'ai sorti login-apple du bloc : elle débloque l'onboarding"*).
-6. Show result using **wa-board table format** (# / Taille 🟢🟡🔴 / Tâche / Sprint / Résumé / Grillée — Sprint column dropped when no task has one). `#` display-only, recomputed from order just written — always print table after reordering so indexes user sees are current. Sprints in play → progress lines under legend.
+6. **Tighten summaries.** Any task in pass whose `summary` breaks the ≤ 8 words rule → rewrite it, silently.
+7. Show result using **wa-board list format**. `#` display-only, recomputed from order just written — always print list after reordering so indexes user sees are current. Sprints in play → progress lines under legend.
 
 **Cheap and quiet by default** — user asked for task, not backlog audit:
 
@@ -91,10 +94,10 @@ Product-owner hat: what matters now, what order. New task(s) from this run = **f
 - Reorder + re-estimate: apply freely, reversible, order is whole point.
 - **Assigning sprint user didn't name: propose, never silent** (one line, same as cancel/split). Sprint they named, or one inherited by split they already approved: silent.
 - **Cancel or split: never silent.** Propose one line each (`⚠️ sync-offline looks like 3 tasks — split?`), do only on yes. Applies to focus tasks and any existing task pass flags.
-- No before/after diff; one table (the after) enough.
-- Single todo task → nothing to order, skip straight to table.
+- No before/after diff; one list (the after) enough.
+- Single todo task → nothing to order, skip straight to list.
 
-**Explicit run** (`/wa-task` no arg, or user asks reorder): full pass over everything, show **before/after** tables plus rationale for any cancel/split.
+**Explicit run** (`/wa-task` no arg, or user asks reorder): full pass over everything, show **before/after** lists plus rationale for any cancel/split.
 
 ## Stop and ask
 
@@ -104,4 +107,4 @@ Priority call needs product intent you lack? Ask — no assume. But on automatic
 
 ## Next step
 
-Board table from step 6 already on screen with fresh `#` indexes. Suggest **`/wa-code <#>`** for top grilled todo (or `/wa-autopilot <#,#>` if new tasks are quick wins).
+Board list from step 7 already on screen with fresh `#` indexes. Suggest **`/wa-code <#>`** for top grilled todo (or `/wa-autopilot <#,#>` if new tasks are quick wins).

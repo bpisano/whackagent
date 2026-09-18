@@ -7,6 +7,8 @@ description: Interactively bootstrap the whackagent workflow in a project — or
 
 Set up orchestrated dev flow for project. Short interactive setup, then scaffold, then index.
 
+Wording (screen + reports): **wa-board → Voice** — telegraphic, tech terms stay English.
+
 Runs on fresh project **and** on one already set up. Second time = **reconfigure**, not re-install: current values become defaults, nothing you edited get overwritten.
 
 ## 0. Which mode

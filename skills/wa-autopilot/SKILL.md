@@ -7,11 +7,13 @@ description: Auto mode — runs batch of tasks unattended, in parallel when they
 
 `/wa-code` unattended, over batch. Same PM role, same pipeline, one addition: **independent tasks run parallel, each in own git worktree.** Give batch, walk away, read report.
 
+Wording (screen + reports): **wa-board → Voice** — telegraphic, tech terms stay English.
+
 ## Scope
 
 Given tasks, or every `todo` task if none (confirm list first if user present). Best on small well-scoped tasks — say so if one look large or `grilled: false`.
 
-**Args take slugs, display indexes or sprint name**, mixed, any order: `/wa-autopilot login-apple`, `/wa-autopilot 2,4,5`, `/wa-autopilot 2-5`, `/wa-autopilot 3 sync-offline`, `/wa-autopilot login-refacto`. Indexes = `#` from wa-board table — resolve per **wa-board → Task indexes**. Always **echo resolved list** (`2 → login-apple`). Bad index → stop, say which, no guess.
+**Args take slugs, display indexes or sprint name**, mixed, any order: `/wa-autopilot login-apple`, `/wa-autopilot 2,4,5`, `/wa-autopilot 2-5`, `/wa-autopilot 3 sync-offline`, `/wa-autopilot login-refacto`. Indexes = `#` from wa-board list — resolve per **wa-board → Task indexes**. Always **echo resolved list** (`2 → login-apple`). Bad index → stop, say which, no guess.
 
 **Sprint name expands to its `todo` tasks**, backlog order — `in-progress`, `review`, `validated` already moving or waiting on user, don't touch. Resolve per **wa-board → Sprints**; echo expansion (`login-refacto → login-apple · login-layout · login-errors (3 todo, 2 déjà en review)`) so user see what left out. Sprint with no todo task → say so, stop. Sprint tasks usually touch same screen, so expect most land in **separate waves** — wave planner doing job, not failure.
 
@@ -74,18 +76,34 @@ A blocker in one task **does not** stall its wave — the others keep going.
 Print and save `{reports}/autopilot-<date>.md`:
 
 ```
-# Autopilot run
+# Autopilot · 2026-09-18 · 🏁 login-refacto 2/3
 
-## Delivered — à tester, review en attente
-- <slug> — branch wa/<slug> — <commits> — build: green · run: pass · review: /wa-validate
+2 · 🟢 **Login Apple** — à tester
+3 · 🟡 **Login layout** — à tester
+5 · 🟢 **Forgot password** — ⛔ bloquée
 
-## Blocked
-- <slug> — <the open question> — needs your input
+---
+## 🟢 Login Apple · branch wa/login-apple
+<report card>
+
+## 🟡 Login layout · branch wa/login-layout
+<report card>
+
+---
+## ⛔ Forgot password
+Question : reset par email ou magic link ?
+Reco : magic link, déjà en place pour le signup.
+
+→ next : /wa-validate login-apple
 ```
 
-Batch came from a sprint, or its tasks share one → add its progress line (`🏁 login-refacto — 4/5`) and group the lists by sprint. One branch per task still, never one per sprint: the user reviews and merges task by task.
+Three parts, always this order:
 
-Obvious at a glance: what's ready to look at, what needs you. Never write "review: clean" for a task the verifier never saw.
+1. **Recap** — every task of the batch, **wa-board list format** (line 1 only), suffix `— à tester` or `— ⛔ bloquée`. Sprint in play → progress line in title; several sprints → group recap by sprint.
+2. **One card per delivered task** — **wa-code → Report card**, branch in header instead of sprint tag. Same skeleton as attended `/wa-code`.
+3. **Blocked** — per task: open question + your recommended answer, one line each. Kept worktree → say so.
+
+One branch per task still, never one per sprint: user reviews and merges task by task. Never write `review: clean` for a task the verifier never saw.
 
 ## Next step
 

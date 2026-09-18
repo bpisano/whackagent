@@ -1,7 +1,7 @@
 {
   "name": "whackagent",
   "description": "Orchestrated dev workflow: backlog + wiki + a task lifecycle (setup → task → code → your test → validate → close) driven by isolated implementer + verifier subagents, plus an autopilot that parallelizes independent tasks across git worktrees. Backlog stays prioritized on its own. Swift-first, language-template driven.",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "author": {
     "name": "Benjamin Pisano"
   },

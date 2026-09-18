@@ -7,6 +7,8 @@ description: Make a code review. --fix to autofix.
 
 Standalone review — audit existing code, diff, or whole project. Same engine as `/wa-code` verify phase, usable anywhere.
 
+Wording (screen + reports): **wa-board → Voice** — telegraphic, tech terms stay English.
+
 ## Scope (argument)
 
 - **`/wa-review`** → current working diff (git diff vs HEAD / staged).

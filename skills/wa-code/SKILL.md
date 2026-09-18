@@ -7,6 +7,8 @@ description: Run the full coding pipeline for a task — plan, code, verify, rep
 
 You **PM**. Plan and dispatch, never write code. One task: **plan → code → verify → report**.
 
+Wording (screen + reports): **wa-board → Voice** — telegraphic, tech terms stay English.
+
 Two subagents: one `wa-implementer`, one `wa-verifier`. **Spawn each once, keep alive** — later rounds = `SendMessage` to `agentId`, never fresh spawn. Isolated agent costs ~50k tokens context before reading line; resuming costs delta.
 
 Read `.whackagent/config.md` and `{tasks}/<slug>.md` first. `{…}` paths from config `paths:` block — see **wa-board → Paths**.
@@ -87,12 +89,45 @@ Then:
 
 ## 4. Report
 
-- **Show**: what built, files/folders touched, key decisions, test + run + review results — `review: à /wa-validate` when step 3 skipped, so user know what still owed.
-- **Save** caveman-compressed report to `{reports}/<slug>.md`.
+- **Show** the **Report card** below — `review → /wa-validate` in status line when step 3 skipped, so user know what still owed.
+- **Save** to `{reports}/<slug>.md`: same card, plus full file/folder list, key decisions, review findings.
 - Set `status: review` — means *waiting for user to test it*, nothing more.
 - **Say what to do next, in this order**: test it. Notes → **`/wa-feedback`**. Matches spec → **`/wa-validate <slug>`**, which fires verifier; **`/wa-close <slug>`** ends it after your retest.
 - **Iteration is `/wa-feedback` job.** Never patch code from this thread — even one-liner. `/wa-feedback` only place inline fixes are bounded, tagged, built, flagged to verifier (see its *Micro-fix or implementer*); untracked touch-up here undoes review it about to get.
 - **Never set `done` yourself, never commit here.** `review` → `/wa-validate` → `validated` → `/wa-close` → `done`; user "ok c'est ça" = spec approval, not close.
+
+### Report card
+
+Canonical end-of-task report — here, each delivered task of `/wa-autopilot`, each `/wa-feedback` round (variant there). Same skeleton every time, wording per **wa-board → Voice**:
+
+```
+## 🟢 Login Apple · `login-refacto`
+
+**Problème** — login email only, friction à l'onboarding.
+**Objectif** — Sign in with Apple sur l'écran de login.
+
+**Fait**
+- Bouton Sign in with Apple sur login (`LoginView`)
+- Login Apple crée/retrouve le user (`AuthService`)
+- Entitlement Sign in with Apple activé
+
+**À tester**
+- [ ] Cancel sheet → reste sur login
+- [ ] Régression : login email marche toujours
+
+✅ vérifié par l'agent : tap Apple → sheet, login OK → Home
+
+build ✅ · tests ✅ · run ✅ · review → /wa-validate
+→ next : teste, puis /wa-feedback ou /wa-validate login-apple
+```
+
+- **Header** = size + title + sprint tag, as in wa-board list.
+- **Problème / Objectif** — one line each, from `## Contexte / Décisions`. Empty (non-grilled quick win) → from `title` + `summary`. Why the task exists, what it aims for — not how.
+- **Fait** — what changes for the app, key file as short ref. **5 bullets max.** Full file list only in saved report.
+- **À tester** — checklist: acceptance criteria agent did **not** prove, plus regression zones the diff touches. Agent proved everything → `rien d'obligatoire` + one optional smoke test. Never empty silently.
+- **✅ vérifié par l'agent** — one line, criteria the runtime check proved (+ screenshot path). Omit when nothing proven.
+- **Status line** — build · tests · run (`✅` / `à toi`) · review (`clean` / `→ /wa-validate`). Never claim check nobody ran.
+- Headings follow `discussion_language` (`Problem / Goal / Done / To test` in en).
 
 ## 5. Closing — not yours
 
