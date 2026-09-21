@@ -19,14 +19,14 @@ Owns two things: **writing task** (steps 1–5), **placing it** (step 6). Priori
    - Bare arg matches **live sprint**, no task slug → ambiguous, ask which (recommend: new task inside that sprint, since `/wa-task` creates): `login-refacto est un sprint. Nouvelle tâche dedans (recommandé), ou tu veux la vue ? → /wa-board login-refacto`.
    - **No arg → prioritization only.** Skip to step 6, whole backlog in scope, full pass (see *Explicit run* there).
 1. Read `.whackagent/config.md` + `{wiki}/index.md` for project context. `{…}` paths come from its `paths:` block — see **wa-board → Paths**.
-2. **Title first.** Distill request into SHORT explicit title — feature clear one glance ("Login Apple", not "improve auth"). Slug = kebab-case title (`login-apple`).
+2. **Title first.** Distill request into SHORT explicit title — feature clear one glance ("Login Apple", not "improve auth"). Rules: **wa-board → Titres et summaries** — étiquette ≤ 5 mots, jamais une phrase narrative, jamais de métaphore, tech terms en anglais. Slug = kebab-case title (`login-apple`).
 3. **Grill.** Invoke **grill-me** skill: interview user relentlessly down design tree, one question at time. Resolve scope with **YAGNI** — push back on speculative. Question answerable from code → **go read code** (targeted Grep/Glob, scoped to feature). Never ask user what project already tells you.
    - **Every question carries recommendation. No exception.** See *Grill question format* below — bare question is bug, not style choice.
    - **Cover architecture.** Grill must settle *where this lives*: which feature/folder, what new files/folders, how fits architecture module (group by feature, proper nesting — not flat), which layer boundaries touch. Read architecture module in `{conventions}/` first, so grill against real rules.
    - Exception: user flags trivial quick win → skip grill, create task `grilled: false`.
 4. **Write task file** at `{tasks}/<slug>.md` from `${CLAUDE_PLUGIN_ROOT}/templates/task.md`:
    - `title`, `status: todo`, `grilled: true` (or false if skipped), `created` = today.
-   - `summary` — **≤ 8 words**, what task about (line 2 of wa-board list). Adds what title doesn't say — never repeats it. What, not how.
+   - `summary` — **≤ 8 words**, l'objectif en clair (line 2 of wa-board list). Adds what title doesn't say — never repeats it. Résultat une fois fait, pas le mécanisme ni l'histoire. Rules: **wa-board → Titres et summaries**.
    - `size` — effort estimate: `quickwin` (🟢, hour or less), `medium` (🟡), `large` (🔴, multi-session / probably split). Base on what grill surfaced.
    - `sprint` — kebab-case label, or **empty**. Rules in *Sprints* below. Default empty: most tasks stand alone.
    - `wiki:` — link relevant existing wiki pages with `[[page]]`; note any page to create.
@@ -85,7 +85,7 @@ Product-owner hat: what matters now, what order. New task(s) from this run = **f
 4. **Re-estimate size** when picture changed (`large` 🔴 task split may now be `medium`/`quickwin`). Update each task `size`.
 5. **Reorder.** Order in **Todo** section = priority (top = next). No numeric labels in `{backlog}` — order alone carries priority. Reflect new order in `{backlog}`.
    - **Sprint moves as block.** Its tasks stay contiguous in section, own internal order (dependencies first). Prioritize *sprint* against rest, then tasks inside. Splitting sprint across order needs reason — say out loud (*"j'ai sorti login-apple du bloc : elle débloque l'onboarding"*).
-6. **Tighten summaries.** Any task in pass whose `summary` breaks the ≤ 8 words rule → rewrite it, silently.
+6. **Tighten titles + summaries.** Any task in pass whose `title` or `summary` breaks **wa-board → Titres et summaries** (phrase narrative, métaphore, terme tech traduit, summary > 8 mots) → rewrite it, silently. Slug ne bouge pas.
 7. Show result using **wa-board list format**. `#` display-only, recomputed from order just written — always print list after reordering so indexes user sees are current. Sprints in play → progress lines under legend.
 
 **Cheap and quiet by default** — user asked for task, not backlog audit:

@@ -69,6 +69,27 @@ Canonical, every whackagent skill. Applies to **screen output and `{reports}`**.
 - **Task files are the exception** — `## Contexte / Décisions`, `## Critères d'acceptation` in full simple sentences (franglais OK): verifier and user reread them months later, fragments there get misread.
 - Headings and labels follow `discussion_language`.
 
+### Titres et summaries
+
+Titre = **étiquette**, pas phrase. Nomme la chose + ce qu'on lui fait. ≤ 5 mots. Doit se lire comme un dev l'écrit dans un ticket.
+
+- **Jamais une phrase narrative.** Sujet-verbe-complément qui raconte = titre raté. `Le dashboard pose les questions à la place des commandes` → `Prompts dans le dashboard`.
+- **Jamais de métaphore ni d'image.** `Des tests rougissent au hasard` ne veut rien dire pour personne → `Fix tests flaky CLI`.
+- **Termes tech en anglais**, ici aussi — flaky, job, watermark, toggle, prompt, scope, seed, dashboard, child process. Les traduire produit du charabia : `marqueurs des jobs`, `interrupteur`, `process fils`, `réglage`.
+- **Pas de reformulation élégante.** L'utilisateur dit `rework UI` → écris `Rework UI`, pas `Un style commun pour les écrans`.
+
+Summary = **l'objectif en clair**, ≤ 8 mots. Ce que ça donne une fois fait. Pas le mécanisme, pas l'histoire, pas la liste de ce qui disparaît.
+
+| ❌ | ✅ titre | ✅ summary |
+|---|---|---|
+| Après une purge, les jobs ne se rejouent pas | `Rejouer les jobs après purge` | purge reset pas les watermarks |
+| Importer toute la France, ou juste une région | `Scope d'import configurable` | DATA_SCOPE : région en local, France en prod |
+| Des tests de la CLI rougissent au hasard | `Fix tests flaky CLI` | 4 tests TUI fail en suite, passent isolés |
+| Un style commun pour les écrans de la CLI | `Rework UI écrans CLI` | design system partagé dans tui/design/ |
+| Le dashboard pose les questions à la place des commandes | `Prompts dans le dashboard` | commandes prennent des options, dashboard demande |
+| La navigation du dashboard suit l'arbre des commandes | `Nav dashboard par groupe` | un onglet = un groupe, plus de MENU_* |
+| L'écran Données lit la liste des jobs du backend | `Écran Données lit GET /admin/jobs` | plus de catalogue de jobs dupliqué en CLI |
+
 ## Paths
 
 Every whackagent skill writes `{backlog}` `{tasks}` `{wiki}` `{reports}` `{conventions}` instead of literal folder. They resolve from `paths:` in `.whackagent/config.md`, read at step 1 — project may keep wiki in `docs/wiki/` so team that doesn't run whackagent still read it.

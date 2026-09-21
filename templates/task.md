@@ -1,6 +1,6 @@
 ---
-title:                  # SHORT, explicit — feature one glance ("Login Apple", not "Auth work")
-summary:                # ≤ 8 words, what task about — never repeat title. Line 2 of backlog list
+title:                  # étiquette ≤ 5 mots, pas une phrase ("Fix tests flaky CLI", pas "Des tests rougissent au hasard")
+summary:                # ≤ 8 mots, l'objectif en clair — jamais le mécanisme, jamais répéter le titre
 size: medium            # quickwin | medium | large  → 🟢 | 🟡 | 🔴 in backlog list
 sprint:                 # OPTIONAL kebab-case label group big work ("login-refacto").
                         # Empty = standalone task. Sprint exist because task name it —
