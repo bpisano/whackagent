@@ -7,7 +7,7 @@ description: Interactively bootstrap the whackagent workflow in a project — or
 
 Set up orchestrated dev flow for project. Short interactive setup, then scaffold, then index.
 
-Wording (screen + reports): **wa-board → Voice** — telegraphic, tech terms stay English.
+Wording (whole conversation + reports + PRs): **wa-board → Voice** — telegraphic, tech terms stay English in every language (franglais, never literal translation).
 
 Runs on fresh project **and** on one already set up. Second time = **reconfigure**, not re-install: current values become defaults, nothing you edited get overwritten.
 
@@ -15,7 +15,7 @@ Runs on fresh project **and** on one already set up. Second time = **reconfigure
 
 `.whackagent/config.md` exists → **reconfigure** (jump to *Reconfigure mode*). Absent → **first setup**, steps 1–4.
 
-Optional arg narrow scope: `/wa-setup paths`, `/wa-setup review`, `/wa-setup build`, `/wa-setup branch`, `/wa-setup commit`, `/wa-setup verify`, `/wa-setup languages`. Reconfigure only — on fresh project arg meaningless, say so and run full setup.
+Optional arg narrow scope: `/wa-setup tasks`, `/wa-setup paths`, `/wa-setup review`, `/wa-setup build`, `/wa-setup branch`, `/wa-setup commit`, `/wa-setup verify`, `/wa-setup languages`. Reconfigure only — on fresh project arg meaningless, say so and run full setup.
 
 ## 1. Interactive config (ask one at a time, propose a default)
 
@@ -23,6 +23,7 @@ Detect first, ask second. Scan repo to guess:
 - **primary language** — `Package.swift`/`*.xcodeproj` → swift; `tsconfig.json`/`package.json` → typescript; else generic.
 - **project kind** (Swift) — `*.xcodeproj`/`*.xcworkspace` with app target, or `@main App`/UIKit lifecycle → `app`; `Package.swift` library/executable → `package`; CLI/server as applicable.
 - **SwiftUI usage** — any `import SwiftUI` in source.
+- **GitHub remote** — `git remote get-url origin` on github.com, `gh` installed. Owner is an org, or several contributors in `git shortlog -sn | head` → a team shares this repo.
 - **Its own build wrapper** — repo-local CLI (`cli/`, `bin/`, `scripts/`), `Makefile` with build target, or strongest signal — project's own `CLAUDE.md`/README saying *"ALWAYS use X to build"*. Read that instruction if exists: project that mandates wrapper mandates it for implementer too.
 
 Then confirm with user:
@@ -33,14 +34,15 @@ Then confirm with user:
 4. **Review toggles** — surface public-doc one explicitly, vary by company: _"Require `///` documentation on every public API? (some teams skip this)"_ → sets `review.public_doc`. Offer flip other toggles too.
 5. **Build command** — ask only when detection found wrapper: _"I see `<X>` — should the implementer build with it, or use XcodeBuildMCP / the language default?"_ → sets `build.command` (+ `build.test_command` if test target exists). Nothing detected → leave both empty, don't ask. **Project win over plugin default**: repo that documents own build path documents it for agents too, and implementer torn between two mandates pick one silently.
 6. **Commit policy** — _"Once YOU validate a feature, may I commit it myself, or always wait for you to commit?"_ → sets `auto_commit_after_validation`. Remind: commits always use your name, never Claude's. Outside autopilot, nothing committed before you validate.
-7. **Branch policy** — _"Should `/wa-code` work on its own branch per task (`wa/<slug>`), or code straight on the current branch?"_ → sets `branch.per_task`. If yes, confirm `branch.prefix` and `branch.base` (`current`, or fixed base like `main`). Mention pairing: with per-task branches **and** auto-commit on, closing task commit it and check out next task branch for you (`branch.checkout_next`, on by default) — offer turn off. `/wa-autopilot` branch per task regardless. Say `branch.sprint_prefix` exist (`sprint/<sprint>`, tasks of sprint fork off it, `/wa-close` merge back) but **don't ask** — default work, sprints may never come up.
+7. **Branch policy** — _"Should `/wa-code` work on its own branch per task (`wa/add-apple-login`), or code straight on the current branch?"_ → sets `branch.per_task`. If yes, confirm `branch.prefix` and `branch.base` (`current`, or fixed base like `main`). Mention pairing: with per-task branches **and** auto-commit on, closing task commit it and check out next task branch for you (`branch.checkout_next`, on by default) — offer turn off. `/wa-autopilot` branch per task regardless. Say `branch.sprint_prefix` exist (`sprint/<sprint>`, tasks of sprint fork off it, `/wa-close` merge back) but **don't ask** — default work, sprints may never come up.
    **Then, only when `per_task`: what happen to branch when its task close** — _"When a task is done, should I open a PR onto `main`, merge it locally, or leave the branch alone and let you do the PR? (recommended: leave it alone — you keep control of what gets proposed to the team; switch to `pr` once you trust the flow)"_ → sets `close.strategy` (`nothing` | `pr` | `merge`) + `close.target`. Two things to say: task in **sprint** always merge into its sprint branch first, this setting only decide what happen to sprint branch at end; and `pr` need `gh` authenticated, and **ask every time before opening one**. `close.delete_branch` stay `auto` unless they ask — delete only what already landed elsewhere.
-8. **Where things live** — _"Keep the backlog, tasks and wiki inside `.whackagent/`, or put some of them somewhere the team already reads — `docs/wiki/`, say? (recommended: `.whackagent/` — one folder, nothing to wire up; move them if teammates who don't run whackagent need to read them)"_ → sets `paths.*`. Ask **once, as one question**; split into per-path answers only if they say "some of them". Two things to say when they move something:
+8. **Where tasks live** — ask only when detection found a GitHub remote; none → `files`, don't ask. _"Keep tasks as `.md` files in the repo, or as GitHub issues on a project board the whole team sees? (recommended: <GitHub when a team shares the repo — one backlog for everyone, PRs close their issues / files when you work alone — nothing to wire up>)"_ → sets `tasks.backend` (`files` | `github`). Say what `github` means in three lines: one issue per task (whole task in its body), a board whose Status column is the state and card order the priority, sprints as milestones. It creates things other people see → see *GitHub scaffold*, always a plan and a yes first.
+9. **Where things live** — _"Keep the backlog, tasks and wiki inside `.whackagent/`, or put some of them somewhere the team already reads — `docs/wiki/`, say? (recommended: `.whackagent/` — one folder, nothing to wire up; move them if teammates who don't run whackagent need to read them)"_ → sets `paths.*`. Ask **once, as one question**; split into per-path answers only if they say "some of them". Two things to say when they move something:
    - shared wiki or backlog want **committed, browsable** folder (`docs/`) — `.whackagent/` read fine for agents, bad for human on GitHub;
    - `paths.reports` = run output, not knowledge — leave local (and gitignore-able) unless asked.
    Absolute paths work too (wiki in sibling repo). `.whackagent/config.md` itself never move — it carry the paths.
 
-Keep short — 7 to 9 questions (build one fire only on detected wrapper; close policy only when `per_task`). Rest take template default.
+Keep short — 7 to 10 questions (build one fire only on detected wrapper; close policy only when `per_task`; task storage only with a GitHub remote; `github` → question 9 only about wiki, backlog and tasks don't live in files). Rest take template default.
 
 **Only if project kind is `app`:** ask **who tests the app** after green build — _"In autopilot the agent drives the app itself (taps + screenshots) since nobody's watching. When you're at the keyboard, should it do the same, or stop at build + tests and let you test? (recommended: you test — you'll open the app anyway, and driving it costs a few minutes per round)"_ → sets `verify.mode` (`autopilot` | `always` | `off`) + `verify.platform`/`verify.target`. Name third option only if they push back on autopilot driving at all: `off` = nobody drives it, ever. iOS drive through **XcodeBuildMCP** (same server it builds with, nothing extra to install); Android or physical device need **mobile-mcp** server (`mobile-next/mobile-mcp`) configured — say so.
 
@@ -48,7 +50,7 @@ Keep short — 7 to 9 questions (build one fire only on detected wrapper; close 
 
 Create directory and files (do not overwrite existing without asking).
 
-**Everything below land at its `paths.*` value, not at literal path written here** — `{tasks}`, `{wiki}`, `{backlog}`, `{reports}`, `{conventions}` = whatever step 1 question 8 settled on. Create parent folders as needed; path outside `.whackagent/` normal, not mistake. `config.md` one exception: always `.whackagent/config.md`.
+**Everything below land at its `paths.*` value, not at literal path written here** — `{tasks}`, `{wiki}`, `{backlog}`, `{reports}`, `{conventions}` = whatever step 1 question 9 settled on. Create parent folders as needed; path outside `.whackagent/` normal, not mistake. `config.md` one exception: always `.whackagent/config.md`.
 
 - `.whackagent/config.md` — copy `${CLAUDE_PLUGIN_ROOT}/templates/config.md`, fill answers above (including `paths:` block), set `review.modules` to modules you actually copy (next bullet).
 - `{conventions}/` — copy **only relevant** convention modules there:
@@ -61,9 +63,33 @@ Create directory and files (do not overwrite existing without asking).
   incrementalBuildsEnabled: true
   ```
   Skip if the file already exists (don't clobber a user's config). This is why an implementer with no `build.command` builds through XcodeBuildMCP — command-line `xcodebuild` ignores this file and rebuilds from scratch. With a `build.command` set, the wrapper owns the build dir instead, and this file is just harmless.
-- `{backlog}` — copy `${CLAUDE_PLUGIN_ROOT}/templates/BACKLOG.md`.
+- `{backlog}` — copy `${CLAUDE_PLUGIN_ROOT}/templates/BACKLOG.md`. **`files` only.**
 - `{wiki}/index.md` — copy `${CLAUDE_PLUGIN_ROOT}/templates/wiki-index.md`.
-- Create empty `{tasks}/` and `{reports}/` directories (`.gitkeep` fine).
+- Create empty `{tasks}/` (`files` only) and `{reports}/` directories (`.gitkeep` fine).
+- **`github`** → *GitHub scaffold* below instead of backlog and tasks.
+
+### GitHub scaffold — `tasks.backend: github`
+
+Everything here is visible to the team the moment it exists. **One plan block, one yes**, then run it all:
+
+```
+GitHub — LunabeeStudio/french-map
+
+auth      : gh ✅ · scope project ✅
+project   : "french-map" created, linked to repo
+status    : Draft · Todo · Coding · To test · To close · Done · Canceled
+labels    : size:quickwin · size:medium · size:large
+config    : tasks.backend: github · tasks.project: LunabeeStudio/12
+
+ok? [y/n]
+```
+
+1. **Auth.** `gh auth status` must show `project` scope. Missing → ask user to run `! gh auth refresh -s project`, wait, re-check. Never continue without it.
+2. **Project.** A project already linked to this repo with exactly these Status options → reuse it, say so. Else create one owned by the repo owner (org or user): `gh project create --owner <owner> --title "<repo>"`, then `gh project link <number> --owner <owner> --repo <owner>/<repo>`. One board per repo, whackagent's alone — never repurpose a team board.
+3. **Status field.** Set its options to the seven states, in lifecycle order, via GraphQL `updateProjectV2Field` (`singleSelectOptions`). Names: `Draft`, `Todo`, `Coding`, `To test`, `To close`, `Done`, `Canceled` — state `to-test` ↔ option `To test`.
+4. **Labels.** `gh label create size:quickwin --force` (and `medium`, `large`). Milestones are created on demand by `/wa-task`, never here.
+5. **Config.** `tasks.backend: github`, `tasks.project: <owner>/<number>`. No `{backlog}`, no `{tasks}`.
+6. Existing `.md` tasks → *Import to GitHub* below, same plan block.
 
 ## 3. Seed the wiki (optional, offer it)
 
@@ -86,20 +112,23 @@ The project already works. You're here to **change settings and pick up what the
 3. **Diff the config's keys against `${CLAUDE_PLUGIN_ROOT}/templates/config.md`.** Keys in the template and missing from the config are features shipped after this project was set up (`paths:` is exactly that for anything set up before it existed). They're the main reason to re-run this command — list them with their default and what they buy, and ask.
 4. **Check the paths resolve.** A `paths.*` key pointing at nothing means files moved by hand: say which key and what it points at, offer to re-point the key or move the files back. Don't scaffold over it.
 
+5. **Legacy tasks.** `files` backend with tasks still on the old lifecycle — states `in-progress` / `review` / `validated`, a `grilled:` field, French section headings, kebab-case sprints → *Lifecycle migration* below. Offer it first: every other skill refuses legacy tasks until it's done.
+
 ### 2. Show the state, then ask what changes
 
 One table — current value, and a flag on anything worth attention:
 
 ```
-| Réglage      | Actuel                | |
+| Setting      | Current               | |
 |--------------|-----------------------|-|
+| tasks.backend| files                 | 🆕 github possible — remote LunabeeStudio/french-map |
 | review.when  | on_validation         | |
-| paths.wiki   | .whackagent/wiki      | 🆕 déplaçable (docs/wiki) pour partage équipe |
+| paths.wiki   | .whackagent/wiki      | 🆕 movable (docs/wiki) to share with team |
 | verify.mode  | autopilot             | |
-| build.command| (vide)                | ⚠️ `make build` détecté depuis |
+| build.command| (empty)               | ⚠️ `make build` detected since |
 ```
 
-Then **one question: what do you want to change?** Re-ask a full question (step 1's wording) only for what they name, plus every new key from stock-taking step 3 — those they've never been asked. Current value is the default in every one; "leave it" is always a valid answer. Don't walk all eight questions at somebody who came to flip one toggle.
+Then **one question: what do you want to change?** Re-ask a full question (step 1's wording) only for what they name, plus every new key from stock-taking step 3 — those they've never been asked. Current value is the default in every one; "leave it" is always a valid answer. Don't walk every question at somebody who came to flip one toggle.
 
 With an arg (`/wa-setup paths`), skip the table's unrelated rows and go straight to that section's questions.
 
@@ -117,9 +146,51 @@ With an arg (`/wa-setup paths`), skip the table's unrelated rows and go straight
 
 **Conventions dir — additive only.** Copy in modules that are missing (a module the plugin added, or `swiftui.md` because the project uses SwiftUI now) and update `review.modules` to match. **Never overwrite a module that's already there**: those copies hold the rules `/wa-feedback` captured from the user. A plugin-side module changed upstream → say so, show the diff, copy only on their yes.
 
-**Never re-scaffold what exists.** Backlog, task files, reports and wiki pages are content — this command doesn't touch their contents, ever. Missing entirely (a `{tasks}` folder someone deleted) → recreate the empty folder, mention it.
+**Never re-scaffold what exists.** Backlog, task files, reports and wiki pages are content — this command doesn't touch their contents — except *Lifecycle migration* and *Import to GitHub*, each behind its own plan and yes. Missing entirely (a `{tasks}` folder someone deleted) → recreate the empty folder, mention it.
 
 **Don't re-run the wiki seeding or the compression pass** over pages that already exist. Compression is for pages written this run; there are none.
+
+### Lifecycle migration — old tasks onto the current lifecycle
+
+One plan, one yes, then rewrite every task file and `{backlog}`:
+
+```
+Migration — 12 tasks
+
+states    : in-progress → coding (1) · review → to-test (2) · validated → to-close (1)
+            todo + grilled: false → draft (3) · todo + grilled: true → todo (5)
+headings  : French → English in 9 files (## Critères d'acceptation → ## Acceptance criteria…)
+sprints   : login-refacto → Login refacto · perf-hangs → Perf hangs
+titles    : "Login Apple" → "Add Apple login" · "Tests turn red at random" → "Fix flaky CLI tests"
+backlog   : sections Draft · Todo · Coding · To test · To close · Done · Canceled
+
+ok? [y/n]
+```
+
+- **States**: `in-progress` → `coding`, `review` → `to-test`, `validated` → `to-close`, `todo` + `grilled: false` → `draft`, `todo` + `grilled: true` → `todo`. Drop the `grilled:` field everywhere.
+- **Headings**: `## Contexte / Décisions` → `## Context / Decisions`, `## Critères d'acceptation` → `## Acceptance criteria`, `## Implémentation` → `## Implementation`, `## Vérification` → `## Verification`.
+- **Sprints**: kebab label → human title (**wa-board → Sprint names**). Sprint branches keep their name — kebab of the new title is the same string.
+- **Titles** breaking **wa-board → Titles and summaries** (no verb, narrative, metaphor) → proposed rewrite in the plan. Slugs and file names never move.
+- **Backlog**: sections renamed and reordered, lines keep their order inside each state.
+- Dirty tree → say so first. `git mv` never needed: file names don't change.
+
+### Import to GitHub — `files` → `github` on a project with tasks
+
+Run *Lifecycle migration* first if needed, then extend the *GitHub scaffold* plan block:
+
+```
+milestones: Login refacto, Perf hangs
+issues    : 9 open tasks → #210…#218, backlog order kept
+branches  : wa/add-apple-login → wa/212-add-apple-login (local only)
+archive   : 23 done/canceled tasks stay in {tasks}, never imported
+removed   : 9 imported .md + BACKLOG.md (git history keeps them)
+```
+
+1. **Open tasks only** — `draft` to `to-close`. `done` / `canceled` stay as `.md`: an archive, not a backlog. Hundreds of created-then-closed issues = notification storm for nothing.
+2. **In backlog order**, per **wa-board → Task store → create**: body = file minus frontmatter, Status, `size:*` label, milestone. Then order the board to match `{backlog}`.
+3. **Branches** of in-flight tasks: `git branch -m` to the new key (`wa/<n>-<slug>`). Local only — a pushed branch keeps its remote name, say so.
+4. **Remove** the imported files and `{backlog}` **after** every issue exists. Any creation failed → stop, remove nothing, report what landed: half an import with the source deleted is lost work.
+5. `github` → `files` is not supported. Asked → say so, recommend staying.
 
 ### 4. Report
 

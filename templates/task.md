@@ -1,30 +1,32 @@
 ---
-title:                  # étiquette ≤ 5 mots, pas une phrase ("Fix tests flaky CLI", pas "Des tests rougissent au hasard")
-summary:                # ≤ 8 mots, l'objectif en clair — jamais le mécanisme, jamais répéter le titre
+title:                  # verb + thing, ≤ 5 words ("Fix flaky CLI tests", not "Tests turn red at random")
+summary:                # ≤ 8 words, the goal plain — never the mechanism, never repeat the title
 size: medium            # quickwin | medium | large  → 🟢 | 🟡 | 🔴 in backlog list
-sprint:                 # OPTIONAL kebab-case label group big work ("login-refacto").
+sprint:                 # OPTIONAL human title grouping big work ("Login refacto").
                         # Empty = standalone task. Sprint exist because task name it —
-                        # no sprint file, no create command. See /wa-task → Sprints.
-status: todo            # todo | in-progress | review | validated | done | canceled
-                        #   review    = coded, wait YOU test it
-                        #   validated = you say match spec, verifier ran, wait your retest
-                        #   done       = retested + closed by /wa-close
-grilled: false          # true once clarified via /wa-task (grill-me)
+                        # no sprint file, no create command. See wa-board → Sprints.
+status: draft           # draft | todo | coding | to-test | to-close | done | canceled
+                        #   draft    = idea, not grilled yet → /wa-task
+                        #   todo     = grilled, ready → /wa-code
+                        #   coding   = agent coding it
+                        #   to-test  = coded, YOU test it → /wa-feedback or /wa-validate
+                        #   to-close = spec OK + verifier passed, you retest → /wa-close
+                        #   done     = closed by /wa-close
 wiki:                   # [[page]] refs, comma-separated
 note:                   # free-form trigger / context (optional, not auto-evaluated)
 created:                # YYYY-MM-DD
 ---
 
-## Contexte / Décisions
+## Context / Decisions
 
 <!-- Fill by /wa-task. What, why, scope (YAGNI), decisions resolved in grill. -->
 
-## Critères d'acceptation
+## Acceptance criteria
 
 <!-- Fill by /wa-task. Observable checks mean "done" — each one thing you see
      on screen or state input must produce. wa-verifier drive these on device. -->
 
-## Implémentation
+## Implementation
 
 <!-- Fill by /wa-code. Approach, files touched, build proof, notes from wa-implementer. -->
 
@@ -34,7 +36,7 @@ created:                # YYYY-MM-DD
      lens (style / elegance / structure / correctness) + what autofix changed, one block per
      round. -->
 
-## Vérification
+## Verification
 
 <!-- Fill by /wa-code (verify phase). wa-verifier checks (✅/❌) + screenshot paths per criterion. -->
 

@@ -7,7 +7,7 @@ description: Make a code review. --fix to autofix.
 
 Standalone review — audit existing code, diff, or whole project. Same engine as `/wa-code` verify phase, usable anywhere.
 
-Wording (screen + reports): **wa-board → Voice** — telegraphic, tech terms stay English.
+Wording (whole conversation + reports + PRs): **wa-board → Voice** — telegraphic, tech terms stay English in every language (franglais, never literal translation).
 
 ## Scope (argument)
 

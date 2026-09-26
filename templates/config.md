@@ -22,9 +22,19 @@ paths:                         # WHERE whackagent keep each kind of file. Skills
                                # paths, so must sit at known spot.
                                # Move path after setup → move files too; nothing back-fill.
 
+tasks:                         # WHERE tasks live. See wa-board → Task store.
+  backend: files               # files  — one .md per task in {tasks}, order in {backlog}. Default.
+                               # github — one issue per task, whole task in its body; a GitHub
+                               #   Project board holds state (Status field) and priority (card
+                               #   order); sprints = milestones; PRs carry `Closes #<n>`.
+                               #   Team sees one shared backlog. {backlog} and {tasks} unused.
+                               #   Needs `gh` authenticated with `project` scope.
+  project: ""                  # github only: <owner>/<number> of the board, set by /wa-setup.
+                               #   One board per repo, owned by whackagent.
+
 review:
   when: on_validation          # WHEN wa-verifier run.
-                               #   on_validation — once, at /wa-validate: your feu vert say feature
+                               #   on_validation — once, at /wa-validate: your green light say feature
                                #     match spec, and THAT fire review over whole diff (code + every
                                #     feedback round). Coding and feedback round stay fast; nothing
                                #     reviewed while still moving.
@@ -80,11 +90,13 @@ commit:
 
 branch:
   per_task: false              # /wa-code work on own branch per task instead of current one
-  prefix: "wa/"                # branch name: <prefix><slug> → wa/login-apple
+  prefix: "wa/"                # branch name: <prefix><key> → wa/add-apple-login (github: wa/42-add-apple-login)
   base: current                # fork point: current | main | <branch name>
   sprint_prefix: "sprint/"     # task carrying `sprint:` branch off SPRINT branch, not base:
-                               #   sprint/login-refacto ← created from base: on first task of sprint
-                               #   wa/login-apple       ← forked from it, merged back by /wa-close
+                               #   sprint/login-refacto   ← kebab of sprint "Login refacto",
+                               #                            created from base: on first task
+                               #   wa/add-apple-login     ← forked from it, merged back by /wa-close
+                               #   (github backend: wa/42-add-apple-login)
                                # So task 3 of sprint see task 1 work — same screen, no blind conflict.
                                # Created by whoever need it first: /wa-code step 0 or /wa-autopilot
                                # wave setup. Empty string → sprint get no branch, tasks use base:.
