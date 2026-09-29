@@ -1,6 +1,6 @@
 ---
 name: wa-validate
-description: Your green light on coded feature — "this is what I asked for". Runs verifier over whole diff (style, elegance, structure, correctness) and records verdict. Does NOT close task — /wa-close does.
+description: Runs the code review once you're happy with the feature. Doesn't close the task.
 ---
 
 # /wa-validate
@@ -9,7 +9,9 @@ description: Your green light on coded feature — "this is what I asked for". R
 
 Wording (whole conversation + reports + PRs): **wa-board → Voice** — telegraphic, tech terms stay English in every language (franglais, never literal translation).
 
-Does **not** set task `done`, never touch git. You probably retest after review touch things — closing separate deliberate step: **`/wa-close`**.
+Does **not** set task `done`. `files`: never touch git. `github`: round-end commit + push only (board needs it). You probably retest after review touch things — closing separate deliberate step: **`/wa-close`**.
+
+**Optional as a step.** `/wa-close` on a `to-test` task runs this same pass itself before landing. Run `/wa-validate` alone when you want review findings — and a retest — before deciding to close.
 
 Where it sit: `/wa-task` → `/wa-code` → *you test, `/wa-feedback`, you test again* → **`/wa-validate`** → verifier → *you retest* → **`/wa-close`**.
 
@@ -23,7 +25,8 @@ Review every round burn one verifier per note, review code about to change anywa
    - `status: coding` → code not finished. Say so, don't review half-task.
    - `status: to-close` → already reviewed. Code moved since → re-review delta; untouched → nothing to do, closing is **`/wa-close <id>`**.
    - `status: done` / `canceled` → nothing to do.
-2. **Be on right branch.** `branch.per_task` or `/wa-autopilot` delivery → work live on `<branch.prefix><key>`. Not here → say which branch, switch **only after user confirms** (their tree may be dirty).
+2. **Be on right branch.** `branch.per_task` or `/wa-autopilot` delivery → work live on `<branch.prefix><key>`. Not here → say which branch, switch **only after user confirms** (their tree may be dirty). `github` → `git fetch` + pull: last round may come from another machine.
+   - **`github` → take the task.** `github-board claim <n> coding` per **wa-board → Task store → Locks**. Exit 3 → name owner + age, stop. Exit 4 → say state, stop.
 3. **State what you take as validated** — the `## Acceptance criteria`, listed back in one block. Criterion they know unmet means they wanted `/wa-feedback`, not this: say so and stop rather than review feature still being finished.
 4. **Dispatch verifier** — point of command. One `wa-verifier`, per `/wa-code` step 3 in full.
    - **Scope = cumulative diff**: `branch.base..HEAD` plus working tree when task has own branch, else every file in `## Implementation` and each `## Feedback` round. Hunks inline, `inline`-tagged ones **flagged as written without convention pass** — those get harder look.
@@ -31,6 +34,7 @@ Review every round burn one verifier per note, review code about to change anywa
 5. **Check sweep → autofix.** `LENSES:` short of four ✓ → send back for missing lens first; this pass close task, lens skipped here skipped for good. Then order by severity, keep lens tags. `review.autofix: true` → dispatch implementer, re-verify, loop until clean or no progress, **cap 3 rounds**. Not converging → stop, show what left. Record everything in `## Review` under `validation` round.
 6. **Runtime.** `verify.mode: always` and autofix touched code → implementer re-drive app. Any other mode → **say plainly code moved since user tested it** and name files, so nobody treat stale test as proof.
 7. **Set state `to-close`** per **Task store**. Never `done` here — that's user's second look, not yours.
+   - **`github` → round end**: file `status: to-close` + `## Review`, commit (config author, **never Claude**), push — PR updates, lock released, card → To close (hook). Findings still open (step 8, third case) → `status: to-test` instead: not reviewed clean, not closable. Round aborted before any push → `github-board release <n> coding --reset-to <state claimed from>`.
 8. **Report + hand back**, one of three:
    - **Clean, autofix changed nothing** → code they tested *is* code reviewed. Nothing to retest: *"`/wa-close <id>` whenever you want."*
    - **Clean, autofix changed code** → list what changed, in their terms. *"Retest, then `/wa-close <id>`."*
@@ -40,13 +44,14 @@ Review every round burn one verifier per note, review code about to change anywa
 
 - **`/wa-feedback` on `to-close` task** → code moved after its review: state go back to `to-test`, task need `/wa-validate` again. Never close on review predating last edit.
 - **`review.when: each_round`** → rounds already reviewed; this pass still run, over cumulative diff, and it's one that counts. Short: most findings already fixed.
-- **`/wa-autopilot`** deliver tasks at `to-test`, uncommitted-by-you and unreviewed by verifier — that's deal, your review async. Each one need own `/wa-validate`.
+- **`/wa-autopilot`** deliver tasks at `to-test`, uncommitted-by-you and unreviewed by verifier — that's deal, your review async. Each one need own `/wa-validate` — or `/wa-close`, which runs it.
+- **`/wa-close` on `to-test`** → runs steps 3–6 of this file itself, then lands. Same verifier, same autofix cap, same `## Review` record.
 
 ## Never
 
 - Never mark task `done` — that's `/wa-close`, after user retests reviewed code.
 - Never review task user hasn't validated: without their yes, you review feature still moving.
-- Never commit, merge, push, open PR or delete branch — **git belong to `/wa-close`**.
+- Never merge, open PR, mark PR ready or delete branch — **landing belong to `/wa-close`**. Never commit or push in `files`; `github` → round-end commit + push only, never mid-round.
 - Never write code yourself — findings go to implementer, same as `/wa-code`.
 
 ## Asking
@@ -55,4 +60,4 @@ Every question carry recommended answer + one-line reason — finding worth acce
 
 ## Next step
 
-Retest what review changed, then **`/wa-close <id>`** — it commit, land branch (merge into sprint, PR, or nothing per `close.strategy`) and mark task `done`. Closed → **`/wa-wiki`**.
+Retest what review changed, then **`/wa-close <id>`** — it syncs wiki, commits, lands branch (`files`: merge into sprint, PR, or nothing per `close.strategy`; `github`: draft PR marked ready, you merge) and marks task `done`.

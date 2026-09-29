@@ -1,0 +1,220 @@
+# whackagent board hooks — template version: 1
+# Installed by /wa-setup from the whackagent plugin (templates/github-board.yml).
+# Moves cards on the GitHub Project from repository events, so the board follows the task files:
+#   issue opened                            → Draft
+#   push to wa/<n>-<slug>                   → column = `status:` of {tasks}/<n>-<slug>.md on that push
+#                                             (todo · to-test · to-close), releases the claim the round held
+#   PR merged (any base)                    → Done, issue closed, claims dropped, milestone closed when empty
+#   PR closed unmerged                      → Todo (spec kept on its branch)
+# The task file is the truth once its branch exists. Agents write only the locks (Grilling, Coding)
+# and Canceled; every other column comes from here.
+# Settings are repository variables written by `github-board provision`. Projects v2 writes need
+# the WA_PROJECT_TOKEN secret (classic PAT, scopes: project, repo). Everything else uses GITHUB_TOKEN.
+# Custom branch prefix? Change the `branches` filter below to match WA_BRANCH_PREFIX.
+# Adapted from the rlatapy-luna/whackagent fork.
+
+name: whackagent board
+
+on:
+  issues:
+    types: [opened]
+  push:
+    branches: ["wa/**"]
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: whackagent-board-${{ github.event.issue.number || github.head_ref || github.ref_name }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  board:
+    if: vars.WA_PROJECT_NUMBER != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          WA_PROJECT_TOKEN: ${{ secrets.WA_PROJECT_TOKEN }}
+          WA_PROJECT_OWNER: ${{ vars.WA_PROJECT_OWNER }}
+          WA_PROJECT_NUMBER: ${{ vars.WA_PROJECT_NUMBER }}
+          WA_STATUS_FIELD: ${{ vars.WA_STATUS_FIELD }}
+          WA_STATES: ${{ vars.WA_STATES }}
+          WA_TASKS_PATH: ${{ vars.WA_TASKS_PATH }}
+          WA_BRANCH_PREFIX: ${{ vars.WA_BRANCH_PREFIX }}
+        with:
+          script: |
+            const env = process.env;
+            if (!env.WA_PROJECT_TOKEN) {
+              core.setFailed("WA_PROJECT_TOKEN secret missing: classic PAT with scopes project + repo");
+              return;
+            }
+            // Second client on the PAT: GITHUB_TOKEN can't reach Projects v2. Same class as `github`.
+            const projects = new github.constructor({ auth: env.WA_PROJECT_TOKEN });
+            const { owner, repo } = context.repo;
+            const prefix = env.WA_BRANCH_PREFIX || "wa/";
+            const tasksPath = (env.WA_TASKS_PATH || ".whackagent/tasks").replace(/\/$/, "");
+            const statusField = env.WA_STATUS_FIELD || "Status";
+            const states = {
+              draft: "Draft", grilling: "Grilling", todo: "Todo", coding: "Coding",
+              "to-test": "To test", "to-close": "To close", done: "Done", canceled: "Canceled",
+              ...JSON.parse(env.WA_STATES || "{}"),
+            };
+            // `status:` values a pushed task file may move the card to. `coding` is a lock, set by claim only.
+            const fromFile = ["todo", "to-test", "to-close"];
+            const settled = ["done", "canceled"];
+
+            const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const issueFromBranch = (branch) => {
+              const match = branch.match(new RegExp(`^${escape(prefix)}(\\d+)-`));
+              return match ? Number(match[1]) : null;
+            };
+
+            let projectCache;
+            async function project() {
+              if (projectCache) return projectCache;
+              const data = await projects.graphql(
+                `query($l:String!,$n:Int!,$f:String!){repositoryOwner(login:$l){... on ProjectV2Owner{
+                  projectV2(number:$n){id field(name:$f){... on ProjectV2SingleSelectField{id options{id name}}}}}}}`,
+                { l: env.WA_PROJECT_OWNER || owner, n: Number(env.WA_PROJECT_NUMBER), f: statusField });
+              const p = data.repositoryOwner.projectV2;
+              if (!p || !p.field) throw new Error(`project or field ${statusField} not found`);
+              const byName = Object.fromEntries(p.field.options.map((o) => [o.name, o.id]));
+              projectCache = { id: p.id, field: p.field.id, byName };
+              return projectCache;
+            }
+
+            async function item(number) {
+              const p = await project();
+              const { data: issue } = await github.rest.issues.get({ owner, repo, issue_number: number });
+              const added = await projects.graphql(
+                `mutation($p:ID!,$c:ID!,$f:String!){addProjectV2ItemById(input:{projectId:$p,contentId:$c}){item{id
+                  fieldValueByName(name:$f){... on ProjectV2ItemFieldSingleSelectValue{name}}}}}`,
+                { p: p.id, c: issue.node_id, f: statusField });
+              const node = added.addProjectV2ItemById.item;
+              const current = node.fieldValueByName?.name;
+              const state = Object.keys(states).find((s) => states[s] === current) || null;
+              // column set but state null = a column whackagent doesn't own (Blocked, …): hands off
+              return { id: node.id, state, column: current || null, issue };
+            }
+
+            async function setState(ticket, state) {
+              const p = await project();
+              await projects.graphql(
+                `mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){updateProjectV2ItemFieldValue(input:{
+                  projectId:$p,itemId:$i,fieldId:$f,value:{singleSelectOptionId:$o}}){projectV2Item{id}}}`,
+                { p: p.id, i: ticket.id, f: p.field, o: p.byName[states[state]] });
+              core.info(`#${ticket.issue.number}: ${ticket.state ?? "none"} → ${state}`);
+            }
+
+            async function release(number, phase) {
+              try {
+                await github.rest.git.deleteRef({ owner, repo, ref: `wa-claims/${number}/${phase}` });
+              } catch (e) { if (![404, 422].includes(e.status)) throw e; }
+            }
+
+            const comment = (number, body) =>
+              github.rest.issues.createComment({ owner, repo, issue_number: number, body });
+
+            // The task file for #number at sha: its path and `status:`, or null when absent, not this
+            // issue's, or not grilled yet (empty acceptance criteria).
+            async function taskFile(number, sha) {
+              let listing;
+              try {
+                ({ data: listing } = await github.rest.repos.getContent({ owner, repo, path: tasksPath, ref: sha }));
+              } catch (e) { if (e.status === 404) return null; throw e; }
+              const file = (Array.isArray(listing) ? listing : []).find((f) => new RegExp(`^${number}-.*\\.md$`).test(f.name));
+              if (!file) return null;
+              const { data } = await github.rest.repos.getContent({ owner, repo, path: file.path, ref: sha });
+              const text = Buffer.from(data.content, "base64").toString("utf8");
+              if (!new RegExp(`^issue:\\s*#?${number}\\s*$`, "m").test(text)) {
+                core.notice(`${file.path}: frontmatter issue: does not match #${number}`);
+                return null;
+              }
+              const section = text.split(/^## Acceptance criteria\s*$/m)[1];
+              const criteria = section ? section.split(/^## /m)[0].replace(/<!--[\s\S]*?-->/g, "").trim() : "";
+              if (!criteria) {
+                core.notice(`${file.path}: Acceptance criteria empty, grill not finished`);
+                return null;
+              }
+              const status = (text.match(/^status:\s*([a-z-]+)/m) || [])[1] || null;
+              return { path: file.path, status };
+            }
+
+            const event = context.eventName;
+            const payload = context.payload;
+
+            if (event === "issues") {
+              if (payload.issue.pull_request) return;
+              if (payload.issue.labels.some((l) => l.name === "wa-ignore")) return;
+              const ticket = await item(payload.issue.number);
+              if (!ticket.column) await setState(ticket, "draft");
+              return;
+            }
+
+            if (event === "push") {
+              if (payload.deleted) return;
+              const branch = context.ref.replace("refs/heads/", "");
+              const number = issueFromBranch(branch);
+              if (!number) return;
+              const file = await taskFile(number, payload.after);
+              if (!file || !fromFile.includes(file.status)) return;
+              const ticket = await item(number);
+              if (ticket.column && !ticket.state) return;
+              if (settled.includes(ticket.state)) return;
+              // The push ends whichever round was running: grill (→ todo) or coding round (→ to-test / to-close).
+              await release(number, "grilling");
+              await release(number, "coding");
+              if (ticket.state === file.status) return;
+              await setState(ticket, file.status);
+              // sha permalink: the branch is deleted on merge, the commit stays
+              const url = `${context.serverUrl}/${owner}/${repo}/blob/${payload.after}/${file.path}`;
+              const name = file.path.split("/").pop();
+              const lines = {
+                todo: `✅ **grilled** — spec [\`${name}\`](${url}) on \`${branch}\``,
+                "to-test": `🧪 **to test** — [\`${name}\`](${url})`,
+                "to-close": `🏁 **to close** — verifier passed, retest then close`,
+              };
+              await comment(number, lines[file.status]);
+              return;
+            }
+
+            if (event === "pull_request") {
+              const pr = payload.pull_request;
+              if (pr.head.repo?.full_name !== pr.base.repo.full_name) return;
+              const number = issueFromBranch(pr.head.ref);
+              if (!number) return;
+              const ticket = await item(number);
+              if (ticket.column && !ticket.state) {
+                core.info(`#${number} sits in column ${ticket.column}, not a whackagent state: untouched`);
+                return;
+              }
+
+              if (pr.merged) {
+                await setState(ticket, "done");
+                await release(number, "grilling");
+                await release(number, "coding");
+                if (ticket.issue.state === "open") {
+                  await github.rest.issues.update({ owner, repo, issue_number: number, state: "closed", state_reason: "completed" });
+                }
+                await comment(number, `🎉 **done** — #${pr.number} merged into \`${pr.base.ref}\``);
+                const milestone = ticket.issue.milestone;
+                if (milestone) {
+                  const { data: m } = await github.rest.issues.getMilestone({ owner, repo, milestone_number: milestone.number });
+                  if (m.state === "open" && m.open_issues === 0) {
+                    await github.rest.issues.updateMilestone({ owner, repo, milestone_number: m.number, state: "closed" });
+                    core.info(`milestone ${m.title} closed`);
+                  }
+                }
+                return;
+              }
+
+              if (settled.includes(ticket.state)) return;
+              await setState(ticket, "todo");
+              await release(number, "coding");
+              await comment(number, `↩️ **todo** — #${pr.number} closed unmerged, spec kept on \`${pr.head.ref}\``);
+            }

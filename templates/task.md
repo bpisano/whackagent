@@ -5,13 +5,18 @@ size: medium            # quickwin | medium | large  → 🟢 | 🟡 | 🔴 in b
 sprint:                 # OPTIONAL human title grouping big work ("Login refacto").
                         # Empty = standalone task. Sprint exist because task name it —
                         # no sprint file, no create command. See wa-board → Sprints.
-status: draft           # draft | todo | coding | to-test | to-close | done | canceled
+blocked_by: []          # slugs of tasks that must land first. See wa-board → Dependencies.
+                        # github backend: title, summary, size, sprint, blocked_by live on the
+                        #   issue — drop these five lines, write `issue: <n>` instead.
+status: draft           # draft | grilling | todo | coding | to-test | to-close | done | canceled
                         #   draft    = idea, not grilled yet → /wa-task
+                        #   grilling = grill running (lock)
                         #   todo     = grilled, ready → /wa-code
-                        #   coding   = agent coding it
+                        #   coding   = agent coding it (lock)
                         #   to-test  = coded, YOU test it → /wa-feedback or /wa-validate
                         #   to-close = spec OK + verifier passed, you retest → /wa-close
-                        #   done     = closed by /wa-close
+                        #   done     = closed by /wa-close (github: PR merged)
+                        # github backend: pushed status moves the board card (hook).
 wiki:                   # [[page]] refs, comma-separated
 note:                   # free-form trigger / context (optional, not auto-evaluated)
 created:                # YYYY-MM-DD

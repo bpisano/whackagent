@@ -1,0 +1,892 @@
+#!/usr/bin/env python3
+"""whackagent GitHub board helper — internal, called by the skills, never by the user.
+
+Tasks on a GitHub Project v2 on top of `gh`. Stdlib only. Verbs documented in
+skills/wa-board/SKILL.md → Task store. Settings come from repository variables (shared
+with the board workflow), IDs are cached per clone in <git-common-dir>/whackagent/github-cache.json.
+
+Ported from the rlatapy-luna/whackagent fork (wa-backlog), adapted to whackagent's lifecycle.
+
+Exit codes: 0 ok · 1 error · 2 usage · 3 claim taken · 4 wrong state for the operation.
+"""
+
+import argparse
+import concurrent.futures
+import hashlib
+import datetime as dt
+import json
+import os
+import socket
+import subprocess
+import sys
+from pathlib import Path
+
+STATES = ["draft", "grilling", "todo", "coding", "to-test", "to-close", "done", "canceled"]
+DEFAULT_STATE_NAMES = {
+    "draft": "Draft",
+    "grilling": "Grilling",
+    "todo": "Todo",
+    "coding": "Coding",
+    "to-test": "To test",
+    "to-close": "To close",
+    "done": "Done",
+    "canceled": "Canceled",
+}
+STATE_COLORS = {
+    "draft": "GRAY",
+    "grilling": "ORANGE",
+    "todo": "BLUE",
+    "coding": "PURPLE",
+    "to-test": "YELLOW",
+    "to-close": "PINK",
+    "done": "GREEN",
+    "canceled": "RED",
+}
+STATE_DESCRIPTIONS = {
+    "draft": "Idea, not grilled yet",
+    "grilling": "Locked: someone is grilling it",
+    "todo": "Grilled, ready to code",
+    "coding": "Locked: an agent is coding it",
+    "to-test": "Coded, waiting for a human test",
+    "to-close": "Verified, retest then close",
+    "done": "PR merged",
+    "canceled": "Dropped",
+}
+HIDDEN = {"done", "canceled"}
+SIZES = ["quickwin", "medium", "large"]
+SIZE_COLORS = {"quickwin": "GREEN", "medium": "YELLOW", "large": "RED"}
+# Phase claimed → states the ticket may be in when the claim is taken.
+CLAIM_FROM = {"grilling": {"draft"}, "coding": {"todo", "to-test", "to-close"}}
+CLAIM_NAMESPACE = "wa-claims"
+IGNORE_LABEL = "wa-ignore"
+
+EXIT_ERROR, EXIT_USAGE, EXIT_TAKEN, EXIT_WRONG_STATE = 1, 2, 3, 4
+
+
+class Failure(Exception):
+    def __init__(self, message, code=EXIT_ERROR):
+        super().__init__(message)
+        self.code = code
+
+
+class StaleCache(Exception):
+    """Board holds ids the cache doesn't know: the Project changed since the cache was built."""
+
+
+# ---------------------------------------------------------------- gh plumbing
+
+
+def gh(args, payload=None, check=True):
+    proc = subprocess.run(
+        ["gh", *args],
+        input=json.dumps(payload) if payload is not None else None,
+        capture_output=True,
+        text=True,
+    )
+    if check and proc.returncode != 0:
+        raise Failure(f"gh {' '.join(args[:3])}: {proc.stderr.strip() or proc.stdout.strip()}")
+    return proc
+
+
+def rest(method, path, body=None, check=True):
+    args = ["api", "-X", method, path]
+    if body is not None:
+        args += ["--input", "-"]
+    proc = gh(args, body, check=check)
+    out = proc.stdout.strip()
+    data = json.loads(out) if out else None
+    return (proc.returncode, data) if not check else data
+
+
+def graphql(query, **variables):
+    data = rest("POST", "graphql", {"query": query, "variables": variables})
+    if data.get("errors"):
+        raise Failure("graphql: " + "; ".join(e.get("message", "") for e in data["errors"]))
+    return data["data"]
+
+
+def emit(value):
+    json.dump(value, sys.stdout, indent=2, ensure_ascii=False)
+    sys.stdout.write("\n")
+
+
+def note(message):
+    print(message, file=sys.stderr)
+
+
+# ---------------------------------------------------------------- settings
+
+
+def git(*args):
+    return subprocess.run(["git", *args], capture_output=True, text=True, check=True).stdout.strip()
+
+
+def cache_path():
+    return Path(git("rev-parse", "--path-format=absolute", "--git-common-dir")) / "whackagent" / "github-cache.json"
+
+
+def current_repo():
+    return gh(["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"]).stdout.strip()
+
+
+def repo_variables(repo):
+    data = rest("GET", f"repos/{repo}/actions/variables?per_page=100")
+    return {v["name"]: v["value"] for v in data.get("variables", [])}
+
+
+def owner_node(owner):
+    """Projects hang off a user or an organization; the GraphQL root differs."""
+    data = graphql(
+        "query($l:String!){repositoryOwner(login:$l){__typename id}}", l=owner
+    )["repositoryOwner"]
+    if not data:
+        raise Failure(f"unknown owner {owner}")
+    return data["__typename"].lower(), data["id"]
+
+
+def project_fields(owner_kind, owner, number):
+    data = graphql(
+        f"""query($l:String!,$n:Int!){{{owner_kind}(login:$l){{projectV2(number:$n){{id url
+            fields(first:50){{nodes{{... on ProjectV2SingleSelectField{{id name options{{id name color description}}}}}}}}}}}}}}""",
+        l=owner,
+        n=number,
+    )[owner_kind]["projectV2"]
+    if not data:
+        raise Failure(f"project {owner}/{number} not found")
+    fields = {f["name"]: f for f in data["fields"]["nodes"] if f}
+    return data["id"], data["url"], fields
+
+
+def fingerprint(variables):
+    settings = {k: v for k, v in sorted(variables.items()) if k.startswith("WA_")}
+    return hashlib.sha256(json.dumps(settings).encode()).hexdigest()
+
+
+def load(refresh=False):
+    """Settings from repo variables, ids from the Project. The cache is reused only while the
+    variables are unchanged (one cheap call per run), so a re-provision elsewhere is picked up."""
+    path = cache_path()
+    cached = json.loads(path.read_text()) if path.exists() else None
+    repo = cached["repo"] if cached else current_repo()
+    variables = repo_variables(repo)
+    if cached and not refresh and cached.get("fingerprint") == fingerprint(variables):
+        return cached
+    if "WA_PROJECT_NUMBER" not in variables:
+        raise Failure(f"{repo} has no WA_PROJECT_NUMBER variable — run /wa-setup (provision)")
+    owner = variables.get("WA_PROJECT_OWNER", repo.split("/")[0])
+    number = int(variables["WA_PROJECT_NUMBER"])
+    owner_kind, _ = owner_node(owner)
+    project_id, url, fields = project_fields(owner_kind, owner, number)
+    status_name = variables.get("WA_STATUS_FIELD", "Status")
+    size_name = variables.get("WA_SIZE_FIELD", "Size")
+    custom = json.loads(variables.get("WA_STATES", "{}"))
+    # Unknown keys ignored: a transitional WA_STATES may still carry an old state id for older hooks.
+    state_names = {s: custom.get(s, DEFAULT_STATE_NAMES[s]) for s in STATES}
+    status = fields.get(status_name)
+    if not status:
+        raise Failure(f"project has no single-select field {status_name!r}")
+    options = {o["name"]: o["id"] for o in status["options"]}
+    missing = [s for s, n in state_names.items() if n not in options]
+    if missing:
+        raise Failure(f"Status options missing for {missing} — run provision again")
+    size = fields.get(size_name)
+    config = {
+        "repo": repo,
+        "owner": owner,
+        "owner_kind": owner_kind,
+        "project_number": number,
+        "project_id": project_id,
+        "project_url": url,
+        "fingerprint": fingerprint(variables),
+        "status_field": status["id"],
+        "status_option_names": {o["id"]: o["name"] for o in status["options"]},
+        "state_options": {s: options[n] for s, n in state_names.items()},
+        "state_names": state_names,
+        "size_field": size["id"] if size else None,
+        "size_options": {o["name"]: o["id"] for o in size["options"]} if size else {},
+        "tasks_path": variables.get("WA_TASKS_PATH", ".whackagent/tasks"),
+        "branch_prefix": variables.get("WA_BRANCH_PREFIX", "wa/"),
+        "stale_after_hours": int(variables.get("WA_STALE_AFTER_HOURS", "24")),
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(config, indent=2))
+    return config
+
+
+# ---------------------------------------------------------------- tickets
+
+ITEM_FIELDS = """
+  id
+  content { __typename
+    ... on Issue { number title body url state
+      milestone { title } labels(first:20) { nodes { name } } }
+    ... on DraftIssue { title } }
+  fieldValues(first:50) { nodes {
+    ... on ProjectV2ItemFieldSingleSelectValue { optionId field { ... on ProjectV2SingleSelectField { id } } } } }
+"""
+
+
+def summary_of(body):
+    for line in (body or "").splitlines():
+        line = line.strip()
+        if line and not line.startswith("<!--"):
+            return line
+    return ""
+
+
+def items(config):
+    query = f"""query($p:ID!,$after:String){{node(id:$p){{... on ProjectV2{{
+        items(first:100, after:$after){{pageInfo{{hasNextPage endCursor}} nodes{{{ITEM_FIELDS}}}}}}}}}}}"""
+    after, nodes = None, []
+    while True:
+        page = graphql(query, p=config["project_id"], after=after)["node"]["items"]
+        nodes += page["nodes"]
+        if not page["pageInfo"]["hasNextPage"]:
+            return nodes
+        after = page["pageInfo"]["endCursor"]
+
+
+def claims(config, number=None):
+    """Live claims, all of them or one ticket's. Map by number, or list when number given."""
+    scope = f"{CLAIM_NAMESPACE}/{number}/" if number is not None else f"{CLAIM_NAMESPACE}/"
+    code, data = rest("GET", f"repos/{config['repo']}/git/matching-refs/{scope}", check=False)
+    found = {}
+    for ref in data or []:
+        _, _, held_by, phase = ref["ref"].split("/", 3)
+        found.setdefault(int(held_by), []).append({"phase": phase, "sha": ref["object"]["sha"]})
+    return found if number is None else found.get(number, [])
+
+
+def claim_owner(config, sha):
+    commit = rest("GET", f"repos/{config['repo']}/git/commits/{sha}")
+    fields = dict(
+        line.split(": ", 1) for line in commit["message"].splitlines()[1:] if ": " in line
+    )
+    return {"agent": fields.get("agent", "?"), "since": commit["committer"]["date"]}
+
+
+def to_ticket(config, node, claim_map, with_owners=False, keep_sha=False):
+    content = node["content"] or {}
+    if content.get("__typename") != "Issue":
+        return {"draft": True, "title": content.get("title", ""), "item_id": node["id"]}
+    values = {
+        v["field"]["id"]: v["optionId"]
+        for v in node["fieldValues"]["nodes"]
+        if v and v.get("field")
+    }
+    by_option = {o: s for s, o in config["state_options"].items()}
+    by_size = {o: s for s, o in config["size_options"].items()}
+    number = content["number"]
+    status_option = values.get(config["status_field"])
+    if status_option and status_option not in config["status_option_names"]:
+        raise StaleCache(f"unknown Status option {status_option}")
+    held = claim_map.get(number, [])
+    if with_owners:
+        held = [{**c, **claim_owner(config, c["sha"])} for c in held]
+    return {
+        "number": number,
+        "title": content["title"],
+        "summary": summary_of(content["body"]),
+        "state": by_option.get(status_option),
+        "column": config["status_option_names"].get(status_option),
+        "size": by_size.get(values.get(config["size_field"])),
+        "sprint": (content["milestone"] or {}).get("title"),
+        "closed": content["state"] == "CLOSED",
+        "ignored": IGNORE_LABEL in [l["name"] for l in content["labels"]["nodes"]],
+        "claims": [dict(c) if keep_sha else {k: v for k, v in c.items() if k != "sha"} for c in held],
+        "url": content["url"],
+        "item_id": node["id"],
+    }
+
+
+def find(config, number, with_owners=True):
+    """Read one ticket through the issue, not the project item list: that list lags behind
+    writes by minutes, the issue's own projectItems don't."""
+    owner, name = config["repo"].split("/")
+    query = f"""query($o:String!,$r:String!,$n:Int!){{repository(owner:$o,name:$r){{issue(number:$n){{
+        projectItems(first:20){{nodes{{project{{id}} {ITEM_FIELDS}}}}}}}}}}}"""
+    for attempt in range(2):
+        issue = graphql(query, o=owner, r=name, n=number)["repository"]["issue"]
+        if not issue:
+            raise Failure(f"#{number} does not exist")
+        for node in issue["projectItems"]["nodes"]:
+            if node["project"]["id"] == config["project_id"]:
+                ticket = to_ticket(config, node, {number: claims(config, number)}, with_owners)
+                if ticket["column"] is None:  # no Status at all: fresh card, not a column we don't know
+                    set_state_raw(config, ticket, "draft")
+                    ticket["state"] = "draft"
+                    ticket["column"] = config["state_names"]["draft"]
+                return ticket
+        if attempt == 0:
+            add_to_board(config, number)  # every issue is a ticket; the opened hook may have missed it
+    raise Failure(f"#{number} could not be added to the board")
+
+
+def issue_node_id(config, number):
+    return rest("GET", f"repos/{config['repo']}/issues/{number}")["node_id"]
+
+
+def add_to_board(config, number):
+    return graphql(
+        "mutation($p:ID!,$c:ID!){addProjectV2ItemById(input:{projectId:$p,contentId:$c}){item{id}}}",
+        p=config["project_id"],
+        c=issue_node_id(config, number),
+    )["addProjectV2ItemById"]["item"]["id"]
+
+
+def set_option(config, item_id, field, option):
+    graphql(
+        """mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){updateProjectV2ItemFieldValue(input:{
+            projectId:$p,itemId:$i,fieldId:$f,value:{singleSelectOptionId:$o}}){projectV2Item{id}}}""",
+        p=config["project_id"],
+        i=item_id,
+        f=field,
+        o=option,
+    )
+
+
+def set_state_raw(config, ticket, state):
+    set_option(config, ticket["item_id"], config["status_field"], config["state_options"][state])
+
+
+def comment(config, number, text):
+    rest("POST", f"repos/{config['repo']}/issues/{number}/comments", {"body": text})
+
+
+def agent_id(explicit=None):
+    if explicit:
+        return explicit
+    if os.environ.get("WA_AGENT"):
+        return os.environ["WA_AGENT"]
+    try:
+        where = git("rev-parse", "--show-toplevel")
+    except subprocess.CalledProcessError:
+        where = os.getcwd()
+    return f"{socket.gethostname().split('.')[0]}:{where}"
+
+
+def claim_tree(config):
+    """One-file tree for claim commits; created once, kept in the cache.
+
+    Never reuse a branch tree: once it holds `.github/workflows/`, GitHub refuses (404) a ref to a
+    commit adding workflow files unless the token has the `workflow` scope.
+    """
+    if not config.get("claim_blob_tree"):
+        tree = rest("POST", f"repos/{config['repo']}/git/trees", {
+            "tree": [{"path": "CLAIM", "mode": "100644", "type": "blob", "content": "whackagent claim\n"}],
+        })
+        config["claim_blob_tree"] = tree["sha"]
+        cache_path().write_text(json.dumps(config, indent=2))
+    return config["claim_blob_tree"]
+
+
+def remote_branch(config, number):
+    code, data = rest(
+        "GET", f"repos/{config['repo']}/git/matching-refs/heads/{config['branch_prefix']}{number}-", check=False
+    )
+    names = [r["ref"].removeprefix("refs/heads/") for r in data or []]
+    return names[0] if names else None
+
+
+# ---------------------------------------------------------------- operations
+
+
+def op_config(args):
+    emit(load(refresh=args.refresh))
+
+
+def op_list(args):
+    config = load()
+    claim_map = claims(config)
+    wanted = set(args.state.split(",")) if args.state else None
+    rows = []
+    for node in items(config):
+        ticket = to_ticket(config, node, claim_map, keep_sha=args.owners)
+        if ticket.get("draft"):
+            if not wanted and not args.sprint:  # drafts have no state or sprint: only in unfiltered lists
+                rows.append(ticket)
+            continue
+        if ticket["ignored"]:
+            continue
+        if wanted and ticket["state"] not in wanted:
+            continue
+        if not wanted and not args.all and (ticket["closed"] or ticket["state"] in HIDDEN):
+            continue
+        if args.sprint and ticket["sprint"] != args.sprint:
+            continue
+        rows.append(ticket)
+    if args.owners:
+        claimed = [c for t in rows for c in t.get("claims", [])]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+            for claim, owner in zip(claimed, pool.map(lambda c: claim_owner(config, c["sha"]), claimed)):
+                claim.update(owner)
+    for t in rows:
+        for c in t.get("claims", []):
+            c.pop("sha", None)
+    emit(rows)
+
+
+def op_get(args):
+    config = load()
+    ticket = find(config, args.number)
+    ticket["branch"] = remote_branch(config, args.number)
+    ticket["blocked_by"] = blocked_by(config, args.number)
+    emit(ticket)
+
+
+def op_create(args):
+    config = load()
+    body = args.summary + ("\n\n" + args.note if args.note else "")
+    issue = rest("POST", f"repos/{config['repo']}/issues", {"title": args.title, "body": body})
+    number = issue["number"]
+    item_id = add_to_board(config, number)  # idempotent with the issues.opened hook
+    ticket = {"number": number, "item_id": item_id}
+    set_state_raw(config, ticket, "draft")
+    if args.size:
+        set_size(config, ticket, args.size)
+    if args.sprint:
+        set_sprint(config, number, args.sprint)
+    emit({"number": number, "url": issue["html_url"], "state": "draft"})
+
+
+def op_claim(args):
+    config = load()
+    phase = args.phase
+    ticket = find(config, args.number, with_owners=False)
+    if ticket["closed"]:
+        raise Failure(f"#{args.number} is closed", EXIT_WRONG_STATE)
+    ref = f"refs/{CLAIM_NAMESPACE}/{args.number}/{phase}"
+    held = next((c for c in claims(config, args.number) if c["phase"] == phase), None)
+    if held:  # before the state check, so a loser learns who holds it; leaves no commit behind
+        taken(config, args.number, phase, held["sha"])
+    if ticket["state"] not in CLAIM_FROM[phase]:
+        where = ticket["state"] or f"in column {ticket['column']!r}"
+        raise Failure(f"#{args.number} is {where}, {phase} needs {sorted(CLAIM_FROM[phase])}", EXIT_WRONG_STATE)
+    agent = agent_id(args.agent)
+    now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    commit = rest(
+        "POST",
+        f"repos/{config['repo']}/git/commits",
+        {
+            "message": f"wa-claim {phase} #{args.number}\n\nagent: {agent}\nclaimed: {now}\n",
+            "tree": claim_tree(config),
+            "parents": [],
+        },
+    )
+    code, data = rest("POST", f"repos/{config['repo']}/git/refs", {"ref": ref, "sha": commit["sha"]}, check=False)
+    if code != 0:
+        if (data or {}).get("message") != "Reference already exists":
+            raise Failure(f"could not create claim ref {ref}: {(data or {}).get('message', 'unknown error')}")
+        existing = rest("GET", f"repos/{config['repo']}/git/ref/{ref.removeprefix('refs/')}")
+        taken(config, args.number, phase, existing["object"]["sha"])
+    set_state_raw(config, ticket, phase)
+    comment(config, args.number, f"🔒 **{phase}** — `{agent}` · {now}")
+    emit({"number": args.number, "phase": phase, "taken": False, "agent": agent, "since": now})
+
+
+def taken(config, number, phase, sha):
+    owner = claim_owner(config, sha)
+    emit({"number": number, "phase": phase, "taken": True, **owner})
+    raise Failure(f"#{number} {phase} already claimed by {owner['agent']} since {owner['since']}", EXIT_TAKEN)
+
+
+def op_release(args):
+    config = load()
+    ref = f"{CLAIM_NAMESPACE}/{args.number}/{args.phase}"
+    code, _ = rest("DELETE", f"repos/{config['repo']}/git/refs/{ref}", check=False)
+    if args.reset_to:
+        set_state_raw(config, find(config, args.number, with_owners=False), args.reset_to)
+    reason = f" — {args.reason}" if args.reason else ""
+    target = f", back to **{args.reset_to}**" if args.reset_to else ""
+    comment(config, args.number, f"🔓 **{args.phase}** released{target}{reason}")
+    emit({"number": args.number, "phase": args.phase, "released": code == 0, "state": args.reset_to})
+
+
+def op_set_state(args):
+    config = load()
+    set_state_raw(config, find(config, args.number, with_owners=False), args.state)
+    emit({"number": args.number, "state": args.state})
+
+
+def op_cancel(args):
+    """Canceled column, claims dropped, issue closed as not planned, reason as a comment."""
+    config = load()
+    set_state_raw(config, find(config, args.number, with_owners=False), "canceled")
+    for claim in claims(config, args.number):
+        rest("DELETE", f"repos/{config['repo']}/git/refs/{CLAIM_NAMESPACE}/{args.number}/{claim['phase']}", check=False)
+    comment(config, args.number, f"🚫 **canceled** — {args.reason}")
+    rest("PATCH", f"repos/{config['repo']}/issues/{args.number}", {"state": "closed", "state_reason": "not_planned"})
+    emit({"number": args.number, "state": "canceled"})
+
+
+def op_move(args):
+    config = load()
+    nodes = [n for n in items(config) if (n["content"] or {}).get("number") is not None]
+    by_number = {n["content"]["number"]: n["id"] for n in nodes}
+    order = [n["content"]["number"] for n in nodes]
+    for n in filter(lambda n: n is not None, [args.number, args.before, args.after]):
+        if n not in by_number:
+            raise Failure(f"#{n} is not on the board (or not listed yet — new cards show up after 1–3 min)", EXIT_USAGE)
+    after = None
+    if args.bottom:
+        rest_order = [n for n in order if n != args.number]
+        after = by_number[rest_order[-1]] if rest_order else None
+    elif args.after is not None:
+        after = by_number[args.after]
+    elif args.before is not None:
+        rest_order = [n for n in order if n != args.number]
+        index = rest_order.index(args.before)
+        after = by_number[rest_order[index - 1]] if index > 0 else None
+    variables = {"p": config["project_id"], "i": by_number[args.number]}
+    if after:
+        variables["a"] = after
+    graphql(
+        "mutation($p:ID!,$i:ID!,$a:ID){updateProjectV2ItemPosition(input:{projectId:$p,itemId:$i,afterId:$a}){clientMutationId}}",
+        **variables,
+    )
+    emit({"number": args.number, "moved": True})
+
+
+def set_size(config, ticket, size):
+    if not config["size_field"]:
+        raise Failure("project has no Size field — run provision again")
+    set_option(config, ticket["item_id"], config["size_field"], config["size_options"][size])
+
+
+def milestone_number(config, title, create):
+    for state in ("open", "closed"):
+        for m in rest("GET", f"repos/{config['repo']}/milestones?state={state}&per_page=100"):
+            if m["title"] == title:
+                if m["state"] == "closed":
+                    rest("PATCH", f"repos/{config['repo']}/milestones/{m['number']}", {"state": "open"})
+                return m["number"]
+    if not create:
+        return None
+    return rest("POST", f"repos/{config['repo']}/milestones", {"title": title})["number"]
+
+
+def set_sprint(config, number, sprint):
+    milestone = milestone_number(config, sprint, create=True) if sprint else None
+    rest("PATCH", f"repos/{config['repo']}/issues/{number}", {"milestone": milestone})
+
+
+def op_set_field(args):
+    config = load()
+    if args.field == "size":
+        if args.value not in SIZES:
+            raise Failure(f"size must be one of {SIZES}", EXIT_USAGE)
+        set_size(config, find(config, args.number, with_owners=False), args.value)
+    else:
+        set_sprint(config, args.number, args.value)
+    emit({"number": args.number, args.field: args.value or None})
+
+
+def op_comment(args):
+    config = load()
+    comment(config, args.number, args.text)
+    emit({"number": args.number, "commented": True})
+
+
+def op_depend(args):
+    """Record that <number> is blocked by each ticket in --on (issue Relationships). Idempotent."""
+    config = load()
+    blocked = issue_node_id(config, args.number)
+    added, kept = [], []
+    for blocker in args.on:
+        try:
+            graphql(
+                "mutation($i:ID!,$b:ID!){addBlockedBy(input:{issueId:$i,blockingIssueId:$b}){issue{number}}}",
+                i=blocked,
+                b=issue_node_id(config, blocker),
+            )
+            added.append(blocker)
+        except Failure as error:
+            if "already" not in str(error).lower():
+                raise
+            kept.append(blocker)
+    emit({"number": args.number, "blocked_by_added": added, "blocked_by_existing": kept})
+
+
+def op_link_pr(args):
+    """Give PR <pr> the ticket's milestone and a manual closing link (PR Development). Idempotent.
+
+    `Closes #n` in the body only links when the PR targets the default branch; sprint PRs
+    never do, so the link is added explicitly.
+    """
+    config = load()
+    issue = rest("GET", f"repos/{config['repo']}/issues/{args.number}")
+    milestone = (issue.get("milestone") or {}).get("number")
+    if milestone:
+        rest("PATCH", f"repos/{config['repo']}/issues/{args.pr}", {"milestone": milestone})
+    graphql(
+        "mutation($i:ID!,$p:[ID!]!){addCloseIssueReferences(input:{issueId:$i,pullRequestIds:$p}){clientMutationId}}",
+        i=issue["node_id"],
+        p=[rest("GET", f"repos/{config['repo']}/pulls/{args.pr}")["node_id"]],
+    )
+    emit({"number": args.number, "pr": args.pr, "milestone": (issue.get("milestone") or {}).get("title"), "linked": True})
+
+
+def blocked_by(config, number):
+    rows = rest("GET", f"repos/{config['repo']}/issues/{number}/dependencies/blocked_by")
+    return [{"number": r["number"], "state": r["state"]} for r in rows]
+
+
+def op_claims(args):
+    config = load()
+    now = dt.datetime.now(dt.timezone.utc)
+
+    def row(number, claim):
+        branch = remote_branch(config, number)
+        last_push = None
+        if branch:
+            head = rest("GET", f"repos/{config['repo']}/commits/{branch}")
+            last_push = head["commit"]["committer"]["date"]
+        owner = claim_owner(config, claim["sha"])
+        latest = max(filter(None, [owner["since"], last_push]))
+        age = now - dt.datetime.fromisoformat(latest.replace("Z", "+00:00"))
+        return {
+            "number": number,
+            "phase": claim["phase"],
+            **owner,
+            "branch": branch,
+            "last_activity": latest,
+            "stale": age.total_seconds() > config["stale_after_hours"] * 3600,
+        }
+
+    work = [(number, claim) for number, held in sorted(claims(config).items()) for claim in held]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        emit(list(pool.map(lambda job: row(*job), work)))
+
+
+def op_whoami(args):
+    emit({"agent": agent_id(args.agent)})
+
+
+def op_branch(args):
+    config = load()
+    emit({"number": args.number, "branch": remote_branch(config, args.number)})
+
+
+# ---------------------------------------------------------------- provisioning
+
+
+def ensure_status_options(field, state_names):
+    """Add missing state options, keeping existing ones (and their ids, so no card loses its Status)."""
+    existing = {o["name"]: o for o in field["options"]}
+    missing = [s for s in STATES if state_names[s] not in existing]
+    if not missing:
+        return False
+    # The mutation replaces the whole option list: resend every existing option exactly as it is
+    # (id, color, description) and append only the missing states.
+    options = [
+        {"id": o["id"], "name": o["name"], "color": o["color"], "description": o["description"] or ""}
+        for o in field["options"]
+    ]
+    options += [
+        {"name": state_names[s], "color": STATE_COLORS[s], "description": STATE_DESCRIPTIONS[s]} for s in missing
+    ]
+    graphql(
+        """mutation($f:ID!,$o:[ProjectV2SingleSelectFieldOptionInput!]){updateProjectV2Field(input:{
+            fieldId:$f,singleSelectOptions:$o}){projectV2Field{... on ProjectV2SingleSelectField{id}}}}""",
+        f=field["id"],
+        o=options,
+    )
+    return True
+
+
+def op_provision(args):
+    repo = current_repo()
+    owner = args.owner or repo.split("/")[0]
+    owner_kind, owner_id = owner_node(owner)
+    created = False
+    if args.project:
+        number = args.project
+    else:
+        project = graphql(
+            "mutation($o:ID!,$t:String!){createProjectV2(input:{ownerId:$o,title:$t}){projectV2{number}}}",
+            o=owner_id,
+            t=args.title,
+        )["createProjectV2"]["projectV2"]
+        number, created = project["number"], True
+    project_id, url, fields = project_fields(owner_kind, owner, number)
+    repo_id = rest("GET", f"repos/{repo}")["node_id"]
+    graphql(
+        "mutation($p:ID!,$r:ID!){linkProjectV2ToRepository(input:{projectId:$p,repositoryId:$r}){clientMutationId}}",
+        p=project_id,
+        r=repo_id,
+    )
+    state_names = dict(DEFAULT_STATE_NAMES)
+    for pair in args.state or []:
+        state, _, name = pair.partition("=")
+        if state not in STATES:
+            raise Failure(f"unknown state {state!r}, expected one of {STATES}", EXIT_USAGE)
+        state_names[state] = name
+    status = fields.get(args.status_field)
+    if not status:
+        raise Failure(f"project has no single-select field {args.status_field!r}")
+    changed_status = ensure_status_options(status, state_names)
+    size_created = False
+    if args.size_field not in fields:
+        graphql(
+            """mutation($p:ID!,$n:String!,$o:[ProjectV2SingleSelectFieldOptionInput!]){createProjectV2Field(input:{
+                projectId:$p,dataType:SINGLE_SELECT,name:$n,singleSelectOptions:$o}){clientMutationId}}""",
+            p=project_id,
+            n=args.size_field,
+            o=[{"name": s, "color": SIZE_COLORS[s], "description": ""} for s in SIZES],
+        )
+        size_created = True
+    variables = {
+        "WA_PROJECT_OWNER": owner,
+        "WA_PROJECT_NUMBER": str(number),
+        "WA_STATUS_FIELD": args.status_field,
+        "WA_SIZE_FIELD": args.size_field,
+        "WA_STATES": json.dumps(state_names),
+        "WA_TASKS_PATH": args.tasks_path,
+        "WA_BRANCH_PREFIX": args.branch_prefix,
+        "WA_STALE_AFTER_HOURS": str(args.stale_after_hours),
+    }
+    for name, value in variables.items():
+        gh(["variable", "set", name, "--repo", repo, "--body", value])
+    config = load(refresh=True)
+    secret = gh(["secret", "list", "--repo", repo, "--json", "name", "--jq", ".[].name"], check=False).stdout.split()
+    emit(
+        {
+            "project_url": url,
+            "project_number": number,
+            "project_created": created,
+            "status_options_added": changed_status,
+            "size_field_created": size_created,
+            "variables": variables,
+            "secret_WA_PROJECT_TOKEN": "WA_PROJECT_TOKEN" in secret,
+            "state_options": config["state_options"],
+        }
+    )
+
+
+# ---------------------------------------------------------------- cli
+
+
+def parser():
+    p = argparse.ArgumentParser(prog="github-board", description="whackagent GitHub board helper (internal)")
+    sub = p.add_subparsers(dest="op", required=True)
+
+    s = sub.add_parser("config", help="print resolved settings")
+    s.add_argument("--refresh", action="store_true", help="re-read repo variables and project ids")
+    s.set_defaults(func=op_config)
+
+    s = sub.add_parser("list", help="board rows in priority order")
+    s.add_argument("--state", help="comma-separated states")
+    s.add_argument("--sprint")
+    s.add_argument("--all", action="store_true", help="include done, canceled and closed")
+    s.add_argument("--owners", action="store_true", help="resolve claim owners (one call per claim)")
+    s.set_defaults(func=op_list)
+
+    s = sub.add_parser("get")
+    s.add_argument("number", type=int)
+    s.set_defaults(func=op_get)
+
+    s = sub.add_parser("create")
+    s.add_argument("--title", required=True)
+    s.add_argument("--summary", required=True)
+    s.add_argument("--size", choices=SIZES)
+    s.add_argument("--sprint")
+    s.add_argument("--note")
+    s.set_defaults(func=op_create)
+
+    s = sub.add_parser("claim", help="atomic lock; exit 3 when taken")
+    s.add_argument("number", type=int)
+    s.add_argument("phase", choices=sorted(CLAIM_FROM))
+    s.add_argument("--agent")
+    s.set_defaults(func=op_claim)
+
+    s = sub.add_parser("release")
+    s.add_argument("number", type=int)
+    s.add_argument("phase", choices=sorted(CLAIM_FROM))
+    s.add_argument("--reset-to", choices=STATES)
+    s.add_argument("--reason")
+    s.set_defaults(func=op_release)
+
+    s = sub.add_parser("set-state")
+    s.add_argument("number", type=int)
+    s.add_argument("state", choices=STATES)
+    s.set_defaults(func=op_set_state)
+
+    s = sub.add_parser("cancel", help="Canceled column, claims dropped, issue closed not planned")
+    s.add_argument("number", type=int)
+    s.add_argument("--reason", required=True)
+    s.set_defaults(func=op_cancel)
+
+    s = sub.add_parser("move")
+    s.add_argument("number", type=int)
+    where = s.add_mutually_exclusive_group(required=True)
+    where.add_argument("--top", action="store_true")
+    where.add_argument("--bottom", action="store_true")
+    where.add_argument("--before", type=int)
+    where.add_argument("--after", type=int)
+    s.set_defaults(func=op_move)
+
+    s = sub.add_parser("set-field")
+    s.add_argument("number", type=int)
+    s.add_argument("field", choices=["size", "sprint"])
+    s.add_argument("value", help='size value, or sprint name ("" clears)')
+    s.set_defaults(func=op_set_field)
+
+    s = sub.add_parser("comment")
+    s.add_argument("number", type=int)
+    s.add_argument("text")
+    s.set_defaults(func=op_comment)
+
+    s = sub.add_parser("depend", help="ticket is blocked by others (issue Relationships)")
+    s.add_argument("number", type=int)
+    s.add_argument("--on", required=True, type=lambda v: [int(x) for x in v.split(",") if x], help="blocker ids, comma-separated")
+    s.set_defaults(func=op_depend)
+
+    s = sub.add_parser("link-pr", help="PR gets ticket milestone + closing link (Development)")
+    s.add_argument("number", type=int)
+    s.add_argument("pr", type=int)
+    s.set_defaults(func=op_link_pr)
+
+    s = sub.add_parser("claims", help="every live claim, owner, last activity, stale flag")
+    s.set_defaults(func=op_claims)
+
+    s = sub.add_parser("whoami")
+    s.add_argument("--agent")
+    s.set_defaults(func=op_whoami)
+
+    s = sub.add_parser("branch", help="remote branch carrying the ticket")
+    s.add_argument("number", type=int)
+    s.set_defaults(func=op_branch)
+
+    s = sub.add_parser("provision", help="create or adopt the project, fields, repo variables")
+    target = s.add_mutually_exclusive_group(required=True)
+    target.add_argument("--title", help="create a new project with this title")
+    target.add_argument("--project", type=int, help="adopt an existing project number")
+    s.add_argument("--owner", help="project owner login (default: repo owner)")
+    s.add_argument("--status-field", default="Status")
+    s.add_argument("--size-field", default="Size")
+    s.add_argument("--state", action="append", metavar="STATE=OPTION", help="map a state onto an existing option")
+    s.add_argument("--tasks-path", default=".whackagent/tasks")
+    s.add_argument("--branch-prefix", default="wa/")
+    s.add_argument("--stale-after-hours", type=int, default=24)
+    s.set_defaults(func=op_provision)
+    return p
+
+
+def main():
+    args = parser().parse_args()
+    try:
+        try:
+            args.func(args)
+        except StaleCache:
+            load(refresh=True)  # Project changed under the cache: rebuild once, rerun
+            args.func(args)
+    except Failure as failure:
+        note(f"github-board: {failure}")
+        sys.exit(failure.code)
+    except subprocess.CalledProcessError as error:
+        note(f"github-board: {error.cmd[0]} failed: {error.stderr}")
+        sys.exit(EXIT_ERROR)
+
+
+if __name__ == "__main__":
+    main()

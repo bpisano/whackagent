@@ -1,6 +1,6 @@
 ---
 name: wa-code
-description: Run the full coding pipeline for a task — plan, code, verify, report — orchestrating isolated subagents.
+description: Plans, codes, tests and reports on a task, with isolated subagents.
 ---
 
 # /wa-code
@@ -15,11 +15,18 @@ Read `.whackagent/config.md`, then the task per **wa-board → Task store**. `{�
 
 Arg = task id (`/wa-code 3`, `/wa-code 42`, or slug) — resolve per **wa-board → Task ids**, echo `#42 → Add Apple login`.
 
-**Grill gate (soft):** `draft` → warn *"not grilled — quick win, or `/wa-task <id>` first?"* Proceed if user confirms.
+**Grill gate:** `draft` / `grilling` → not grilled, no task file to code from. Say so, send to `/wa-task <id>`, stop. `done` / `canceled` → nothing to code, stop.
 
-Set state `coding` per **Task store**.
+**Dependency gate:** open blocker per **wa-board → Dependencies** → warn `⛔ blocked by #12 Add Apple login (todo)`, recommend `/wa-code 12` first (code built on unlanded code = conflict later). Continue only on explicit yes.
 
-## 0. Branch — only if `branch.per_task: true`
+**Take the task:**
+- `files` → set state `coding` per **Task store**.
+- `github` → `github-board claim <n> coding` per **wa-board → Task store → Locks**. Exit 3 → name owner + age, stop. Exit 4 → say state, point to right command, stop. Won → board shows Coding; file `status:` stays until round end.
+
+## 0. Branch — only if `branch.per_task: true` (`github`: always)
+
+**`github`** → branch already exists since grill (`<branch.prefix><n>-<slug>`, from `github-board get <n>` → `branch`). `git fetch`, check it out (worktree or checkout), pull. Never create or rename it. Dirty tree → rule 4 below. Echo, skip 1–3.
+
 
 1. Name = `<branch.prefix><key>` (default `wa/add-apple-login`; `github`: `wa/42-add-apple-login`) — key per **wa-board → Task ids**.
 2. **Fork point** = `branch.base`, **unless task carry `sprint:`** and `branch.sprint_prefix` non-empty. Then base = sprint branch `<branch.sprint_prefix><kebab(sprint)>` (default `sprint/login-refacto`): create from `branch.base` if absent, check up to date otherwise. Why it exist — task 3 of sprint fork off task 1 merged work, not rediscover it as conflict. `/wa-close` merges back into it.
@@ -92,9 +99,11 @@ Then:
 - **Show** the **Report card** below — `review → /wa-validate` in status line when step 3 skipped, so user know what still owed.
 - **Save** to `{reports}/<key>.md`: same card, plus full file/folder list, key decisions, review findings.
 - Set state `to-test` — means *waiting for user to test it*, nothing more.
+- **`github` → round end** per **wa-board → Task store → `github` — task branch and rounds**: file `status: to-test` + `## Implementation`/`## Verification` written, commit (config author, **never Claude**), push. First delivery → `gh pr create --draft --base <base> --head <branch>`, title/body per **wa-board → Voice → PR wording**, then `github-board link-pr <n> <pr>`. PR exists → push alone updates it. Then mergeable check (`CONFLICTING` → rebase task range, rebuild, `push --force-with-lease`). Push = lock released, card → To test (hook). Print PR URL in report.
+- **Round aborted before any push** (blocked, user stops) → `github-board release <n> coding --reset-to <state claimed from>`, say why.
 - **Say what to do next, in this order**: test it. Notes → **`/wa-feedback`**. Matches spec → **`/wa-validate <id>`**, which fires verifier; **`/wa-close <id>`** ends it after your retest.
 - **Iteration is `/wa-feedback` job.** Never patch code from this thread — even one-liner. `/wa-feedback` only place inline fixes are bounded, tagged, built, flagged to verifier (see its *Micro-fix or implementer*); untracked touch-up here undoes review it about to get.
-- **Never set `done` yourself, never commit here.** `to-test` → `/wa-validate` → `to-close` → `/wa-close` → `done`; user "ok that's it" = spec approval, not close.
+- **Never set `done` yourself, never commit here** (`github`: round-end commit + push only). `to-test` → `/wa-validate` → `to-close` → `/wa-close` → `done`; user "ok that's it" = spec approval, not close.
 
 ### Report card
 
@@ -131,7 +140,9 @@ build ✅ · tests ✅ · run ✅ · review → /wa-validate
 
 ## 5. Closing — not yours
 
-Commit, branch landing and `status: done` belong to **`/wa-close`**. Nothing in this file commits or moves branch after step 0.
+`files`: commit, branch landing and `status: done` belong to **`/wa-close`**. Nothing in this file commits or moves branch after step 0.
+
+`github`: round-end commit + push + draft PR (step 4) are the only git moves here. Marking PR ready, merge, `done` → `/wa-close` and the merge hook.
 
 ## Asking
 
@@ -139,8 +150,8 @@ Every question you put to user — `BLOCKED:`, architecture fork, failed check �
 
 ## Never
 
-Never write code yourself. Never commit — closing is `/wa-close` job. Never mark task `done`. Never switch branches with dirty tree. Never let subagents touch backlog/wiki/reports — you own those. Never write to literal `.whackagent/` path when config `paths:` points elsewhere.
+Never write code yourself. Never commit (`files`) — closing is `/wa-close` job; `github` commits only at round end, never mid-round (push mid-round ends it). Never mark PR ready, never merge. Never mark task `done`. Never code a task whose lock you lost. Never switch branches with dirty tree. Never let subagents touch backlog/wiki/reports — you own those. Never write to literal `.whackagent/` path when config `paths:` points elsewhere.
 
 ## Next step
 
-Test it. Notes → **`/wa-feedback`**. Matches spec → **`/wa-validate <id>`** (verifier), then **`/wa-close <id>`** after retest. Closed → **`/wa-wiki`**.
+Test it. Notes → **`/wa-feedback`**. Matches spec → **`/wa-close <id>`** (runs verifier + wiki, then lands) — or **`/wa-validate <id>`** first to see review before closing.

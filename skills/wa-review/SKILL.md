@@ -1,6 +1,6 @@
 ---
 name: wa-review
-description: Make a code review. --fix to autofix.
+description: Reviews any code, outside a task. --fix applies the fixes.
 ---
 
 # /wa-review

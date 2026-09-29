@@ -1,6 +1,6 @@
 ---
 name: wa-feedback
-description: Apply your feedback on task just coded — routed by size (micro-fix here, bigger through same isolated pipeline as /wa-code), then re-verified and reviewed before any commit. Use after /wa-code or /wa-autopilot when you want changes to what was built.
+description: Applies your notes on a coded task, then re-checks it. Use after /wa-code or /wa-autopilot.
 ---
 
 # /wa-feedback
@@ -17,6 +17,7 @@ Feedback where quality leak: change feel small, so code patched straight from ma
 2. **Always re-verify before task close.** *When* depend on `review.when`: `each_round` → verifier round after every fix; `on_validation` (default) → none here, one pass over whole diff at `/wa-validate`. Never allowed: zero. Tiny changes exactly ones that break style and architecture. None reach commit unreviewed.
 3. **Re-run app per `verify.mode`.** `always` → re-drive every round: prior runtime proof void moment code changed. `autopilot` (attended here) or `off` → nobody drive; say `run: yours`, user re-test. Never allowed: claim check that wasn't run.
 4. **Never mark task done, ever.** This command iterate; **`/wa-validate`** review, **`/wa-close`** close. Round end at `to-test`, waiting user next test.
+5. **`github`: one round = one lock + one push.** Claim at start, commit + push at end — **wa-board → Task store → `github` — task branch and rounds**. Nothing pushed mid-round.
 
 ## Micro-fix or implementer
 
@@ -53,7 +54,8 @@ Rules = `/wa-code` → *Resuming, rounds 2+*, in full — delta only, anti-stale
 
 1. **Resolve task.** Arg = task id (`/wa-feedback 42 the button should be secondary`), resolve per **wa-board → Task ids**. No task given → the `coding` one, else most recent `to-test`. Ambiguous → ask, don't guess. Read `.whackagent/config.md` + the task per **wa-board → Task store** (need `## Acceptance criteria`, `## Implementation`, `## Review`, `## Verification`). `{…}` paths come from config `paths:` block — see **wa-board → Paths**.
    - **`to-close` → review it passed now stale.** Apply notes as usual, then set back to `to-test`: task need fresh `/wa-validate` before `/wa-close`. Never close on review predating last edit.
-   - **Right branch first.** Task delivered by `/wa-autopilot` — or `/wa-code` with `branch.per_task: true` — live on `<branch.prefix><key>`. Check current branch; if work not here, say which branch it on and switch **only after user confirms** (their tree may be dirty). Never apply feedback to branch that don't hold the code.
+   - **Right branch first.** Task delivered by `/wa-autopilot` — or `/wa-code` with `branch.per_task: true` — live on `<branch.prefix><key>`. Check current branch; if work not here, say which branch it on and switch **only after user confirms** (their tree may be dirty). Never apply feedback to branch that don't hold the code. `github` → `git fetch` + pull first: last round may come from another machine.
+   - **`github` → take the task.** `github-board claim <n> coding` (from `to-test` / `to-close`). Exit 3 → name owner + age, stop. Exit 4 → say state, stop. PR already **ready** (`/wa-close` ran) → `gh pr ready --undo` before touching code: nobody merges code that moves again.
 2. **Triage each feedback item** — say out loud which bucket, one line each:
    - **defect** — don't match acceptance criteria → fix, criteria unchanged.
    - **adjustment** — work, but not what user want (naming, placement, wording, behavior detail) → fix, and **update `## Acceptance criteria`** so criteria match reality; else verify re-fail on old criterion forever.
@@ -70,7 +72,8 @@ Rules = `/wa-code` → *Resuming, rounds 2+*, in full — delta only, anti-stale
 6. **Re-run it — only when `verify.mode: always`.** Re-driven in step 4 — by you for inline fix, by implementer otherwise — against **updated** acceptance criteria; tell it explicit when triage moved them, it reuse its checklist otherwise. Failed checks → back through step 4. Can't run → stop and ask. Append to `## Verification`, keep previous round entry.
    Other modes → append `round <n>: manual validation — not run by agent` and hand ball back: summary in step 8 say what to test, one line, so user know exactly what changed under their fingers.
 7. **Log it.** Append round to task `## Feedback`: what user asked (their words), triage, what changed, review verdict (`deferred` when `review.when: on_validation`), verify verdict, any rule captured. Refresh `{reports}/<key>.md`.
-8. **Report + loop.** **wa-code → Report card**, feedback variant: header `## 🟢 <title> · feedback round <n>`, **Asked** (user words, short) replaces Problem + Goal, rest identical — Done, To test, status line, next. More notes → run again, next round. Feature match spec now → **`/wa-validate <id>`**: that fire verifier; **`/wa-close <id>`** end it after your retest. **Never set `done` here, never commit** — say next command instead.
+   - **`github` → round end**: file `status: to-test`, commit (config author, **never Claude**), push to task branch — PR updates, lock released, card → To test (hook). Mergeable check per **Task store**. Round aborted before any push → `github-board release <n> coding --reset-to <state claimed from>`.
+8. **Report + loop.** **wa-code → Report card**, feedback variant: header `## 🟢 <title> · feedback round <n>`, **Asked** (user words, short) replaces Problem + Goal, rest identical — Done, To test, status line, next. More notes → run again, next round. Feature match spec now → **`/wa-validate <id>`**: that fire verifier; **`/wa-close <id>`** end it after your retest. **Never set `done` here, never commit** (`github`: round-end commit + push only) — say next command instead.
 
 ## Asking
 
@@ -83,8 +86,8 @@ Triage doubt, ambiguous note, `BLOCKED:` from implementer → ask, but **always 
 - Never leave inline fix unbuilt, untested, or untagged.
 - Never implement new feature arriving disguised as feedback.
 - Never add comments explaining fix (`style.md` — code carry meaning, task file carry rationale).
-- Never commit and never close — `/wa-validate` own review, `/wa-close` own commit and branch.
+- Never commit and never close — `/wa-validate` own review, `/wa-close` own commit and branch. `github` exception: round-end commit + push, nothing else — never mark PR ready, never merge.
 
 ## Next step
 
-More notes → run again. Feature matches spec → **`/wa-validate <id>`** (verifier on whole diff), then **`/wa-close <id>`** after your retest. Closed → **`/wa-wiki`**.
+More notes → run again. Feature matches spec → **`/wa-close <id>`** (runs verifier + wiki, then lands) — or **`/wa-validate <id>`** first to see review before closing.

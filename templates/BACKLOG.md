@@ -8,8 +8,12 @@ Truth lives in task file's `sprint:` field — this line = echo.
 
 ## Draft
 
-<!-- idea, not grilled yet — /wa-task to grill it -->
+<!-- idea, not grilled yet — /wa-draft notes one, /wa-task grills it -->
 <!-- - [Sync offline changes](tasks/sync-offline-changes.md) -->
+
+## Grilling
+
+<!-- grill in progress — /wa-task <id> resumes it -->
 
 ## Todo
 

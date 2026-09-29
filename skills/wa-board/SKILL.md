@@ -1,6 +1,6 @@
 ---
 name: wa-board
-description: Renders a dashboard and suggests the next action based on the project's whackagent backlog.
+description: Shows the backlog and the next step.
 ---
 
 # /wa-board
@@ -14,12 +14,13 @@ Dashboard. Lift lid on backlog, point next move.
 2. **List the backlog** per **Task store** — every task with its `title`, `summary`, `size`, `sprint`, `status`, in priority order. Legacy task spotted (see *Task store → Legacy*) → say `/wa-setup` migrates it, stop.
 3. Render as **list**, one section per state (see Display format below), priority order within each. `github` backend → then one line for open repo issues not on the board (see *Task store → Outside issues*).
 4. Suggest exactly **one** next action, by state (filtered run → scope suggestion to sprint):
+   - `github`: sprint complete (every task `done`) and its sprint branch not merged, no open sprint PR → propose sprint PR per **wa-close → Sprint landing** (ask, never open it here).
    - something in `to-close` → reviewed, waiting user retest: `/wa-close <id>` to finish (or `/wa-feedback` if retest found something). Highest precedence — one step from done.
    - something in `to-test` → coded, waiting user test: `/wa-feedback <id> <notes>` if notes, else `/wa-validate <id>` to fire verifier. Beats starting new work.
    - something `coding` → resume it (`/wa-code <id>`)
-   - top `todo` → `/wa-code <id>`. Backlog order maintained by `/wa-task` prioritization pass — never suggest reprioritizing as step (if user *asks* to reorder, that `/wa-task` with no arg).
-   - no `todo`, top `draft` → `/wa-task <id>` to grill it
-   - nothing in todo or draft → `/wa-task <description>` to create one
+   - top **unblocked** `todo` → `/wa-code <id>` (blocked task never suggested — see **Dependencies**). Backlog order maintained by `/wa-task` prioritization pass — never suggest reprioritizing as step (if user *asks* to reorder, that `/wa-task` with no arg).
+   - no `todo`, top `draft` not locked → `/wa-task <id>` to grill it
+   - nothing in todo or draft → `/wa-task <description>` to create one (`/wa-draft` to just note an idea)
    - batch of small `todo` tasks → mention `/wa-autopilot` as option
 
 ## States
@@ -29,6 +30,7 @@ One lifecycle, both backends. Each state says **what's left to do** — never wh
 | state | means | next |
 |---|---|---|
 | `draft` | idea, not grilled | `/wa-task <id>` |
+| `grilling` | **locked** — someone grilling it now | wait, or `/wa-task <id>` resumes (your lock) |
 | `todo` | grilled, ready to code | `/wa-code <id>` |
 | `coding` | agent coding it | `/wa-code <id>` resumes |
 | `to-test` | coded, **you** test it | `/wa-feedback` or `/wa-validate` |
@@ -36,7 +38,9 @@ One lifecycle, both backends. Each state says **what's left to do** — never wh
 | `done` | closed | — |
 | `canceled` | dropped, reason noted | — |
 
-Quick win flagged trivial skips the grill → born `todo`. "Review" names only the verifier's pass, never a state.
+`/wa-draft` creates `draft`. `/wa-task` always grills: takes the `grilling` lock, ends at `todo`. "Review" names only the verifier's pass, never a state.
+
+**Locks** (`grilling`, `coding`) — one grill, one coding round per task at a time. `github`: atomic claim (see **Task store → Locks**). `files`: one checkout, one agent — plain status, no lock to take.
 
 ## Display format
 
@@ -66,10 +70,10 @@ Canonical way tasks shown anywhere in flow (here, `/wa-task` prioritization pass
 
 Rules:
 
-- **Line 1** = `<id> · <size> **<title>**`, then `` · <sprint>`` when task has one.
+- **Line 1** = `<id> · <size> **<title>**`, then `` · <sprint>`` when task has one, then `` · ⛔ #12`` when blocked (open blockers, see **Dependencies**), then `` · 🔒 alice@mbp 2h`` when a lock is held (`github`: owner + age; `stale` → `🔒⏳`).
 - **Line 2** = task `summary`, indented 4 spaces. Never dump task body.
 - **Id** — per **Task ids**: display index `2 ·` for `files` (never `2.`: markdown renumbers it), issue number `#42 ·` for `github`.
-- **Section order = lifecycle, left to right like the GitHub board**: Draft → Todo → Coding → To test → To close → Done → Canceled. Display indexes number **continuously across sections**, top to bottom — never restart per section, so user cites one without ambiguity.
+- **Section order = lifecycle, left to right like the GitHub board**: Draft → Grilling → Todo → Coding → To test → To close → Done → Canceled. Display indexes number **continuously across sections**, top to bottom — never restart per section, so user cites one without ambiguity.
 - **Size** maps `size`: 🟢 `quickwin` · 🟡 `medium` · 🔴 `large`.
 - **Sprint tag** only on tasks that have one. Filtered run (`/wa-board <sprint>`) drops it — every task is that sprint.
 - Skip empty sections. Show only few recent under **Done**.
@@ -147,7 +151,7 @@ Wider change → shorter, more generic word (`Performance`). Narrower → add th
 Closes #42        ← github backend: one `Closes #n` per task the PR delivers
 ```
 
-- **`github` backend → always link.** Task PR: `Closes #<n>`. Sprint PR: `Closes #<n>` for every task of the sprint, plus the sprint's milestone set on the PR. GitHub then shows the PR on each issue and closes them at merge into the default branch.
+- **`github` backend → always link.** Task PR: `Closes #<n>` + `github-board link-pr <n> <pr>` (base ≠ default branch → `Closes` alone links nothing). Sprint PR: `Closes #<n>` for every task of the sprint, plus the sprint's milestone set on the PR. GitHub then shows the PR on each issue and closes them at merge into the default branch.
 - **Write for someone landing cold.** No task slugs, no backlog/sprint jargon, no verifier rounds, no finding counts, no "process" section, no follow-up list.
 - **Numbers: one line or a table ≤ 3 rows**, only when the PR is *about* numbers (perf). Never every counter you measured.
 - **Why, not how.** `Home map paused during nav` beats the three mechanisms behind it. Details live in the code and the task file.
@@ -188,48 +192,97 @@ How a task is named in commands, board, branches, worktrees and reports.
 
 Everywhere skills write `<id>` they mean input form; `<key>` means the branch/report form.
 
+## Dependencies
+
+Task **blocked by** others = needs their code landed first. Canonical rules, every skill refers here.
+
+- **Where**: `files` → `blocked_by: [add-apple-login, …]` (slugs) in task frontmatter. `github` → issue relationship *blocked by* — `github-board depend <n> --on <x>[,<y>]`, read back in `github-board get <n>` → `blocked_by: [{number, state}]`. Tracker metadata like size and sprint — known before any task file exists.
+- **Who sets**: `/wa-task` and `/wa-draft` at creation (user names it, or it builds on another task), grill when it finds one, split → each child blocked by the sibling it builds on.
+- **Open blocker** = not `done` (`github`: issue still open). `canceled` blocker → no longer blocks; say so once.
+- **Effects**: `/wa-board` tags line `⛔ #12`, never suggests blocked task as next. `/wa-code` on blocked task → warn, recommend coding blocker first, go on only on yes. `/wa-autopilot` → blocked task waits for its blocker's wave; blocker outside batch and not landed → skip it. Prioritization pass → blocker always above what it blocks.
+- **No stacking.** Dependent task starts from base once blocker landed — never from blocker's unmerged branch.
+
 ## Task store
 
 Where tasks live — `tasks.backend` in config: **`files`** (default) or **`github`**. Every skill reads and writes tasks **only through the operations below**, never by assuming one backend.
 
-**A task is the same content in both**: `title`, `summary`, `size`, `sprint`, `status`, `wiki`, `note`, and the six sections (`## Context / Decisions`, `## Acceptance criteria`, `## Implementation`, `## Review`, `## Verification`, `## Feedback`). Template: `${CLAUDE_PLUGIN_ROOT}/templates/task.md`.
+**Task file is the truth, both backends.** Same template (`${CLAUDE_PLUGIN_ROOT}/templates/task.md`), same six sections (`## Context / Decisions`, `## Acceptance criteria`, `## Implementation`, `## Review`, `## Verification`, `## Feedback`). Difference: where the file sits, who holds the metadata.
 
-| op | `files` | `github` |
+| | `files` | `github` |
 |---|---|---|
-| **list backlog** | `{backlog}` lines, order = priority, + each task file | `gh project item-list <number> --owner <owner> --format json` — item order = priority, Status field = state |
-| **read task** | `{tasks}/<slug>.md` | `gh issue view <n> --json title,body,labels,milestone,createdAt` + its project Status |
-| **write sections** | edit file | **re-read body right before**, edit, `gh issue edit <n> --body-file <tmp>` — never from a stale copy: a teammate may have edited it |
-| **set state** | frontmatter `status:` + move backlog line to its section | project item Status (`gh project item-edit --id <item> --field-id <status> --project-id <project> --single-select-option-id <option>`) |
-| **create** | file from template + backlog line | `gh issue create` (title, body, `size:*` label, milestone) → `gh project item-add` → set Status → position |
-| **reorder** | backlog line order | GraphQL `updateProjectV2ItemPosition` (`afterId` = item above) |
-| **sprint** | `sprint:` field + `· <Sprint>` suffix | milestone — `gh issue edit <n> --milestone "<Sprint>"`; missing → `gh api repos/<owner>/<repo>/milestones -f title="<Sprint>"` first |
-| **size** | `size:` field | label `size:quickwin` / `size:medium` / `size:large` (one at a time) |
+| **task file** | `{tasks}/<slug>.md`, in working tree | `{tasks}/<n>-<slug>.md` **on task branch** `<branch.prefix><n>-<slug>` — exists from end of grill |
+| **title, summary, size, sprint, blockers** | frontmatter | issue title, first body line, Project `Size`, milestone, *blocked by* relationship — **never in file** |
+| **state** | frontmatter `status:` + `{backlog}` section | Project `Status` column. Once branch exists, file `status:` drives it: **hook** reads pushed file, moves card |
+| **priority** | `{backlog}` line order | Project card order |
 
-**`github` body** = task file minus frontmatter. Fields with no GitHub home go on top, omitted when empty; `created` = issue `createdAt`:
+### `github` — operations
 
-```
-<summary>
+Helper: `${CLAUDE_PLUGIN_ROOT}/scripts/github-board <verb>` (internal, Python 3 + `gh`, run from repo root). JSON on stdout. Exit 0 ok · 1 error · 2 usage · **3 lock taken** · **4 wrong state** — 3 and 4 normal outcomes, not failures.
 
-wiki: [[auth]], [[login-flow]]
-note: <free-form>
+| op | how |
+|---|---|
+| **list backlog** | `github-board list [--state s,…] [--sprint x] [--all] [--owners]` — priority order, done/canceled hidden unless `--all`; `--owners` resolves lock holders |
+| **read task** | `github-board get <n>` (state, size, sprint, claims, `branch`, `blocked_by`) + task file: `git show origin/<branch>:{tasks}/<n>-<slug>.md` (or working tree when on that branch). No branch yet (`draft`) → issue body is the raw idea note |
+| **create** | `github-board create --title … --summary … [--size] [--sprint] [--note <idea>]` → issue in `draft`, bottom of board. Summary = first body line, note below it |
+| **lock** | `github-board claim <n> grilling\|coding` — see *Locks* |
+| **write sections / status** | edit task file on task branch; lands on board at next push (hook) |
+| **state not from file** | `claim` (Grilling, Coding), `release <n> <phase> --reset-to <state>` (abort), `cancel <n> --reason …` (Canceled + issue closed not planned). `set-state` = setup / repair only |
+| **reorder** | `github-board move <n> --top\|--bottom\|--before m\|--after m` |
+| **size / sprint** | `github-board set-field <n> size <quickwin\|medium\|large>` · `set-field <n> sprint "<Sprint>"` (milestone created on first use, `""` clears) |
+| **blockers** | `github-board depend <n> --on <x>[,<y>]` |
+| **PR link** | `github-board link-pr <n> <pr>` right after `gh pr create` — milestone + closing link |
 
-## Context / Decisions
-…
-## Feedback
-…
-```
+**Hook** (`.github/workflows/whackagent-board.yml`, from `${CLAUDE_PLUGIN_ROOT}/templates/github-board.yml`) owns every other move:
 
-**`github` specifics:**
+| event | result |
+|---|---|
+| issue opened | `draft` |
+| push to `wa/<n>-…` with `{tasks}/<n>-*.md` (`issue: <n>`, non-empty `## Acceptance criteria`) | column = file `status:` (`todo` · `to-test` · `to-close`), locks released |
+| PR merged (any base) | `done`, issue closed, milestone closed when empty |
+| PR closed unmerged | `todo` |
 
-- **Ids once per run.** Project id, Status field id and its option ids via `gh project view` / `gh project field-list <number> --owner <owner> --format json` — look up once, reuse.
-- **Auth.** `gh` needs the `project` scope. Missing → say `gh auth refresh -s project`, stop. Never fall back to `files` silently.
-- **Closing.** `done` → Status Done only; the issue closes itself when the PR carrying `Closes #<n>` merges (see **Voice → PR wording**). Exception: no PR will ever carry it (`close.strategy: merge`) → `gh issue close <n> --reason completed`. `canceled` → Status Canceled + `gh issue close <n> --reason "not planned"`, reason as a comment.
-- **Outside issues.** Open repo issues not on the board — `gh issue list --state open --json number,title,projectItems`, keep those with no item in this project. `/wa-board` shows one line (`📥 3 issues off board (#57, #60, #61) → /wa-task 57 to adopt one`); **never adds them itself**. Board item with no Status (added by hand) → shown as `draft`.
-- **Task ref for subagents.** Implementer and verifier never read config and never write the task. Hand them a **task ref**: `files` → the task file path; `github` → `issue #<n>, read with: gh issue view <n> --json title,body -q '.title + "\n\n" + .body'`. Orchestrator records what they return.
-- **No comments.** whackagent never posts issue comments, except the cancel reason. Everything lives in the body.
-- **`{backlog}` and `{tasks}` unused.** `{reports}`, `{wiki}`, `{conventions}` stay in the repo as in `files`.
+**Never set `todo`, `to-test`, `to-close`, `done` on the board yourself** — write `status:` in file, push; hook moves card. Code drives board. Hook slow → wait, don't patch.
 
-**Legacy** — task still carrying old states (`in-progress`, `review`, `validated`), a `grilled:` field, or French headings (`## Contexte / Décisions`, `## Critères d'acceptation`, `## Implémentation`, `## Vérification`) → project predates this lifecycle. Don't guess, don't alias: say `/wa-setup` migrates it (one plan, one yes), stop.
+### `github` — task branch and rounds
+
+- **Branch** created at grill by `gh issue develop <n> --name <branch.prefix><n>-<slug> --base <base>` (base = sprint branch when task in sprint, else `branch.base`) — only GitHub-created branches link in issue **Development**. Never `git checkout -b` + push for it.
+- **Every round ends with commit + push** on task branch — grill (`status: todo`), `/wa-code`, `/wa-feedback`, `/wa-validate`, `/wa-autopilot`. Commit author = `commit.author_name`/`author_email`, never Claude. That push releases the lock. **No push mid-round** — hook would end round early.
+- **Draft PR** opened by first coding delivery: `gh pr create --draft --base <base> --head <branch>`, title/body per **Voice → PR wording**, then `link-pr`. Later rounds push to it. `/wa-close` marks it ready; user merges.
+- **PR ready + new round** (`/wa-feedback`) → `gh pr ready --undo` first: nobody merges code that moves again.
+- **Round end checks mergeable**: `gh pr view --json mergeable` → `CONFLICTING` → rebase task range on base, rebuild, `push --force-with-lease` (own task branch only), check again. Conflict needs a design call → stop, say which files.
+- **Task ref for subagents.** Implementer and verifier never read config and never write the task. Hand them the task file path (worktree or checkout on task branch). Orchestrator records what they return.
+
+### Locks (`github`)
+
+- `claim <n> grilling` from `draft` · `claim <n> coding` from `todo`, `to-test`, `to-close`. Atomic: git ref `refs/wa-claims/<n>/<phase>`, N agents → one wins.
+- **Exit 3 = taken** → name owner and age (`🔒 #42 grilling — alice@mbp since 2h`), stop. Never retry, never steal.
+- **Exit 4 = wrong state** → say state, point to right command.
+- Released by the push ending the round (hook), or `release <n> <phase> --reset-to <state>` on abort: grill abandoned → `--reset-to draft`; coding round aborted before any push → `--reset-to` the state it was claimed from.
+- **No expiry** — grill is interactive, answer may come in two days. `github-board claims` flags `stale` (no push past `WA_STALE_AFTER_HOURS`); `/wa-board` shows it. `/wa-task release <n>` clears one — human-triggered only.
+
+### `github` — other rules
+
+- **Auth.** `gh` needs `project` scope. Missing → say `! gh auth refresh -h github.com -s project`, stop. Never fall back to `files` silently.
+- **Closing.** `done` comes from the merge (hook). `canceled` → `github-board cancel <n> --reason "<why>"`.
+- **Outside issues.** Every issue opened lands on board as `draft` (hook), `wa-ignore` label opts out. Board draft items (Project-only, no issue) → `/wa-board` lists them, suggests converting.
+- **Comments = trail only.** Hook and claims post one line per move. whackagent never writes task content in comments or issue body — it lives in the file.
+- **`{backlog}` unused.** `{tasks}` lives on task branches. `{reports}`, `{wiki}`, `{conventions}` stay in repo as in `files`.
+- **Hook needs** secret `WA_PROJECT_TOKEN` (classic PAT, `project` + `repo`) and must be on default branch **and** on base branches (sprint branches forked after it carry it). Set up by `/wa-setup`.
+- **Known lag.** Project item list trails writes by 1–3 min: `list` may miss brand-new task; `get`/`claim` read through the issue, always current.
+
+### `files` — operations
+
+| op | how |
+|---|---|
+| **list backlog** | `{backlog}` lines, order = priority, + each task file |
+| **read task** | `{tasks}/<slug>.md` |
+| **write sections** | edit file |
+| **set state** | frontmatter `status:` + move backlog line to its section |
+| **create** | file from template + backlog line |
+| **reorder** | backlog line order |
+| **sprint / size / blockers** | `sprint:` field + `· <Sprint>` suffix · `size:` · `blocked_by:` |
+
+**Legacy** — task still carrying old states (`in-progress`, `review`, `validated`), a `grilled:` field, or French headings (`## Contexte / Décisions`, `## Critères d'acceptation`, `## Implémentation`, `## Vérification`) → project predates this lifecycle. `github` task whose content lives in the issue body (no task file on its branch, body holds `## Acceptance criteria`) or size as `size:*` label → pre-0.13 GitHub layout. Don't guess, don't alias: say `/wa-setup` migrates it (one plan, one yes), stop.
 
 ## Paths
 

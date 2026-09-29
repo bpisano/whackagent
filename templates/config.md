@@ -24,11 +24,13 @@ paths:                         # WHERE whackagent keep each kind of file. Skills
 
 tasks:                         # WHERE tasks live. See wa-board → Task store.
   backend: files               # files  — one .md per task in {tasks}, order in {backlog}. Default.
-                               # github — one issue per task, whole task in its body; a GitHub
-                               #   Project board holds state (Status field) and priority (card
-                               #   order); sprints = milestones; PRs carry `Closes #<n>`.
-                               #   Team sees one shared backlog. {backlog} and {tasks} unused.
-                               #   Needs `gh` authenticated with `project` scope.
+                               # github — one issue per task on a GitHub Project board. Task file
+                               #   {tasks}/<n>-<slug>.md lives on the task branch (truth); the issue
+                               #   holds title, summary, size, sprint, blockers. A workflow hook moves
+                               #   cards from pushes and merges. Locks stop two people grilling or
+                               #   coding one task. Every round commits + pushes; one draft PR per task.
+                               #   {backlog} unused. Needs `gh` with `project` scope + WA_PROJECT_TOKEN
+                               #   secret. See wa-board → Task store.
   project: ""                  # github only: <owner>/<number> of the board, set by /wa-setup.
                                #   One board per repo, owned by whackagent.
 
@@ -85,11 +87,13 @@ verify:                        # runtime check — implementer drive app it just
 commit:
   auto_commit_after_validation: false   # may Claude commit once YOU validate feature?
                                # (name kept for old configs: it gate the commit /wa-close make)
+                               # github backend: ignored — every round commit + push (board need it)
   author_name: "Benjamin Pisano"        # commits ALWAYS use this — never "Claude"
   author_email: "benjamin.pisano@icloud.com"
 
 branch:
   per_task: false              # /wa-code work on own branch per task instead of current one
+                               # github backend: always true — task file live on task branch
   prefix: "wa/"                # branch name: <prefix><key> → wa/add-apple-login (github: wa/42-add-apple-login)
   base: current                # fork point: current | main | <branch name>
   sprint_prefix: "sprint/"     # task carrying `sprint:` branch off SPRINT branch, not base:
@@ -112,6 +116,8 @@ close:                         # WHERE work land when /wa-close finish a task. T
                                # pr     — push branch + open PR onto target: (`gh pr create`).
                                #   Outward-facing: /wa-close ALWAYS confirm before, every time.
                                # merge  — merge branch into target: locally, no push.
+                               # github backend: ignored — task already has its draft PR;
+                               #   /wa-close rebase, push, mark it ready. YOU merge.
   target: main                 # where pr/merge land. Ignored by `nothing`.
   delete_branch: auto          # auto   — delete only once code live elsewhere (merged into sprint
                                #   branch, or merged into target). `pr` and `nothing` keep it:
