@@ -1,6 +1,6 @@
 ---
 name: wa-wiki
-description: Keep the wiki up to date, or look up project knowledge. /wa-wiki updates, /wa-wiki <query> answers.
+description: Answers from the project wiki. No argument: syncs the wiki with recent changes.
 ---
 
 # /wa-wiki
@@ -18,14 +18,16 @@ Read `.whackagent/config.md` first — its `paths:` block say where `{wiki}` and
 
 Task status + report handled by `/wa-code`. This step keep shared knowledge true.
 
-1. **Figure out what changed** — recent `done` tasks, latest `{reports}/*.md`, and/or git diff since last sync.
+**`/wa-close` runs it automatically**, scoped to the task it closes (its diff, `wiki:` field, report) — before its commit. Manual `/wa-wiki` = sync outside a task (hand-made changes, backlog of closed tasks never synced).
+
+1. **Figure out what changed** — called by `/wa-close` → that task only. Manual → recent `done` tasks, latest `{reports}/*.md`, and/or git diff since last sync.
 2. **Wiki.** Update or create affected pages, under `{wiki}/`:
    - Reflect new/changed behavior in relevant `[[page]]`(s).
    - Cross-link: wiki↔wiki, link task where useful.
    - Create any page a task's `wiki:` flagged missing.
    - Keep narrative (*why* + shape), not code dump.
    - **Compress** (if `compress_wiki: true`): run **caveman-compress** on each page written, then delete `*.original.md` backup. Wiki only. **`{wiki}` outside `.whackagent/` → say it once and recommend `compress_wiki: false`**: wiki moved into project tree is one humans read, caveman prose buys tokens at their expense.
-3. **Commit (only if allowed).** If `commit.auto_commit_after_validation: true` AND task is `to-close` or `done` (i.e. went through `/wa-validate`), commit with configured author name/email — **never** as Claude. Else leave it. Outside autopilot, never commit unvalidated work.
+3. **Commit (only if allowed).** Called by `/wa-close` → **never commit here**: close commits pages with code, one commit. Manual run: if `commit.auto_commit_after_validation: true` AND task is `to-close` or `done` (i.e. went through `/wa-validate`), commit with configured author name/email — **never** as Claude. Else leave it. Outside autopilot, never commit unvalidated work.
 
 Stop and ask if can't tell which page a change belongs to — don't scatter duplicates.
 
@@ -39,4 +41,4 @@ Read-only. Answer what user asked about project.
 
 ## Next step
 
-After update mode: suggest **`/wa-board`** for next task.
+After manual update mode: suggest **`/wa-board`** for next task. Inside `/wa-close`: back to its plan block.
