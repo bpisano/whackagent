@@ -140,7 +140,7 @@ Wider change → shorter, more generic word (`Performance`). Narrower → add th
 **Body = telegraphic, three blocks max:**
 
 ```
-<one line: what changes for the app, plain words — the only place a key number goes>
+<one short sentence: what changes for the app, plain words — the only place a key number goes; no feature list>
 
 ## Changes
 - <3–6 bullets, one change each, plain words; type/file name in backticks only when it helps a reviewer find it>
@@ -152,6 +152,21 @@ Closes #42        ← github backend: one `Closes #n` per task the PR delivers
 ```
 
 - **`github` backend → always link.** Task PR: `Closes #<n>` + `github-board link-pr <n> <pr>` (base ≠ default branch → `Closes` alone links nothing). Sprint PR: `Closes #<n>` for every task of the sprint, plus the sprint's milestone set on the PR. GitHub then shows the PR on each issue and closes them at merge into the default branch.
+- **Opening line = one short sentence, never a feature list.** Every new behavior, and every fix, goes in its own **Changes** bullet.
+- **One bullet = one subject, named.** Name the screen or feature the user knows (`The settings screen opens…`), never a subject-less `Opens…`.
+- **Bullet form.** Describing how a feature now behaves → a plain sentence (`The list keeps its scroll position`). Anything else → action word first: `Add` / `Fix` / `Remove` (in `discussion_language`). Never `Fix:` or `Feature:` prefixes.
+- **Words the user says.** No technical or niche term a teammate would stop on (`debounce`, `hydration`, `backoff`) — say what they see. Drop how it works and magic numbers unless the PR is about them.
+
+  ❌ `The search screen now opens on recent results, focused and ready to type, without flicker. Queries are debounced to cut requests, results stay in place while loading, and pull-to-refresh retries with exponential backoff up to 5 times…`
+
+  ✅
+  ```
+  ## Changes
+  - The search screen opens on recent results, ready to type
+  - Results no longer flicker while loading
+  - Add pull to refresh on search results
+  - Fix search failing on slow networks
+  ```
 - **Write for someone landing cold.** No task slugs, no backlog/sprint jargon, no verifier rounds, no finding counts, no "process" section, no follow-up list.
 - **Numbers: one line or a table ≤ 3 rows**, only when the PR is *about* numbers (perf). Never every counter you measured.
 - **Why, not how.** `Home map paused during nav` beats the three mechanisms behind it. Details live in the code and the task file.
