@@ -104,6 +104,11 @@ branch:
                                # So task 3 of sprint see task 1 work — same screen, no blind conflict.
                                # Created by whoever need it first: /wa-code step 0 or /wa-autopilot
                                # wave setup. Empty string → sprint get no branch, tasks use base:.
+                               #   sprint/login-refacto-test ← LOCAL test branch: sprint + every
+                               #                            delivered task, rebuilt and checked out after
+                               #                            each delivery and at end of /wa-autopilot.
+                               #                            Launch project there, test whole sprint.
+                               #                            Never pushed, never landed.
   checkout_next: true          # after /wa-close commit, hop onto next task branch
                                # (only when per_task AND commit.auto_commit_after_validation)
 

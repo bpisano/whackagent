@@ -85,7 +85,7 @@ The task file stays the source of truth. A GitHub Project shows it to the team.
 - **One issue per task.** The issue holds the title, summary, size, sprint (milestone) and blockers.
 - **The spec lives on the task branch.** `/wa-task 42` creates `wa/42-add-apple-login` and commits `.whackagent/tasks/42-add-apple-login.md` there.
 - **The board follows the files.** A GitHub Action reads the task file on every push and moves the card. A merged PR moves it to Done and closes the issue.
-- **One person per task.** Grilling and coding take a lock. Someone else trying gets `🔒 #42 grilling — alice@mbp since 2h`.
+- **One person per task.** Grilling and coding take a lock. Someone else trying gets `🔒 #42 grilling — alice@mbp since 2h`. A review locks the task too, but the card stays in To test.
 - **One draft PR per task.** Every round pushes to it. `/wa-close` marks it ready. You merge.
 
 Setup needs `gh` with the `project` scope and a token for the Action (`WA_PROJECT_TOKEN`). `/wa-setup` walks you through both.
@@ -106,6 +106,7 @@ No sprint file, no create command. A sprint exists as soon as a task names it (a
 
 - `/wa-board login-refacto` shows only that sprint, with its progress: `🏁 Login refacto — 2/5`.
 - Tasks branch off `sprint/login-refacto` and merge back into it. Task 3 starts from tasks 1 and 2.
+- After each delivery, and at the end of `/wa-autopilot`, you land on `sprint/login-refacto-test`: the sprint plus every task waiting for your test. Run the project there to test them all. It's local and rebuilt each time, nothing changes on GitHub.
 - When the last task closes, `/wa-close` offers to ship the sprint branch.
 
 ## Settings worth knowing

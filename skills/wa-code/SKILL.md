@@ -30,7 +30,7 @@ Arg = task id (`/wa-code 3`, `/wa-code 42`, or slug) — resolve per **wa-board 
 
 1. Name = `<branch.prefix><key>` (default `wa/add-apple-login`; `github`: `wa/42-add-apple-login`) — key per **wa-board → Task ids**.
 2. **Fork point** = `branch.base`, **unless task carry `sprint:`** and `branch.sprint_prefix` non-empty. Then base = sprint branch `<branch.sprint_prefix><kebab(sprint)>` (default `sprint/login-refacto`): create from `branch.base` if absent, check up to date otherwise. Why it exist — task 3 of sprint fork off task 1 merged work, not rediscover it as conflict. `/wa-close` merges back into it.
-3. Already on it → nothing. Exists but not checked out → check out, don't recreate. Absent → create from fork point above (`current` = where you are; else named branch, fetched first if tracks remote).
+3. Already on it → nothing. Exists but not checked out → check out, don't recreate (coming from sprint test branch = normal, see **wa-board → Sprint test branch**). Absent → create from fork point above (`current` = where you are; else named branch, fetched first if tracks remote).
 4. **Dirty tree → stop and ask** before any checkout: carry over, stash, or stay? Never move uncommitted work silently.
 5. Echo: `branch: wa/42-add-apple-login (base: sprint/login-refacto)` — name sprint branch when it one, say when you just created it.
 
@@ -101,6 +101,7 @@ Then:
 - Set state `to-test` — means *waiting for user to test it*, nothing more.
 - **`github` → round end** per **wa-board → Task store → `github` — task branch and rounds**: file `status: to-test` + `## Implementation`/`## Verification` written, commit (config author, **never Claude**), push. First delivery → `gh pr create --draft --base <base> --head <branch>`, title/body per **wa-board → Voice → PR wording**, then `github-board link-pr <n> <pr>`. PR exists → push alone updates it. Then mergeable check (`CONFLICTING` → rebase task range, rebuild, `push --force-with-lease`). Push = lock released, card → To test (hook). Print PR URL in report.
 - **Round aborted before any push** (blocked, user stops) → `github-board release <n> coding --reset-to <state claimed from>`, say why.
+- **Task in sprint → sprint test branch**, per **wa-board → Sprint test branch**: rebuild it (sprint + every delivered task), check it out, echo it. User launches project from there, every sprint feature in. `files`: work uncommitted → no build, stay on task branch, say so.
 - **Say what to do next, in this order**: test it. Notes → **`/wa-feedback`**. Matches spec → **`/wa-validate <id>`**, which fires verifier; **`/wa-close <id>`** ends it after your retest.
 - **Iteration is `/wa-feedback` job.** Never patch code from this thread — even one-liner. `/wa-feedback` only place inline fixes are bounded, tagged, built, flagged to verifier (see its *Micro-fix or implementer*); untracked touch-up here undoes review it about to get.
 - **Never set `done` yourself, never commit here** (`github`: round-end commit + push only). `to-test` → `/wa-validate` → `to-close` → `/wa-close` → `done`; user "ok that's it" = spec approval, not close.
@@ -126,6 +127,7 @@ Canonical end-of-task report — here, each delivered task of `/wa-autopilot`, e
 
 ✅ checked by agent: tap Apple → sheet, login OK → Home
 
+test branch: sprint/login-refacto-test = sprint + #42 · #43
 build ✅ · tests ✅ · run ✅ · review → /wa-validate
 → next: test it, then /wa-feedback or /wa-validate 42
 ```
@@ -136,13 +138,14 @@ build ✅ · tests ✅ · run ✅ · review → /wa-validate
 - **To test** — checklist: acceptance criteria agent did **not** prove, plus regression zones the diff touches. Agent proved everything → `nothing required` + one optional smoke test. Never empty silently.
 - **✅ checked by agent** — one line, criteria the runtime check proved (+ screenshot path). Omit when nothing proven.
 - **Status line** — build · tests · run (`✅` / `yours`) · review (`clean` / `→ /wa-validate`). Never claim check nobody ran.
+- **Sprint task** → one line above status line: `test branch: sprint/login-refacto-test = sprint + #42 · #43`. Not built → say why there (`⚠️ #45 not in`, dirty tree, uncommitted).
 - Headings follow `discussion_language` (`Problème / Objectif / Fait / À tester` in fr).
 
 ## 5. Closing — not yours
 
-`files`: commit, branch landing and `status: done` belong to **`/wa-close`**. Nothing in this file commits or moves branch after step 0.
+`files`: commit, branch landing and `status: done` belong to **`/wa-close`**. Nothing in this file commits or moves branch after step 0 — sprint test branch aside (local, throwaway).
 
-`github`: round-end commit + push + draft PR (step 4) are the only git moves here. Marking PR ready, merge, `done` → `/wa-close` and the merge hook.
+`github`: round-end commit + push + draft PR (step 4) are the only git moves here that reach GitHub. Marking PR ready, merge, `done` → `/wa-close` and the merge hook.
 
 ## Asking
 
@@ -150,7 +153,7 @@ Every question you put to user — `BLOCKED:`, architecture fork, failed check �
 
 ## Never
 
-Never write code yourself. Never commit (`files`) — closing is `/wa-close` job; `github` commits only at round end, never mid-round (push mid-round ends it). Never mark PR ready, never merge. Never mark task `done`. Never code a task whose lock you lost. Never switch branches with dirty tree. Never let subagents touch backlog/wiki/reports — you own those. Never write to literal `.whackagent/` path when config `paths:` points elsewhere.
+Never write code yourself. Never commit (`files`) — closing is `/wa-close` job; `github` commits only at round end, never mid-round (push mid-round ends it). Never mark PR ready, never merge into sprint branch or base (sprint test branch only), never push test branch. Never mark task `done`. Never code a task whose lock you lost. Never switch branches with dirty tree. Never let subagents touch backlog/wiki/reports — you own those. Never write to literal `.whackagent/` path when config `paths:` points elsewhere.
 
 ## Next step
 

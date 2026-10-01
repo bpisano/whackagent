@@ -20,7 +20,8 @@ Where sit: `/wa-task` → `/wa-code` → *you test, `/wa-feedback`* → (`/wa-va
    - `to-test` → **never reviewed.** Say so in one line (`#42 not reviewed yet → review first`), run *Review* below, then continue.
    - `draft` / `grilling` / `todo` / `coding` → not coded. Stop.
    - `done` / `canceled` → already closed. Say what branch did, stop.
-   - `github` → `github-board claim <n> coding` first (from `to-test` / `to-close`). Exit 3 → name owner, stop. Exit 4 → say state, stop.
+   - `github` → `github-board claim <n> coding --keep-state` first (from `to-test` / `to-close`) — review round per **wa-board → Task store → Locks**: lock taken, card stays where it is through review and through `ok?`. Exit 3 → name owner, stop. Exit 4 → say state, stop.
+   - **Be on task branch.** On sprint test branch with clean tree → check out task branch without asking (**wa-board → Sprint test branch → Leaving it**). Never close from test branch: its merges aren't the task.
 2. **Check nothing moved** since review round — `git diff` against state `## Review` recorded. Code changed → say what, re-review the delta inline (*Review*, scope = delta). Review only worth tree it read.
 3. **Wiki** — *Wiki* below. Before commit, so pages ship with code.
 4. **Show landing plan, get yes.** One block, before touching git — see *Plan block*. Only confirmation command ask; everything after run without more prompting.
@@ -87,7 +88,7 @@ Rules:
 - **`github` → PR already exists** (draft, opened by `/wa-code`). Show its number, URL, base, and the refreshed title/body when they change. Ready = teammates may merge: always confirmed.
 - **`strategy: pr` = loud case.** PR visible to other people second it opens. Name target branch, that it push, and show **exact title and body** you'll use (**wa-board → PR wording**) — user can edit them before yes. Never open one on implied yes carried from earlier close.
 - Anything you skip (no commit, no worktree, branch kept) → say it skipped, not omit line. Silence read as "it happened".
-- User say no → stop at step 4. Task stay `to-close` (review recorded, wiki pages left in tree, say so), nothing else touched. `github` → `github-board release <n> coding --reset-to <state claimed from>`.
+- User say no → stop at step 4. Task stay `to-close` (review recorded, wiki pages left in tree, say so), nothing else touched. `github` → `github-board release <n> coding` (card never moved).
 
 ## GitHub landing
 
@@ -96,7 +97,7 @@ Rules:
 1. **Status** — task file `status: to-close` (Review set it). Commit review round, wiki pages, autofix — one commit, configured author.
 2. **Rebase if needed** — base = sprint branch when task in sprint, else `branch.base`. `gh pr view --json mergeable,baseRefName` + `git fetch`. Behind or `CONFLICTING` → rebase task range onto `origin/<base>`, rebuild. Conflict → stop, leave rebase in progress, name files, say task stays `to-close`. Never guess resolution.
 
-Any step failing before the push (rebase conflict, commit error, push rejected) → lock still held: say so, `github-board release <n> coding --reset-to to-close --reason "<what failed>"` once user decides to leave it, never silently.
+Any step failing before the push (rebase conflict, commit error, push rejected) → lock still held: say so, `github-board release <n> coding --reason "<what failed>"` once user decides to leave it, never silently.
 3. **Push** — `git push`; after rebase only → `--force-with-lease`, own task branch only. Push ends round: hook releases coding lock.
 4. **PR ready** — refresh title and body per **wa-board → PR wording** (`Closes #<n>` last), `gh pr edit`, then `gh pr ready`. No PR found (task coded before 0.13) → `gh pr create --base <base>` non-draft + `github-board link-pr <n> <pr>`.
 5. **Stop.** User merges on GitHub (CI, review, protected branch — team gesture). Hook sets `done`, closes issue, closes empty milestone. Never `gh pr merge`, never delete branch (PR needs it), never close issue, never set `done`.
@@ -146,6 +147,7 @@ Last task of sprint reach `done` — no task of that sprint left in `draft`, `gr
 3. **Only on yes.** No is a normal answer — the branch stays, the sprint stays complete, nothing is lost. Never fold this into the task's own confirmation at step 4: two different things landing, two yeses.
    Sprint PR → title and body per **wa-board → PR wording**: title = sprint's theme in 1–3 words (`Performance`, `Map architecture`), body sums up the sprint for someone who never saw its tasks — never one bullet per task, never task slugs. `github` → PR always (not `close.strategy`), onto `branch.base`, sprint milestone set on the PR (`gh pr create --milestone "<Sprint>"`); tasks already closed by their own merges.
 4. Sprint branch merged or PR'd → `delete_branch` applies to it the same way it applies to a task branch.
+5. **Sprint test branch** (`<sprint branch>-test`) → delete it, whatever the answer at step 3: no delivered task left to test. Checked out → switch to sprint branch first. Local only, was never pushed.
 
 A sprint is never `done` as a thing — there's no sprint status to set. It's complete when its tasks are, and this step is the only place that notices.
 
@@ -154,6 +156,7 @@ A sprint is never `done` as a thing — there's no sprint status to set. It's co
 - **`/wa-validate`** sets `to-close` and stops there. Optional now: `/wa-close` on a `to-test` task runs same review itself. Run it apart when you want to retest reviewed code before landing.
 - **`/wa-feedback` on a `to-close` task** → state back to `to-test`, needs `/wa-validate` again before it can be closed.
 - **`/wa-autopilot`** leaves tasks at `to-test` on their own branches, worktrees already removed (except blocked ones). Each goes `/wa-close` (review included).
+- **Sprint test branch** — where user tested: sprint + every delivered task, local only (**wa-board → Sprint test branch**). `/wa-close` never lands it, never merges from it; task lands from its own branch. Stale after a close → next delivery rebuilds it.
 - **`/wa-wiki`** runs inside `/wa-close`, scoped to the task. Standalone `/wa-wiki` = sync outside any task.
 
 ## Never

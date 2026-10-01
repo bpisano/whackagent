@@ -25,8 +25,8 @@ Review every round burn one verifier per note, review code about to change anywa
    - `status: coding` → code not finished. Say so, don't review half-task.
    - `status: to-close` → already reviewed. Code moved since → re-review delta; untouched → nothing to do, closing is **`/wa-close <id>`**.
    - `status: done` / `canceled` → nothing to do.
-2. **Be on right branch.** `branch.per_task` or `/wa-autopilot` delivery → work live on `<branch.prefix><key>`. Not here → say which branch, switch **only after user confirms** (their tree may be dirty). `github` → `git fetch` + pull: last round may come from another machine.
-   - **`github` → take the task.** `github-board claim <n> coding` per **wa-board → Task store → Locks**. Exit 3 → name owner + age, stop. Exit 4 → say state, stop.
+2. **Be on right branch.** `branch.per_task` or `/wa-autopilot` delivery → work live on `<branch.prefix><key>`. Not here → say which branch, switch **only after user confirms** (their tree may be dirty). On sprint test branch with clean tree → switch without asking (**wa-board → Sprint test branch → Leaving it**). `github` → `git fetch` + pull: last round may come from another machine.
+   - **`github` → take the task.** `github-board claim <n> coding --keep-state` per **wa-board → Task store → Locks** — review round: lock taken, card stays `To test`. Exit 3 → name owner + age, stop. Exit 4 → say state, stop.
 3. **State what you take as validated** — the `## Acceptance criteria`, listed back in one block. Criterion they know unmet means they wanted `/wa-feedback`, not this: say so and stop rather than review feature still being finished.
 4. **Dispatch verifier** — point of command. One `wa-verifier`, per `/wa-code` step 3 in full.
    - **Scope = cumulative diff**: `branch.base..HEAD` plus working tree when task has own branch, else every file in `## Implementation` and each `## Feedback` round. Hunks inline, `inline`-tagged ones **flagged as written without convention pass** — those get harder look.
@@ -34,7 +34,8 @@ Review every round burn one verifier per note, review code about to change anywa
 5. **Check sweep → autofix.** `LENSES:` short of four ✓ → send back for missing lens first; this pass close task, lens skipped here skipped for good. Then order by severity, keep lens tags. `review.autofix: true` → dispatch implementer, re-verify, loop until clean or no progress, **cap 3 rounds**. Not converging → stop, show what left. Record everything in `## Review` under `validation` round.
 6. **Runtime.** `verify.mode: always` and autofix touched code → implementer re-drive app. Any other mode → **say plainly code moved since user tested it** and name files, so nobody treat stale test as proof.
 7. **Set state `to-close`** per **Task store**. Never `done` here — that's user's second look, not yours.
-   - **`github` → round end**: file `status: to-close` + `## Review`, commit (config author, **never Claude**), push — PR updates, lock released, card → To close (hook). Findings still open (step 8, third case) → `status: to-test` instead: not reviewed clean, not closable. Round aborted before any push → `github-board release <n> coding --reset-to <state claimed from>`.
+   - **`github` → round end**: file `status: to-close` + `## Review`, commit (config author, **never Claude**), push — PR updates, lock released, card → To close (hook). Findings still open (step 8, third case) → `status: to-test` instead: not reviewed clean, not closable. Round aborted before any push → `github-board release <n> coding` (card never moved).
+   - **Task in sprint, autofix changed code → rebuild sprint test branch**, check it out, per **wa-board → Sprint test branch**: retest happens there. Nothing changed → no rebuild, say which branch user is on.
 8. **Report + hand back**, one of three:
    - **Clean, autofix changed nothing** → code they tested *is* code reviewed. Nothing to retest: *"`/wa-close <id>` whenever you want."*
    - **Clean, autofix changed code** → list what changed, in their terms. *"Retest, then `/wa-close <id>`."*
@@ -51,7 +52,7 @@ Review every round burn one verifier per note, review code about to change anywa
 
 - Never mark task `done` — that's `/wa-close`, after user retests reviewed code.
 - Never review task user hasn't validated: without their yes, you review feature still moving.
-- Never merge, open PR, mark PR ready or delete branch — **landing belong to `/wa-close`**. Never commit or push in `files`; `github` → round-end commit + push only, never mid-round.
+- Never merge into sprint branch or base, open PR, mark PR ready or delete branch — **landing belong to `/wa-close`**. Sprint test branch (local, throwaway) is the one thing merged here. Never commit or push in `files`; `github` → round-end commit + push only, never mid-round.
 - Never write code yourself — findings go to implementer, same as `/wa-code`.
 
 ## Asking

@@ -42,6 +42,8 @@ One lifecycle, both backends. Each state says **what's left to do** — never wh
 
 **Locks** (`grilling`, `coding`) — one grill, one coding round per task at a time. `github`: atomic claim (see **Task store → Locks**). `files`: one checkout, one agent — plain status, no lock to take.
 
+**`coding` = code being written, nothing else.** `/wa-code` and `/wa-feedback` set it. Coded task sits in `to-test`; review rounds (`/wa-validate`, `/wa-close`) lock it **without moving it** — never back to `coding` while verifier reads or while waiting on user's yes.
+
 ## Display format
 
 Canonical way tasks shown anywhere in flow (here, `/wa-task` prioritization pass, `/wa-autopilot` recap). **List, never table.** One section per non-empty state, tasks in priority order, two lines per task:
@@ -183,10 +185,31 @@ Sprint = **optional human title** on task (`sprint: Login refacto`), grouping bi
 - **Resolving a name**: exact title first, then case-insensitive / kebab-normalized match (`login-refacto` finds `Login refacto`). No match → say so and list known sprints (sprint with no live task is complete, not typo). Ambiguous → list candidates, stop.
 - **Task id vs sprint**: task id wins over sprint of same name. Clash → say which one you took.
 
-- **One branch, when `branch.per_task`.** `<branch.sprint_prefix><kebab(sprint)>` (default `sprint/login-refacto`), created from `branch.base` by whoever needs it first — `/wa-code` step 0 or `/wa-autopilot` wave. Tasks of sprint fork off it and `/wa-close` merges them back, so each task starts from sprint current state. `branch.sprint_prefix: ""` turns that off: tasks use `branch.base` like any other. Nothing merges into sprint branch before its task is reviewed and closed.
+- **One branch, when `branch.per_task`.** `<branch.sprint_prefix><kebab(sprint)>` (default `sprint/login-refacto`), created from `branch.base` by whoever needs it first — `/wa-code` step 0 or `/wa-autopilot` wave. Tasks of sprint fork off it and `/wa-close` merges them back, so each task starts from sprint current state. `branch.sprint_prefix: ""` turns that off: tasks use `branch.base` like any other. Nothing merges into sprint branch before its task is reviewed and closed — testing every delivered task at once is **Sprint test branch** job, below.
 - **A sprint is complete, never `done`.** No sprint state exists. Complete when no task of it left in `draft`/`todo`/`coding`/`to-test`/`to-close` — `/wa-close` notices and offers to land sprint branch.
 
 Commands taking sprint name: `/wa-board <sprint>` (filtered view), `/wa-autopilot <sprint>` (batch its todo tasks), `/wa-task` (assigns and inherits). `/wa-code`, `/wa-validate`, `/wa-feedback`, `/wa-close` stay **per task** — one task is their unit, and whole sprint unattended is what `/wa-autopilot` already does better.
+
+### Sprint test branch
+
+One local branch holding **every delivered task of sprint**: user launches project once, tests them all. Name = `<sprint branch>-test` (default `sprint/login-refacto-test`). Exists whenever sprint has a branch.
+
+- **Not the sprint branch.** Sprint branch only takes reviewed, closed tasks. `github`: task merged into it and pushed = task PR marked merged = card `Done` before anyone tested. Test branch changes nothing on GitHub.
+- **Local, throwaway.** Never pushed, never PR'd, never a fork point, never committed on. Rebuilt from scratch every time — task branches get rebased, merges kept from last build would conflict.
+- **Who builds**: every round delivering a sprint task — `/wa-code`, `/wa-feedback`, `/wa-validate` at round end; `/wa-autopilot` once, end of run. Then **checks it out**: user tests from there. Always, even with one delivered task — user never wonders which branch to launch.
+- **Build** (main checkout, never a worktree):
+  ```
+  git checkout -B <sprint branch>-test <base>   # github: origin/<sprint branch>, fetched · files: <sprint branch>
+  git merge --no-ff --no-edit <task branch>     # every sprint task in to-test / to-close, board order
+  ```
+  `github` → merge `origin/<task branch>` (round end pushed it). Merge commits as `commit.author_name` / `author_email`, **never Claude**.
+- **Needs committed work.** `files` attended round leaves code uncommitted → nothing to merge: stay on task branch (already sprint + this task), say so. Other delivered sprint tasks waiting on own branches → name them.
+- **Two tasks conflict** → `git merge --abort`, skip that task, keep merging the rest. Report `⚠️ #45 not in test branch — conflicts with #42 (AuthStore.swift)`. Never resolve on throwaway branch: resolution dies at next build, real one happens when task lands.
+- **Dirty tree** → no build, no checkout. Attended: say what's dirty, ask (recommend staying on task branch). Autopilot: skip, say so in report.
+- **Commits made on it** (`git log --first-parent --no-merges <base>..<sprint branch>-test` non-empty) → rebuild would drop them. Attended: ask, recommend moving them to their task with `/wa-feedback`. Autopilot: leave branch untouched, say so.
+- **Echo**: `test branch: sprint/login-refacto-test = sprint + #42 · #43 — you're on it`.
+- **Leaving it.** Task command starting on test branch (`/wa-code`, `/wa-feedback`, `/wa-validate`, `/wa-close`) → check out task branch **without asking** when tree clean: whackagent own branch, nothing to lose. Edits made while testing (dirty) → usual dirty-tree question, recommend carrying them over to task branch.
+- **Deleted** when sprint lands (`/wa-close` → *Sprint landing*).
 
 ## Task ids
 
@@ -239,7 +262,7 @@ Helper: `${CLAUDE_PLUGIN_ROOT}/scripts/github-board <verb>` (internal, Python 3 
 | **list backlog** | `github-board list [--state s,…] [--sprint x] [--all] [--owners]` — priority order, done/canceled hidden unless `--all`; `--owners` resolves lock holders |
 | **read task** | `github-board get <n>` (state, size, sprint, claims, `branch`, `blocked_by`) + task file: `git show origin/<branch>:{tasks}/<n>-<slug>.md` (or working tree when on that branch). No branch yet (`draft`) → issue body is the raw idea note |
 | **create** | `github-board create --title … --summary … [--size] [--sprint] [--note <idea>]` → issue in `draft`, bottom of board. Summary = first body line, note below it |
-| **lock** | `github-board claim <n> grilling\|coding` — see *Locks* |
+| **lock** | `github-board claim <n> grilling\|coding` · review round: `claim <n> coding --keep-state` — see *Locks* |
 | **write sections / status** | edit task file on task branch; lands on board at next push (hook) |
 | **state not from file** | `claim` (Grilling, Coding), `release <n> <phase> --reset-to <state>` (abort), `cancel <n> --reason …` (Canceled + issue closed not planned). `set-state` = setup / repair only |
 | **reorder** | `github-board move <n> --top\|--bottom\|--before m\|--after m` |
@@ -256,7 +279,7 @@ Helper: `${CLAUDE_PLUGIN_ROOT}/scripts/github-board <verb>` (internal, Python 3 
 | PR merged (any base) | `done`, issue closed, milestone closed when empty |
 | PR closed unmerged | `todo` |
 
-**Never set `todo`, `to-test`, `to-close`, `done` on the board yourself** — write `status:` in file, push; hook moves card. Code drives board. Hook slow → wait, don't patch.
+**Never set `todo`, `to-test`, `to-close`, `done` on the board yourself** — write `status:` in file, push; hook moves card. Code drives board. Hook slow → wait, don't patch; hook that never ran → repair per *task branch and rounds → Round end confirms card moved*.
 
 ### `github` — task branch and rounds
 
@@ -264,15 +287,17 @@ Helper: `${CLAUDE_PLUGIN_ROOT}/scripts/github-board <verb>` (internal, Python 3 
 - **Every round ends with commit + push** on task branch — grill (`status: todo`), `/wa-code`, `/wa-feedback`, `/wa-validate`, `/wa-autopilot`. Commit author = `commit.author_name`/`author_email`, never Claude. That push releases the lock. **No push mid-round** — hook would end round early.
 - **Draft PR** opened by first coding delivery: `gh pr create --draft --base <base> --head <branch>`, title/body per **Voice → PR wording**, then `link-pr`. Later rounds push to it. `/wa-close` marks it ready; user merges.
 - **PR ready + new round** (`/wa-feedback`) → `gh pr ready --undo` first: nobody merges code that moves again.
+- **Round end confirms card moved.** After push, `github-board get <n>` — up to ~1 min, hook needs it. Card still `Coding`, or lock still held → hook never ran on this branch: say it, with cause from `gh run list --branch <branch> --workflow whackagent-board.yml --limit 1` (no run = workflow file missing on branch forked before hook merged; failed = secret). Then repair: `github-board release <n> coding --reset-to <file status>`. Coded task never stays in `Coding`.
 - **Round end checks mergeable**: `gh pr view --json mergeable` → `CONFLICTING` → rebase task range on base, rebuild, `push --force-with-lease` (own task branch only), check again. Conflict needs a design call → stop, say which files.
 - **Task ref for subagents.** Implementer and verifier never read config and never write the task. Hand them the task file path (worktree or checkout on task branch). Orchestrator records what they return.
 
 ### Locks (`github`)
 
 - `claim <n> grilling` from `draft` · `claim <n> coding` from `todo`, `to-test`, `to-close`. Atomic: git ref `refs/wa-claims/<n>/<phase>`, N agents → one wins.
+- **Review round** (`/wa-validate`, `/wa-close`) → `claim <n> coding --keep-state`, from `to-test` / `to-close`. Same lock, **card stays in its column**: nobody is coding. Plain `claim <n> coding` there = bug — card back in Coding for whole review, and for as long as user takes to answer `ok?`.
 - **Exit 3 = taken** → name owner and age (`🔒 #42 grilling — alice@mbp since 2h`), stop. Never retry, never steal.
 - **Exit 4 = wrong state** → say state, point to right command.
-- Released by the push ending the round (hook), or `release <n> <phase> --reset-to <state>` on abort: grill abandoned → `--reset-to draft`; coding round aborted before any push → `--reset-to` the state it was claimed from.
+- Released by the push ending the round (hook), or `release <n> <phase> --reset-to <state>` on abort: grill abandoned → `--reset-to draft`; coding round aborted before any push → `--reset-to` the state it was claimed from; review round aborted → `release <n> coding` alone, card never moved.
 - **No expiry** — grill is interactive, answer may come in two days. `github-board claims` flags `stale` (no push past `WA_STALE_AFTER_HOURS`); `/wa-board` shows it. `/wa-task release <n>` clears one — human-triggered only.
 
 ### `github` — other rules

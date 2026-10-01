@@ -66,10 +66,19 @@ Each task get own checkout, so parallel implementers never see each other's edit
 
 1. **State `to-test`** + notes in `## Implementation` / `## Verification`, per **wa-board → Task store** — never `done`, never `to-close`.
 2. **Commit in its worktree**, on its branch, with the configured author name/email — task file included. **Never as Claude. Never merge to base. Never touch another branch.** The commit is the delivery, not a close: the code is unreviewed by the verifier and unseen by the user, sitting on a branch nobody merged.
-   - **`github` → round end** per **wa-board → Task store → task branch and rounds**: push (hook moves card to `To test`, drops lock), first delivery → `gh pr create --draft --base <base> --head <branch>` (title/body per **wa-board → Voice → PR wording**) + `github-board link-pr <n> <pr>`, then `gh pr view --json mergeable` → `CONFLICTING` → rebase task range on base, rebuild, `push --force-with-lease`, check again. Conflict needing a design call → leave it, log as blocker. A task leaves autopilot waiting for the user to test it, exactly like one from `/wa-code`. **Never merge into the sprint branch here** — that's `/wa-close`, after the user's review; an unreviewed merge poisons the base of every later task in the sprint. **Don't** sync wiki/graph unattended — that's `/wa-wiki` after it closes.
+   - **`github` → round end** per **wa-board → Task store → task branch and rounds**: push (hook moves card to `To test`, drops lock), first delivery → `gh pr create --draft --base <base> --head <branch>` (title/body per **wa-board → Voice → PR wording**) + `github-board link-pr <n> <pr>`, then `gh pr view --json mergeable` → `CONFLICTING` → rebase task range on base, rebuild, `push --force-with-lease`, check again. Conflict needing a design call → leave it, log as blocker. A task leaves autopilot waiting for the user to test it, exactly like one from `/wa-code`. **Never merge into the sprint branch here** — that's `/wa-close`, after the user's review; an unreviewed merge poisons the base of every later task in the sprint (`github`: and marks the task PR merged → `Done` untested). Testing them together is the **sprint test branch**, step 4. **Don't** sync wiki/graph unattended — that's `/wa-wiki` after it closes.
 3. **Remove the worktree** (`git worktree remove ../.wa-worktrees/<key>`) — the branch survives, that's what you review later. A blocked task keeps its worktree; say so in the report.
 
 Skip the report-and-iterate phase entirely — nobody's there to iterate with. Save the report to `{reports}/<key>.md` (`{…}` from the config's `paths:` block, see **wa-board → Paths**) — **in the main checkout, never inside a worktree**: the worktree gets removed and the report with it.
+
+## 4. Sprint test branch — once, end of run
+
+Batch delivered sprint tasks → user must not check out N branches to test N features. After last wave, worktrees removed: **build sprint test branch and check it out**, per **wa-board → Sprint test branch** — `<sprint branch>-test` = sprint branch + every task of sprint in `to-test` / `to-close` (this run's and earlier ones). User comes back, launches project, everything is there.
+
+- Main checkout, never a worktree. Local only: never pushed, nothing changes on GitHub, sprint branch untouched.
+- Several sprints in batch → build each, check out the one with most tasks delivered this run, name the others.
+- Unattended rules: dirty main checkout → skip, say so. Two tasks conflict → skip that task, keep the rest, log `⚠️ #45 not in test branch — conflicts with #42 (<files>)`. Commits found on existing test branch → leave it untouched, say so. Never ask.
+- No sprint task delivered (standalone tasks only, or all blocked) → nothing to build: branches listed in report as before.
 
 ## Blockers — skip and log, never ask, never guess
 
@@ -94,6 +103,8 @@ Print and save `{reports}/autopilot-<date>.md`:
 #44 · 🟡 **Add Apple onboarding** · ⛔ #42 — skipped
 #46 · 🟢 **Fix login errors** · 🔒 alice@mbp 2h — skipped
 
+test branch: sprint/login-refacto-test = sprint + #42 · #43 — you're on it
+
 ---
 ## 🟢 #42 Add Apple login · branch wa/42-add-apple-login
 <report card>
@@ -111,12 +122,12 @@ Reco: magic link, already in place for signup.
 
 Three parts, always this order:
 
-1. **Recap** — every task of the batch, **wa-board list format** (line 1 only, `⛔ #x` / `🔒 owner age` markers included), suffix `— to test`, `— ⛔ blocked` (open question) or `— skipped` (blocker not landed, lock taken, state moved). Sprint in play → progress line in title; several sprints → group recap by sprint.
+1. **Recap** — every task of the batch, **wa-board list format** (line 1 only, `⛔ #x` / `🔒 owner age` markers included), suffix `— to test`, `— ⛔ blocked` (open question) or `— skipped` (blocker not landed, lock taken, state moved). Sprint in play → progress line in title; several sprints → group recap by sprint. Then **test branch line** (step 4): what's in it, what's not and why — or why it wasn't built.
 2. **One card per delivered task** — **wa-code → Report card**, branch in header instead of sprint tag (`github`: draft PR link too). Same skeleton as attended `/wa-code`.
 3. **Blocked** — per task: open question + your recommended answer, one line each. Kept worktree → say so.
 
-One branch per task still, never one per sprint: user reviews and merges task by task. Never write `review: clean` for a task the verifier never saw.
+One branch per task still: user reviews and lands task by task. Test branch is only where they're tested together — never reviewed, never landed. Never write `review: clean` for a task the verifier never saw.
 
 ## Next step
 
-Test the delivered branches. Notes on one → **`/wa-feedback <id> <notes>`** (checks it out, applies them through the same pipeline). Matches spec → **`/wa-validate <id>`** (verifier on the whole branch), then **`/wa-close <id>`** after your retest — it syncs the wiki and lands (`files`: sprint merge or `close.strategy`; `github`: draft PR marked ready, you merge). `/wa-close` alone also works — it runs the validate pass itself.
+Test — sprint tasks from the test branch you're on, standalone ones from their own branch. Notes on one → **`/wa-feedback <id> <notes>`** (checks it out, applies them through the same pipeline). Matches spec → **`/wa-validate <id>`** (verifier on the whole branch), then **`/wa-close <id>`** after your retest — it syncs the wiki and lands (`files`: sprint merge or `close.strategy`; `github`: draft PR marked ready, you merge). `/wa-close` alone also works — it runs the validate pass itself.

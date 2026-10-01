@@ -57,6 +57,8 @@ SIZES = ["quickwin", "medium", "large"]
 SIZE_COLORS = {"quickwin": "GREEN", "medium": "YELLOW", "large": "RED"}
 # Phase claimed → states the ticket may be in when the claim is taken.
 CLAIM_FROM = {"grilling": {"draft"}, "coding": {"todo", "to-test", "to-close"}}
+# A review round locks a coded ticket without moving its card: Coding means code is being written.
+REVIEW_FROM = {"to-test", "to-close"}
 CLAIM_NAMESPACE = "wa-claims"
 IGNORE_LABEL = "wa-ignore"
 
@@ -450,8 +452,11 @@ def op_create(args):
 
 
 def op_claim(args):
-    config = load()
     phase = args.phase
+    if args.keep_state and phase != "coding":
+        raise Failure("--keep-state only applies to the coding lock", EXIT_USAGE)
+    config = load()
+    allowed = REVIEW_FROM if args.keep_state else CLAIM_FROM[phase]
     ticket = find(config, args.number, with_owners=False)
     if ticket["closed"]:
         raise Failure(f"#{args.number} is closed", EXIT_WRONG_STATE)
@@ -459,9 +464,9 @@ def op_claim(args):
     held = next((c for c in claims(config, args.number) if c["phase"] == phase), None)
     if held:  # before the state check, so a loser learns who holds it; leaves no commit behind
         taken(config, args.number, phase, held["sha"])
-    if ticket["state"] not in CLAIM_FROM[phase]:
+    if ticket["state"] not in allowed:
         where = ticket["state"] or f"in column {ticket['column']!r}"
-        raise Failure(f"#{args.number} is {where}, {phase} needs {sorted(CLAIM_FROM[phase])}", EXIT_WRONG_STATE)
+        raise Failure(f"#{args.number} is {where}, {phase} needs {sorted(allowed)}", EXIT_WRONG_STATE)
     agent = agent_id(args.agent)
     now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     commit = rest(
@@ -479,9 +484,12 @@ def op_claim(args):
             raise Failure(f"could not create claim ref {ref}: {(data or {}).get('message', 'unknown error')}")
         existing = rest("GET", f"repos/{config['repo']}/git/ref/{ref.removeprefix('refs/')}")
         taken(config, args.number, phase, existing["object"]["sha"])
-    set_state_raw(config, ticket, phase)
-    comment(config, args.number, f"🔒 **{phase}** — `{agent}` · {now}")
-    emit({"number": args.number, "phase": phase, "taken": False, "agent": agent, "since": now})
+    if not args.keep_state:
+        set_state_raw(config, ticket, phase)
+    label = "review" if args.keep_state else phase
+    comment(config, args.number, f"🔒 **{label}** — `{agent}` · {now}")
+    state = ticket["state"] if args.keep_state else phase
+    emit({"number": args.number, "phase": phase, "state": state, "taken": False, "agent": agent, "since": now})
 
 
 def taken(config, number, phase, sha):
@@ -797,6 +805,7 @@ def parser():
     s.add_argument("number", type=int)
     s.add_argument("phase", choices=sorted(CLAIM_FROM))
     s.add_argument("--agent")
+    s.add_argument("--keep-state", action="store_true", help="review round: lock, card stays in its column")
     s.set_defaults(func=op_claim)
 
     s = sub.add_parser("release")
