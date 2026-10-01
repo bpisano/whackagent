@@ -19,10 +19,12 @@ Given tasks, or every `todo` task if none (confirm list first if user present). 
 
 **Only `todo`.** Autopilot never grills: `draft` needs `/wa-task` with user there. Drop it from batch, say so.
 
-**Blocked tasks** per **wa-board → Dependencies**. No stacking: task starts from base only once blocker **landed** (`done`).
-- Open blocker outside batch → task skipped, `⛔ waits #x`.
-- Open blocker inside batch → still not landed this run (autopilot delivers `to-test`, never merges) → task skipped too, `⛔ waits #x`. Blocker runs normally.
-- Echo skips with resolved list (`#44 ⛔ waits #42`), so user sees why before walking away.
+**Blocked tasks → stack**, per **wa-board → Dependencies → Stacking**. Parallel as much as possible, stacked when needed. **Rule, not a question — never ask, never wait for a yes.**
+- Open blocker inside batch → blocker runs first, task goes in a later wave, branch stacked on blocker's.
+- Open blocker outside batch, already delivered (`to-test` / `to-close`) → stack on its branch, any wave.
+- Open blocker outside batch, not coded → nothing to stack on: task skipped, `⛔ waits #x`.
+- Blocker ends this run blocked → its dependents skipped, `⛔ waits #x`. Never stack on code that didn't build.
+- Echo with resolved list (`#44 ⇡ stacked on #42`, `#48 ⛔ waits #12`), so user sees plan before walking away.
 
 ## 1. Plan the batch — what can run at once
 
@@ -37,11 +39,13 @@ Any doubt → **sequential**. Merge conflict at 3am cost more than wall-clock sa
 
 Group batch into **waves**: everything in wave runs parallel, waves run one after another. **Cap wave at 3** — beyond that, builds queue on machine anyway and report get unreadable.
 
+**Dependencies order waves, never shrink batch.** Task goes in first wave after its last blocker's wave, stacked on it. Two tasks stacked on same blocker → same wave when independent of each other. Earliest wave possible for everything: stack only where a blocker forces it.
+
 Echo plan before start:
 
 ```
 wave 1 (∥) : #42 Add Apple login · #47 Export reports as CSV
-wave 2     : #51 Sync offline changes   (touches AuthStore, like #42)
+wave 2 (∥) : #44 Add Apple onboarding (⇡ stacked on #42) · #51 Sync offline changes (touches AuthStore, like #42)
 ```
 
 ## 2. Run a wave — one worktree per task
@@ -53,6 +57,7 @@ Each task get own checkout, so parallel implementers never see each other's edit
    ```
    git worktree add ../.wa-worktrees/<key> -b <branch.prefix><key> <fork point>
    ```
+   **Stacked task** (blocker delivered, not landed) → **wa-board → Dependencies → Stacking**: `files` → fork point = blocker branch tip, not base. `github` → worktree from task branch as above, then `git rebase --onto origin/<blocker branch> <its base>` inside it, no push. Blocker delivered this run → its branch tip is its round-end commit, worktree already removed. Write `stacked on: <blocker branch> @ <sha>` in task `## Implementation`, tell implementer blocker code is there to reuse.
    **Sprint branch is created in the main checkout, never inside a worktree**, and only once per sprint per run — two waves of the same sprint share it. Tasks of one sprint in the *same* wave still fork off the sprint branch as it stood at wave start: they run in parallel, so none see each other. That's the wave planner's job to have made safe.
 2. **Spawn one `wa-implementer` per task in the wave, in a single message** so they actually run concurrently. Each gets the standard `/wa-code` step 2 payload **plus its worktree path**, and the instruction: *work only under `<worktree>`, absolute paths, never touch the main checkout or another worktree.*
 3. **No verifier here** — `review.when: on_validation` holds, and unattended is exactly where it holds hardest: the user's review is **async**, so a task that gets reworked tomorrow morning would have been reviewed tonight for nothing. Autopilot delivers *code*, built and run; the verifier runs later, when the user runs **`/wa-validate <id>`** on the branch. `review.when: each_round` → then yes, one per task per `/wa-code` step 3 (diff hunks from that worktree only; verifiers are read-only, so they parallelize freely across tasks).
@@ -66,7 +71,7 @@ Each task get own checkout, so parallel implementers never see each other's edit
 
 1. **State `to-test`** + notes in `## Implementation` / `## Verification`, per **wa-board → Task store** — never `done`, never `to-close`.
 2. **Commit in its worktree**, on its branch, with the configured author name/email — task file included. **Never as Claude. Never merge to base. Never touch another branch.** The commit is the delivery, not a close: the code is unreviewed by the verifier and unseen by the user, sitting on a branch nobody merged.
-   - **`github` → round end** per **wa-board → Task store → task branch and rounds**: push (hook moves card to `To test`, drops lock), first delivery → `gh pr create --draft --base <base> --head <branch>` (title/body per **wa-board → Voice → PR wording**) + `github-board link-pr <n> <pr>`, then `gh pr view --json mergeable` → `CONFLICTING` → rebase task range on base, rebuild, `push --force-with-lease`, check again. Conflict needing a design call → leave it, log as blocker. A task leaves autopilot waiting for the user to test it, exactly like one from `/wa-code`. **Never merge into the sprint branch here** — that's `/wa-close`, after the user's review; an unreviewed merge poisons the base of every later task in the sprint (`github`: and marks the task PR merged → `Done` untested). Testing them together is the **sprint test branch**, step 4. **Don't** sync wiki/graph unattended — that's `/wa-wiki` after it closes.
+   - **`github` → round end** per **wa-board → Task store → task branch and rounds**: push (hook moves card to `To test`, drops lock), first delivery → `gh pr create --draft --base <base> --head <branch>` (stacked task: `--base <blocker branch>`, push `--force-with-lease`; title/body per **wa-board → Voice → PR wording**) + `github-board link-pr <n> <pr>`, then `gh pr view --json mergeable` → `CONFLICTING` → rebase task range on base, rebuild, `push --force-with-lease`, check again. Conflict needing a design call → leave it, log as blocker. A task leaves autopilot waiting for the user to test it, exactly like one from `/wa-code`. **Never merge into the sprint branch here** — that's `/wa-close`, after the user's review; an unreviewed merge poisons the base of every later task in the sprint (`github`: and marks the task PR merged → `Done` untested). Testing them together is the **sprint test branch**, step 4. **Don't** sync wiki/graph unattended — that's `/wa-wiki` after it closes.
 3. **Remove the worktree** (`git worktree remove ../.wa-worktrees/<key>`) — the branch survives, that's what you review later. A blocked task keeps its worktree; say so in the report.
 
 Skip the report-and-iterate phase entirely — nobody's there to iterate with. Save the report to `{reports}/<key>.md` (`{…}` from the config's `paths:` block, see **wa-board → Paths**) — **in the main checkout, never inside a worktree**: the worktree gets removed and the report with it.
@@ -100,7 +105,8 @@ Print and save `{reports}/autopilot-<date>.md`:
 #42 · 🟢 **Add Apple login** — to test
 #43 · 🟡 **Rework login form** — to test
 #45 · 🟢 **Add password reset** — ⛔ blocked
-#44 · 🟡 **Add Apple onboarding** · ⛔ #42 — skipped
+#44 · 🟡 **Add Apple onboarding** · ⛔ #42 — to test · ⇡ stacked on #42
+#48 · 🟡 **Add passkey login** · ⛔ #12 — skipped
 #46 · 🟢 **Fix login errors** · 🔒 alice@mbp 2h — skipped
 
 test branch: sprint/login-refacto-test = sprint + #42 · #43 — you're on it
@@ -122,7 +128,7 @@ Reco: magic link, already in place for signup.
 
 Three parts, always this order:
 
-1. **Recap** — every task of the batch, **wa-board list format** (line 1 only, `⛔ #x` / `🔒 owner age` markers included), suffix `— to test`, `— ⛔ blocked` (open question) or `— skipped` (blocker not landed, lock taken, state moved). Sprint in play → progress line in title; several sprints → group recap by sprint. Then **test branch line** (step 4): what's in it, what's not and why — or why it wasn't built.
+1. **Recap** — every task of the batch, **wa-board list format** (line 1 only, `⛔ #x` / `🔒 owner age` markers included), suffix `— to test` (+ `· ⇡ stacked on #x` when stacked: tells user to land `#x` first), `— ⛔ blocked` (open question) or `— skipped` (blocker not coded or itself blocked, lock taken, state moved). Sprint in play → progress line in title; several sprints → group recap by sprint. Then **test branch line** (step 4): what's in it, what's not and why — or why it wasn't built.
 2. **One card per delivered task** — **wa-code → Report card**, branch in header instead of sprint tag (`github`: draft PR link too). Same skeleton as attended `/wa-code`.
 3. **Blocked** — per task: open question + your recommended answer, one line each. Kept worktree → say so.
 

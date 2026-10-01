@@ -21,6 +21,7 @@ Where sit: `/wa-task` → `/wa-code` → *you test, `/wa-feedback`* → (`/wa-va
    - `draft` / `grilling` / `todo` / `coding` → not coded. Stop.
    - `done` / `canceled` → already closed. Say what branch did, stop.
    - `github` → `github-board claim <n> coding --keep-state` first (from `to-test` / `to-close`) — review round per **wa-board → Task store → Locks**: lock taken, card stays where it is through review and through `ok?`. Exit 3 → name owner, stop. Exit 4 → say state, stop.
+   - **Stacked task** (`stacked on:` line in `## Implementation`, left by `/wa-autopilot`) → **wa-board → Dependencies → Stacking**. Blocker not landed → stop: `#44 stacked on #42 — /wa-close 42 first`. Blocker landed → rebase task own commits onto real base before review, `github`: `gh pr edit <pr> --base <base>`; shown in plan block (`rebase` line).
    - **Be on task branch.** On sprint test branch with clean tree → check out task branch without asking (**wa-board → Sprint test branch → Leaving it**). Never close from test branch: its merges aren't the task.
 2. **Check nothing moved** since review round — `git diff` against state `## Review` recorded. Code changed → say what, re-review the delta inline (*Review*, scope = delta). Review only worth tree it read.
 3. **Wiki** — *Wiki* below. Before commit, so pages ship with code.

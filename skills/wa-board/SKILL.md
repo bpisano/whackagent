@@ -237,8 +237,22 @@ Task **blocked by** others = needs their code landed first. Canonical rules, eve
 - **Where**: `files` → `blocked_by: [add-apple-login, …]` (slugs) in task frontmatter. `github` → issue relationship *blocked by* — `github-board depend <n> --on <x>[,<y>]`, read back in `github-board get <n>` → `blocked_by: [{number, state}]`. Tracker metadata like size and sprint — known before any task file exists.
 - **Who sets**: `/wa-task` and `/wa-draft` at creation (user names it, or it builds on another task), grill when it finds one, split → each child blocked by the sibling it builds on.
 - **Open blocker** = not `done` (`github`: issue still open). `canceled` blocker → no longer blocks; say so once.
-- **Effects**: `/wa-board` tags line `⛔ #12`, never suggests blocked task as next. `/wa-code` on blocked task → warn, recommend coding blocker first, go on only on yes. `/wa-autopilot` → blocked task waits for its blocker's wave; blocker outside batch and not landed → skip it. Prioritization pass → blocker always above what it blocks.
-- **No stacking.** Dependent task starts from base once blocker landed — never from blocker's unmerged branch.
+- **Effects**: `/wa-board` tags line `⛔ #12`, never suggests blocked task as next. `/wa-code` on blocked task → warn, recommend coding blocker first, go on only on yes. `/wa-autopilot` → blocked task runs in wave after its blocker, **stacked** on blocker branch (below); blocker not coded and outside batch → skip it. Prioritization pass → blocker always above what it blocks.
+- **Attended: no stacking.** `/wa-code` on blocked task warns and recommends landing blocker first — user is there, that's cheaper than a stack.
+
+### Stacking — `/wa-autopilot`
+
+Blocker **delivered but not landed** (`to-test` / `to-close`, or delivered earlier in same run) → dependent task branch starts **from blocker branch**, not from base. **It's the rule: never a question, never a confirmation.** Parallel wherever tasks are independent, stacked wherever one needs another.
+
+- **`files`** → fork task branch off blocker branch tip instead of base.
+- **`github`** → task branch exists since grill, only grill commits on it: in its worktree, `git rebase --onto origin/<blocker branch> <its base>`. **No push before round end** (push ends round); round-end push → `--force-with-lease`. Draft PR opened `--base <blocker branch>`: PR shows task alone, not blocker code.
+- **Several open blockers** → chained (A ← B ← C) → stack on last one. Independent → stack on first in board order, `git merge` the others into task branch. Conflict there → blocker rule of `/wa-autopilot`: skip and log.
+- **Nothing to stack on** → blocker not coded and outside batch (`draft` / `grilling` / `todo` / `coding` elsewhere), or blocked in this run → dependent skipped, `⛔ waits #x`.
+- **Record it**: first line of `## Implementation` = `stacked on: <blocker branch> @ <short sha>`. Every later skill reads stack point there.
+- **Review scope** (`/wa-validate`, `/wa-close`) = diff from stack point, never from base: blocker code gets its own review.
+- **Blocker moves after** (feedback round, rebase) → next round on dependent rebases its own commits (after stack point) onto blocker new tip, updates the record.
+- **Landing order: blocker first.** `/wa-close` on stacked task, blocker not landed → stop, say `/wa-close <blocker>` first. Blocker landed → rebase task own commits onto real base (sprint branch or `branch.base`), `github`: `gh pr edit <pr> --base <base>`, drop the `stacked on:` line.
+- **Board**: stacked task shows `⛔ #42` as long as blocker is open — delivered on a stack ≠ unblocked.
 
 ## Task store
 

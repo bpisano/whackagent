@@ -92,7 +92,7 @@ Setup needs `gh` with the `project` scope and a token for the Action (`WA_PROJEC
 
 ## Dependencies
 
-A task can be blocked by others. The board shows `⛔ #12`, `/wa-code` warns before starting, and `/wa-autopilot` waits for the blocker to land. With GitHub, they're the issue's native *blocked by* links.
+A task can be blocked by others. The board shows `⛔ #12`, `/wa-code` warns before starting. `/wa-autopilot` runs independent tasks in parallel and stacks a blocked task on its blocker's branch, without asking. Close the blocker first. With GitHub, they're the issue's native *blocked by* links.
 
 ## Sprints
 
