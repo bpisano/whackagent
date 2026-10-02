@@ -56,6 +56,9 @@ review:
                                # what single wa-verifier load before judging. Setup drop
                                # swiftui.md if no SwiftUI, and swap architecture-app.md for
                                # architecture-package.md. Paths relative to {conventions}.
+                               # Setup add apple.md when it exported Xcode's own SwiftUI
+                               # guidance into {conventions}/apple/ (Xcode 27+) — index only,
+                               # agents open one reference per topic they touch.
                                # ONE verifier, not one per lens: isolated agent cost ~50k tokens
                                # context before reading a line, and every lens judge same diff
                                # against same rulebook — splitting pay twice, leave duplicate

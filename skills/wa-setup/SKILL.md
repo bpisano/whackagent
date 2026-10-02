@@ -24,6 +24,7 @@ Detect first, ask second. Scan repo to guess:
 - **project kind** (Swift) — `*.xcodeproj`/`*.xcworkspace` with app target, or `@main App`/UIKit lifecycle → `app`; `Package.swift` library/executable → `package`; CLI/server as applicable.
 - **SwiftUI usage** — any `import SwiftUI` in source.
 - **GitHub remote** — `git remote get-url origin` on github.com, `gh` installed. Owner is an org, or several contributors in `git shortlog -sn | head` → a team shares this repo.
+- **Apple references** — Swift + SwiftUI only: `xcrun agent skills export --output-dir <temp dir>` succeed and yield `swiftui-*` folders (Xcode 27+). Fail or none → no Apple references, question 10 never asked.
 - **Its own build wrapper** — repo-local CLI (`cli/`, `bin/`, `scripts/`), `Makefile` with build target, or strongest signal — project's own `CLAUDE.md`/README saying *"ALWAYS use X to build"*. Read that instruction if exists: project that mandates wrapper mandates it for implementer too.
 
 Then confirm with user:
@@ -41,8 +42,9 @@ Then confirm with user:
    - shared wiki or backlog want **committed, browsable** folder (`docs/`) — `.whackagent/` read fine for agents, bad for human on GitHub;
    - `paths.reports` = run output, not knowledge — leave local (and gitignore-able) unless asked.
    Absolute paths work too (wiki in sibling repo). `.whackagent/config.md` itself never move — it carry the paths.
+10. **Apple references** — ask only when detection found them. _"Your Xcode ships Apple's own SwiftUI guidance for agents (best practices, what's new in this SDK). Copy it into `{conventions}/apple/` so the implementer and the reviewer check APIs against it? (recommended: yes — they open only the page for the topic they touch, so it costs nothing otherwise)"_ → decides whether scaffold copies them. Two things to say: it's **Apple-written content committed in your repo** — on a public repo, their call; and it's a snapshot of this Xcode, `/wa-setup` refreshes it after an update.
 
-Keep short — 7 to 10 questions (build one fire only on detected wrapper; close policy only when `per_task`; task storage only with a GitHub remote; `github` → no branch/close questions, question 9 about wiki and tasks folder — backlog doesn't live in files). Rest take template default.
+Keep short — 7 to 11 questions (build one fire only on detected wrapper; close policy only when `per_task`; task storage only with a GitHub remote; Apple references only when Xcode ships them; `github` → no branch/close questions, question 9 about wiki and tasks folder — backlog doesn't live in files). Rest take template default.
 
 **Only if project kind is `app`:** ask **who tests the app** after green build — _"In autopilot the agent drives the app itself (taps + screenshots) since nobody's watching. When you're at the keyboard, should it do the same, or stop at build + tests and let you test? (recommended: you test — you'll open the app anyway, and driving it costs a few minutes per round)"_ → sets `verify.mode` (`autopilot` | `always` | `off`) + `verify.platform`/`verify.target`. Name third option only if they push back on autopilot driving at all: `off` = nobody drives it, ever. iOS drive through **XcodeBuildMCP** (same server it builds with, nothing extra to install); Android or physical device need **mobile-mcp** server (`mobile-next/mobile-mcp`) configured — say so.
 
@@ -55,6 +57,7 @@ Create directory and files (do not overwrite existing without asking).
 - `.whackagent/config.md` — copy `${CLAUDE_PLUGIN_ROOT}/templates/config.md`, fill answers above (including `paths:` block), set `review.modules` to modules you actually copy (next bullet).
 - `{conventions}/` — copy **only relevant** convention modules there:
   - **Swift** (`${CLAUDE_PLUGIN_ROOT}/conventions/swift/`): always `style.md`, `elegance.md`, `testing.md`, and `architecture-global.md` (platform-agnostic YAGNI/SOLID/DRY/DI — every Swift project). Kind module: `architecture-app.md` if kind is `app`, else `architecture-package.md`. Add `swiftui.md` **only if SwiftUI used** (skip for package/CLI with no SwiftUI — whole point).
+  - **Apple references** (question 10 = yes): from the temp export, copy every `swiftui-*` folder into `{conventions}/apple/`, nothing else — other exported skills (App Intents, C bounds safety, security settings…) off-topic for a convention check. Copy `apple.md` next to the other modules: the index that tells agents to open one reference per topic, never the folder. Delete the temp export. **Commit `apple/` with the rest** — autopilot worktrees only see committed files. Never `xcrun agent skills export` straight into `{conventions}/`: it dumps all ten skills.
   - **TypeScript / generic**: copy single `${CLAUDE_PLUGIN_ROOT}/conventions/<lang>.md` and set `review.modules` to it alone.
   - Set `review.modules` in config to exactly what you copied — verifier read that list and nothing else, so module copied but left out of list = rulebook nobody opens.
 - **Xcode projects only** (repo has `.xcodeproj`/`.xcworkspace`): create `.xcodebuildmcp/config.yaml` at repo root (not in `.whackagent/`) so XcodeBuildMCP build incrementally instead of full-rebuild every time. Content:
@@ -117,7 +120,8 @@ The project already works. You're here to **change settings and pick up what the
 4. **Check the paths resolve.** A `paths.*` key pointing at nothing means files moved by hand: say which key and what it points at, offer to re-point the key or move the files back. Don't scaffold over it.
 
 5. **Legacy tasks.** `files` backend with tasks still on the old lifecycle — states `in-progress` / `review` / `validated`, a `grilled:` field, French section headings, kebab-case sprints → *Lifecycle migration* below. `github` backend with task content in issue bodies or `size:*` labels → *GitHub layout migration* below. Offer it first: every other skill refuses legacy tasks until it's done.
-6. **`github` wiring.** Hook installed on default branch (`.github/workflows/whackagent-board.yml`)? Its `template version:` header vs `${CLAUDE_PLUGIN_ROOT}/templates/github-board.yml` — older → offer update PR (same branch + PR path as *GitHub scaffold* step 3). Secret `WA_PROJECT_TOKEN` present (`gh secret list`)? Repo variables match config (`github-board config --refresh`: tasks path, branch prefix)? Status options cover every state? Any gap → row in table, fix behind a yes.
+6. **Apple references.** Re-export to a temp dir, compare with `{conventions}/apple/`: `diff -rq --exclude=SKILL.md` over the `swiftui-*` folders. **Ignore `SKILL.md`** — Xcode writes its frontmatter keys in random order, every export differs there. Absent but available → 🆕 row, and question 10 gets asked like a new key (never asked before). References differ, or a `swiftui-*` folder appeared/vanished (new SDK) → ⚠️ row, refresh behind a yes. Same → no row. No Xcode 27 on this machine → leave what's there, no row.
+7. **`github` wiring.** Hook installed on default branch (`.github/workflows/whackagent-board.yml`)? Its `template version:` header vs `${CLAUDE_PLUGIN_ROOT}/templates/github-board.yml` — older → offer update PR (same branch + PR path as *GitHub scaffold* step 3). Secret `WA_PROJECT_TOKEN` present (`gh secret list`)? Repo variables match config (`github-board config --refresh`: tasks path, branch prefix)? Status options cover every state? Any gap → row in table, fix behind a yes.
 
 ### 2. Show the state, then ask what changes
 
@@ -133,6 +137,7 @@ One table — current value, and a flag on anything worth attention:
 | paths.wiki   | .whackagent/wiki      | 🆕 movable (docs/wiki) to share with team |
 | verify.mode  | autopilot             | |
 | build.command| (empty)               | ⚠️ `make build` detected since |
+| Apple refs   | present               | ⚠️ installed Xcode ships newer pages — refresh available |
 ```
 
 Then **one question: what do you want to change?** Re-ask a full question (step 1's wording) only for what they name, plus every new key from stock-taking step 3 — those they've never been asked. Current value is the default in every one; "leave it" is always a valid answer. Don't walk every question at somebody who came to flip one toggle.
@@ -152,6 +157,8 @@ With an arg (`/wa-setup paths`), skip the table's unrelated rows and go straight
 5. **Wiki moved out of `.whackagent/` → recommend `compress_wiki: false`** (same reason as step 4: humans read it now).
 
 **Conventions dir — additive only.** Copy in modules that are missing (a module the plugin added, or `swiftui.md` because the project uses SwiftUI now) and update `review.modules` to match. **Never overwrite a module that's already there**: those copies hold the rules `/wa-feedback` captured from the user. A plugin-side module changed upstream → say so, show the diff, copy only on their yes.
+
+**`{conventions}/apple/` is the one exception: replace it whole on refresh.** Nobody edits it — it's Apple's text, and a stale page teaches an API that changed. Delete the `swiftui-*` folders, copy the fresh ones (delete first — Xcode exports files read-only, copying over them fails), and skip the refresh entirely when only `SKILL.md` frontmatter order differs (pure diff noise). `apple.md` itself is a normal module: additive rule above — but **never copied without its `apple/` folder**. Plugin ships the index, Xcode ships the pages; index alone points agents at nothing.
 
 **Never re-scaffold what exists.** Backlog, task files, reports and wiki pages are content — this command doesn't touch their contents — except *Lifecycle migration*, *GitHub layout migration* and *Import to GitHub*, each behind its own plan and yes. Missing entirely (a `{tasks}` folder someone deleted) → recreate the empty folder, mention it.
 

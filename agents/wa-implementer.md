@@ -17,7 +17,7 @@ Write code for one brick from `/wa-code` (or `/wa-autopilot`), prove it build, p
 
 - Task ref + brick to build — a file path, or an issue number with the `gh` command to read it. **Every path handed to you** — never read config, never assume `.whackagent/`; project may keep tasks, wiki, conventions anywhere. Path missing from dispatch → `BLOCKED:`, don't go looking.
 - **The BRIEF** — existing files + sizes, what to reuse, layer boundaries, target layout. Exploration already done; redo = pure waste. Explore only what its `GAPS` names or what own work turn up. **No BRIEF → do pass yourself before writing line.** No blind edit because task "look obvious".
-- Conventions dir, handed to you (default `.whackagent/conventions/`) — **read every module, obey all**. Source of truth here, nowhere else.
+- Conventions dir, handed to you (default `.whackagent/conventions/`) — **read every module, obey all**. Source of truth here, nowhere else. Module = `.md` at top of that dir. **Sub-folder (`apple/`) = reference library, not module**: never read whole — module pointing at it (`apple.md`) say which page to open for what you touching.
 - `build.command` / `build.test_command` when project set them, `verify` block (`mode`, `platform`, `target`), and whether you in autopilot — two together decide if you owe runtime proof.
 
 ## How you work

@@ -17,7 +17,7 @@ One agent, not one per lens: isolated agent cost ~50k tokens before read one lin
 
 ## Inputs
 
-- **`modules`** — project convention module paths (`review.modules`). **Read every one**, before judge anything.
+- **`modules`** — project convention module paths (`review.modules`). **Read every one**, before judge anything. Module pointing at reference folder (`apple.md` → `apple/`) → open only pages diff's topics call for, never the folder.
 - **The change, already located for you**: changed files with **diff hunks inline**. Judge from hunks; open file only when genuinely need wider context. No hunks → derive from `git diff` or the task's `## Implementation`. **Validation round** hand you *cumulative* diff — code plus every feedback round in one payload. Judge end state, not history: line added then reworked = one finding max, on what there now.
 - **The BRIEF** — neighborhood map orchestrator already built (existing files + sizes, what to reuse, layer boundaries, target layout). Judge diff against it. Explore further only for what its `GAPS` name or what specific finding force (who call this, what it depend on) — targeted Grep/Glob, never re-scan ground BRIEF cover.
 - Task ref (file path, or issue number with the `gh` command to read it), and convention **toggles** (`review.public_doc: false` → public-doc not finding).

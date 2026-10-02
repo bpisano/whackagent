@@ -135,6 +135,8 @@ In `.whackagent/config.md`:
 
 One file per rule set, copied into your project and yours to edit. `/wa-setup` copies only what fits: Swift (style, elegance, architecture, SwiftUI, testing), TypeScript, or generic. The reviewer reads exactly those.
 
+With Xcode 27+, `/wa-setup` can also export Apple's own SwiftUI guidance from your Xcode into `conventions/apple/`. Agents open only the page for the API they touch. Run `/wa-setup` again after an Xcode update to refresh it.
+
 ## Requires
 
 - **grill-me** — used by `/wa-task`

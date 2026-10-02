@@ -1,7 +1,7 @@
 {
   "name": "whackagent",
   "description": "Your dev flow in Claude Code: tasks, code, review, wiki.",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "author": {
     "name": "Benjamin Pisano"
   },
