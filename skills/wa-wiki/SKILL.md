@@ -41,4 +41,4 @@ Read-only. Answer what user asked about project.
 
 ## Next step
 
-After manual update mode: suggest **`/wa-board`** for next task. Inside `/wa-close`: back to its plan block.
+After manual update mode: suggest **`/wa-board`** for next task. Inside `/wa-close`: back to its step 4.

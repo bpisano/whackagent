@@ -122,7 +122,7 @@ close:                         # WHERE work land when /wa-close finish a task. T
   strategy: nothing            # nothing — /wa-close stop after commit, branch left alone.
                                #   YOU open the PR. Safest, and default.
                                # pr     — push branch + open PR onto target: (`gh pr create`).
-                               #   Outward-facing: /wa-close ALWAYS confirm before, every time.
+                               #   No confirmation: /wa-close say branch → target + PR title, then do it.
                                # merge  — merge branch into target: locally, no push.
                                # github backend: ignored — task already has its draft PR;
                                #   /wa-close rebase, push, mark it ready. YOU merge.

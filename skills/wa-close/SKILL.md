@@ -20,12 +20,12 @@ Where sit: `/wa-task` → `/wa-code` → *you test, `/wa-feedback`* → (`/wa-va
    - `to-test` → **never reviewed.** Say so in one line (`#42 not reviewed yet → review first`), run *Review* below, then continue.
    - `draft` / `grilling` / `todo` / `coding` → not coded. Stop.
    - `done` / `canceled` → already closed. Say what branch did, stop.
-   - `github` → `github-board claim <n> coding --keep-state` first (from `to-test` / `to-close`) — review round per **wa-board → Task store → Locks**: lock taken, card stays where it is through review and through `ok?`. Exit 3 → name owner, stop. Exit 4 → say state, stop.
-   - **Stacked task** (`stacked on:` line in `## Implementation`, left by `/wa-autopilot`) → **wa-board → Dependencies → Stacking**. Blocker not landed → stop: `#44 stacked on #42 — /wa-close 42 first`. Blocker landed → rebase task own commits onto real base before review, `github`: `gh pr edit <pr> --base <base>`; shown in plan block (`rebase` line).
+   - `github` → `github-board claim <n> coding --keep-state` first (from `to-test` / `to-close`) — review round per **wa-board → Task store → Locks**: lock taken, card stays where it is through review and through `ok?` when one is asked. Exit 3 → name owner, stop. Exit 4 → say state, stop.
+   - **Stacked task** (`stacked on:` line in `## Implementation`, left by `/wa-autopilot`) → **wa-board → Dependencies → Stacking**. Blocker not landed → stop: `#44 stacked on #42 — /wa-close 42 first`. Blocker landed → rebase task own commits onto real base before review, `github`: `gh pr edit <pr> --base <base>`.
    - **Be on task branch.** On sprint test branch with clean tree → check out task branch without asking (**wa-board → Sprint test branch → Leaving it**). Never close from test branch: its merges aren't the task.
 2. **Check nothing moved** since review round — `git diff` against state `## Review` recorded. Code changed → say what, re-review the delta inline (*Review*, scope = delta). Review only worth tree it read.
 3. **Wiki** — *Wiki* below. Before commit, so pages ship with code.
-4. **Show landing plan, get yes.** One block, before touching git — see *Plan block*. Only confirmation command ask; everything after run without more prompting.
+4. **Say where it lands** — *Landing lines* below, before touching git. **No confirmation**: print, keep going. Only exception: code changed since user's test → ask `ok?`, wait.
 5. **Commit** — `files`: when `commit.auto_commit_after_validation`. `github`: always (round ends with push). `commit.author_name` / `commit.author_email`, **never as Claude**. Already clean → skip, say so.
    - Nothing committed and tree dirty → **stop before any branch move.** Uncommitted work plus merge = how work disappear.
 6. **Land branch** — *Landing* below. `github` → *GitHub landing*. `files`: task in sprint → merge into sprint branch, else → `close.strategy`.
@@ -33,7 +33,7 @@ Where sit: `/wa-task` → `/wa-code` → *you test, `/wa-feedback`* → (`/wa-va
 8. **State `done`** — `files` only, per **Task store** (line moves under **Done**, keeps `· <Sprint>` suffix). `github`: never — hook sets `done` at merge.
 9. **Sprint complete?** Last task of sprint just closed (`github`: merged) → *Sprint landing*.
 10. **Next branch** — `files` only, when `branch.per_task` **and** `commit.auto_commit_after_validation` **and** `branch.checkout_next`: next task = top unblocked `todo` in backlog order, branch created/checked out per `/wa-code` step 0 (its sprint decide base — dirty tree → ask). Echo `✅ add-apple-login closed → branch wa/fix-login-errors ready · /wa-code 2`.
-11. **Report** — after-state, four lines max: what landed where (`github`: PR URL, `you merge`), wiki pages touched, sprint progress, next command.
+11. **Report** — one line: `✅` + what landed where, PR URL when there is one. Same formatting as *Landing lines*. Nothing about review, wiki, commit, cleanup unless one of them failed or stopped.
 
 ## Review
 
@@ -41,55 +41,48 @@ Task at `to-test`, or code moved since `to-close`. **Same pass as `/wa-validate`
 
 Three outcomes:
 
-- **Clean, autofix changed nothing** → code tested *is* code reviewed. Continue, plan line `review : ✅ clean`.
-- **Clean, autofix changed code** → continue, plan block lists what changed in user terms under `⚠️ code changed since your test`. Their yes = "I retested". Never bury this line.
+- **Clean, autofix changed nothing** → code tested *is* code reviewed. Continue, say nothing.
+- **Clean, autofix changed code** → continue to step 4, landing lines carry `⚠️ code changed since your test` + what changed in user terms, and ask `ok?`. Their yes = "I retested". Never bury this line.
 - **Findings still open** → stop, as `/wa-validate` step 8: severity-ordered, recommendation per item (fix now / accept and close / spin off `/wa-task`). Nothing lands. Task back to `to-test` (not reviewed clean, not closable), same as `/wa-validate`. `github` → commit + push the review round (task file `status: to-test`) so board follows, lock released.
 
 ## Wiki
 
-`/wa-wiki` update mode, **scoped to this task**: its diff (`branch.base`/sprint branch..HEAD + tree), its `wiki:` field, `## Implementation`, report. Every time — no flag, pass idempotent: already synced → finds nothing. Pages written in working tree, **not committed here** — step 5 commits them with code. Nothing to change → plan line `wiki : nothing to change`. Can't tell which page a change belongs to → ask, recommend one.
+`/wa-wiki` update mode, **scoped to this task**: its diff (`branch.base`/sprint branch..HEAD + tree), its `wiki:` field, `## Implementation`, report. Every time — no flag, pass idempotent: already synced → finds nothing. Pages written in working tree, **not committed here** — step 5 commits them with code. Nothing to change → say nothing. Can't tell which page a change belongs to → ask, recommend one.
 
-## Plan block
+## Landing lines
 
-Say what you about to do to git **before** doing it, in their terms. Landing outward-facing, half irreversible:
+Only the essential: branch → where it goes, plus PR title when a PR is involved. Printed before touching git, then keep going.
 
-```
-Closing add-apple-login · Add Apple login
+Merge (sprint branch, or `strategy: merge`):
 
-review    : ✅ clean — autofix changed 1 file
-            ⚠️ code changed since your test: Apple button disabled while loading
-wiki      : [[auth]] updated, [[login-flow]] created
-commit    : 4 files → commit (Benjamin Pisano)
-sprint    : merge wa/add-apple-login → sprint/login-refacto
-branch    : wa/add-apple-login deleted (merged)
-worktree  : ../.wa-worktrees/add-apple-login removed
-after     : 🏁 Login refacto — 3/5
+````markdown
+`wa/add-apple-login` → `sprint/login-refacto`
+````
 
-ok? [y/n]
-```
+PR (`github`, or `strategy: pr`):
 
-`github`:
+````markdown
+`wa/42-add-apple-login` → `sprint/login-refacto`
+PR #57 · **Add Apple login**
+````
 
-```
-Closing #42 Add Apple login
+Code changed since user's test — the one case that waits for a yes:
 
-review    : ✅ clean
-wiki      : nothing to change
-commit    : 1 file → commit + push wa/42-add-apple-login (Benjamin Pisano)
-rebase    : 3 commits onto sprint/login-refacto (behind by 2)
-PR        : #57 draft → ready · https://github.com/…/pull/57
-after     : you merge → hook sets #42 Done, closes issue
+````markdown
+`wa/42-add-apple-login` → `sprint/login-refacto`
+PR #57 · **Add Apple login**
+⚠️ code changed since your test: Apple button disabled while loading
 
 ok? [y/n]
-```
+````
 
 Rules:
 
-- **Always shown, always confirmed.** `strategy: nothing` and no commit → two lines and a yes, still worth it.
-- **`github` → PR already exists** (draft, opened by `/wa-code`). Show its number, URL, base, and the refreshed title/body when they change. Ready = teammates may merge: always confirmed.
-- **`strategy: pr` = loud case.** PR visible to other people second it opens. Name target branch, that it push, and show **exact title and body** you'll use (**wa-board → PR wording**) — user can edit them before yes. Never open one on implied yes carried from earlier close.
-- Anything you skip (no commit, no worktree, branch kept) → say it skipped, not omit line. Silence read as "it happened".
-- User say no → stop at step 4. Task stay `to-close` (review recorded, wiki pages left in tree, say so), nothing else touched. `github` → `github-board release <n> coding` (card never moved).
+- **Plain text, never a fenced block.** Backticks on branch names only, PR title bold, everything else unstyled. Fences above show the markdown to emit, not a block to print.
+- **No confirmation by default** — merge, push, PR, PR ready all run on the command itself. `ok?` only with the `⚠️` line (autofix or delta review changed code user never tested). User say no → stop. Task stay `to-close` (review recorded, wiki pages left in tree, say so), nothing else touched. `github` → `github-board release <n> coding` (card never moved).
+- **Nothing else.** No review, wiki, commit, branch-delete, worktree, sprint-progress lines. They happen silently; one extra plain line only when a step failed or stopped.
+- **PR line** = number when PR exists (`github`: draft opened by `/wa-code`), none when it's about to be created (`PR · **Add Apple login**`). Title = final one, per **wa-board → PR wording**. Body never shown.
+- **`strategy: nothing`** / `branch.per_task: false` → nothing lands: one line, `wa/add-apple-login` kept, no merge.
 
 ## GitHub landing
 
@@ -145,7 +138,7 @@ Last task of sprint reach `done` — no task of that sprint left in `draft`, `gr
    → Recommended: PR sprint/login-refacto → main   (close.strategy: pr)
      Otherwise: keep the branch, you ship it yourself.
    ```
-3. **Only on yes.** No is a normal answer — the branch stays, the sprint stays complete, nothing is lost. Never fold this into the task's own confirmation at step 4: two different things landing, two yeses.
+3. **Only on yes.** No is a normal answer — the branch stays, the sprint stays complete, nothing is lost. Never skip this yes because the task landed without one: sprint branch leaving for `close.target` is a separate decision.
    Sprint PR → title and body per **wa-board → PR wording**: title = sprint's theme in 1–3 words (`Performance`, `Map architecture`), body sums up the sprint for someone who never saw its tasks — never one bullet per task, never task slugs. `github` → PR always (not `close.strategy`), onto `branch.base`, sprint milestone set on the PR (`gh pr create --milestone "<Sprint>"`); tasks already closed by their own merges.
 4. Sprint branch merged or PR'd → `delete_branch` applies to it the same way it applies to a task branch.
 5. **Sprint test branch** (`<sprint branch>-test`) → delete it, whatever the answer at step 3: no delivered task left to test. Checked out → switch to sprint branch first. Local only, was never pushed.
@@ -164,7 +157,7 @@ A sprint is never `done` as a thing — there's no sprint status to set. It's co
 
 - Never land a task the verifier never saw — `to-test` → *Review* first, open findings → stop.
 - Never land code without its wiki pass.
-- Never merge, push, open a PR, mark one ready or delete a branch without the confirmed plan block.
+- Never touch git before the landing lines are printed. Never land code changed since user's test without their yes.
 - `github`: never merge the PR, never set `done`, never close the issue — the merge and the hook do.
 - Never force-push, never rewrite a shared branch, never touch a branch that isn't this task's or its sprint's.
 - Never delete a branch whose work isn't somewhere else.
