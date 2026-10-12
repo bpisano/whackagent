@@ -678,28 +678,61 @@ def op_branch(args):
 # ---------------------------------------------------------------- provisioning
 
 
-def ensure_status_options(field, state_names):
-    """Add missing state options, keeping existing ones (and their ids, so no card loses its Status)."""
+def cards_per_option(project_id, field_id):
+    """How many cards sit on each Status option — an option holding cards is never dropped."""
+    counts = {}
+    for node in items({"project_id": project_id}):
+        for value in node["fieldValues"]["nodes"]:
+            if value and value.get("field", {}).get("id") == field_id:
+                counts[value["optionId"]] = counts.get(value["optionId"], 0) + 1
+    return counts
+
+
+def ensure_status_options(field, state_names, project_id, prune):
+    """Make the Status field carry every state. Existing options keep their ids, so no card loses
+    its Status. `prune` also drops options no state maps to (GitHub's default "In Progress") and
+    puts the rest in lifecycle order; it refuses while a card still sits on one of them.
+    Returns (changed, removed names, extra names left in place)."""
     existing = {o["name"]: o for o in field["options"]}
+    wanted = [state_names[s] for s in STATES]
+    extra = [o for o in field["options"] if o["name"] not in wanted]
     missing = [s for s in STATES if state_names[s] not in existing]
-    if not missing:
-        return False
-    # The mutation replaces the whole option list: resend every existing option exactly as it is
-    # (id, color, description) and append only the missing states.
-    options = [
-        {"id": o["id"], "name": o["name"], "color": o["color"], "description": o["description"] or ""}
-        for o in field["options"]
-    ]
-    options += [
-        {"name": state_names[s], "color": STATE_COLORS[s], "description": STATE_DESCRIPTIONS[s]} for s in missing
-    ]
+
+    def keep(option):
+        return {
+            "id": option["id"],
+            "name": option["name"],
+            "color": option["color"],
+            "description": option["description"] or "",
+        }
+
+    def fresh(state):
+        return {"name": state_names[state], "color": STATE_COLORS[state], "description": STATE_DESCRIPTIONS[state]}
+
+    if prune:
+        if extra:
+            counts = cards_per_option(project_id, field["id"])
+            held = {o["name"]: counts[o["id"]] for o in extra if counts.get(o["id"])}
+            if held:
+                raise Failure(f"Status options still hold cards, move them first: {held}")
+        options = [keep(existing[state_names[s]]) if state_names[s] in existing else fresh(s) for s in STATES]
+        if not extra and not missing and [o["name"] for o in field["options"]] == wanted:
+            return False, [], []
+        removed, left = [o["name"] for o in extra], []
+    else:
+        if not missing:
+            return False, [], [o["name"] for o in extra]
+        # The mutation replaces the whole option list: resend every existing option exactly as it is
+        # (id, color, description) and append only the missing states.
+        options = [keep(o) for o in field["options"]] + [fresh(s) for s in missing]
+        removed, left = [], [o["name"] for o in extra]
     graphql(
         """mutation($f:ID!,$o:[ProjectV2SingleSelectFieldOptionInput!]){updateProjectV2Field(input:{
             fieldId:$f,singleSelectOptions:$o}){projectV2Field{... on ProjectV2SingleSelectField{id}}}}""",
         f=field["id"],
         o=options,
     )
-    return True
+    return True, removed, left
 
 
 def op_provision(args):
@@ -732,7 +765,11 @@ def op_provision(args):
     status = fields.get(args.status_field)
     if not status:
         raise Failure(f"project has no single-select field {args.status_field!r}")
-    changed_status = ensure_status_options(status, state_names)
+    # A board created here holds no card: its Status field is ours, GitHub's default options go.
+    # An adopted board keeps its extra columns unless asked (--prune-status).
+    changed_status, removed, extra = ensure_status_options(
+        status, state_names, project_id, prune=created or args.prune_status
+    )
     size_created = False
     if args.size_field not in fields:
         graphql(
@@ -762,7 +799,9 @@ def op_provision(args):
             "project_url": url,
             "project_number": number,
             "project_created": created,
-            "status_options_added": changed_status,
+            "status_options_changed": changed_status,
+            "status_options_removed": removed,
+            "status_options_extra": extra,
             "size_field_created": size_created,
             "variables": variables,
             "secret_WA_PROJECT_TOKEN": "WA_PROJECT_TOKEN" in secret,
@@ -874,6 +913,11 @@ def parser():
     s.add_argument("--status-field", default="Status")
     s.add_argument("--size-field", default="Size")
     s.add_argument("--state", action="append", metavar="STATE=OPTION", help="map a state onto an existing option")
+    s.add_argument(
+        "--prune-status",
+        action="store_true",
+        help="adopted board: drop Status options no state maps to, lifecycle order (new boards always do)",
+    )
     s.add_argument("--tasks-path", default=".whackagent/tasks")
     s.add_argument("--branch-prefix", default="wa/")
     s.add_argument("--stale-after-hours", type=int, default=24)

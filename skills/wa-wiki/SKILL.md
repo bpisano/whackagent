@@ -26,7 +26,7 @@ Task status + report handled by `/wa-code`. This step keep shared knowledge true
    - Cross-link: wiki↔wiki, link task where useful.
    - Create any page a task's `wiki:` flagged missing.
    - Keep narrative (*why* + shape), not code dump.
-   - **Compress** (if `compress_wiki: true`): run **caveman-compress** on each page written, then delete `*.original.md` backup. Wiki only. **`{wiki}` outside `.whackagent/` → say it once and recommend `compress_wiki: false`**: wiki moved into project tree is one humans read, caveman prose buys tokens at their expense.
+   - **Compress** (if `compress_wiki: true`): run **caveman-compress** on each page written, then delete `*.original.md` backup. Wiki only, and never `pitch.md` (`/wa-pitch` page — humans reread it). **`{wiki}` outside `.whackagent/` → say it once and recommend `compress_wiki: false`**: wiki moved into project tree is one humans read, caveman prose buys tokens at their expense.
 3. **Commit (only if allowed).** Called by `/wa-close` → **never commit here**: close commits pages with code, one commit. Manual run: if `commit.auto_commit_after_validation: true` AND task is `to-close` or `done` (i.e. went through `/wa-validate`), commit with configured author name/email — **never** as Claude. Else leave it. Outside autopilot, never commit unvalidated work.
 
 Stop and ask if can't tell which page a change belongs to — don't scatter duplicates.

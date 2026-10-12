@@ -20,7 +20,7 @@ Dashboard. Lift lid on backlog, point next move.
    - something `coding` → resume it (`/wa-code <id>`)
    - top **unblocked** `todo` → `/wa-code <id>` (blocked task never suggested — see **Dependencies**). Backlog order maintained by `/wa-task` prioritization pass — never suggest reprioritizing as step (if user *asks* to reorder, that `/wa-task` with no arg).
    - no `todo`, top `draft` not locked → `/wa-task <id>` to grill it
-   - nothing in todo or draft → `/wa-task <description>` to create one (`/wa-draft` to just note an idea)
+   - nothing in todo or draft → `/wa-task <description>` to create one (`/wa-draft` to just note an idea). Backlog empty and no `{wiki}/pitch.md` → `/wa-pitch <pitch>` instead: whole project, sprints and tasks in one go
    - batch of small `todo` tasks → mention `/wa-autopilot` as option
 
 ## States
@@ -38,7 +38,7 @@ One lifecycle, both backends. Each state says **what's left to do** — never wh
 | `done` | closed | — |
 | `canceled` | dropped, reason noted | — |
 
-`/wa-draft` creates `draft`. `/wa-task` always grills: takes the `grilling` lock, ends at `todo`. "Review" names only the verifier's pass, never a state.
+`/wa-draft` creates `draft`, `/wa-pitch` creates a whole project of them. `/wa-task` always grills: takes the `grilling` lock, ends at `todo`. "Review" names only the verifier's pass, never a state.
 
 **Locks** (`grilling`, `coding`) — one grill, one coding round per task at a time. `github`: atomic claim (see **Task store → Locks**). `files`: one checkout, one agent — plain status, no lock to take.
 
@@ -188,7 +188,7 @@ Sprint = **optional human title** on task (`sprint: Login refacto`), grouping bi
 - **One branch, when `branch.per_task`.** `<branch.sprint_prefix><kebab(sprint)>` (default `sprint/login-refacto`), created from `branch.base` by whoever needs it first — `/wa-code` step 0 or `/wa-autopilot` wave. Tasks of sprint fork off it and `/wa-close` merges them back, so each task starts from sprint current state. `branch.sprint_prefix: ""` turns that off: tasks use `branch.base` like any other. Nothing merges into sprint branch before its task is reviewed and closed — testing every delivered task at once is **Sprint test branch** job, below.
 - **A sprint is complete, never `done`.** No sprint state exists. Complete when no task of it left in `draft`/`todo`/`coding`/`to-test`/`to-close` — `/wa-close` notices and offers to land sprint branch.
 
-Commands taking sprint name: `/wa-board <sprint>` (filtered view), `/wa-autopilot <sprint>` (batch its todo tasks), `/wa-task` (assigns and inherits). `/wa-code`, `/wa-validate`, `/wa-feedback`, `/wa-close` stay **per task** — one task is their unit, and whole sprint unattended is what `/wa-autopilot` already does better.
+Commands taking sprint name: `/wa-board <sprint>` (filtered view), `/wa-autopilot <sprint>` (batch its todo tasks), `/wa-task` (assigns and inherits). `/wa-pitch` mints them, several at once. `/wa-code`, `/wa-validate`, `/wa-feedback`, `/wa-close` stay **per task** — one task is their unit, and whole sprint unattended is what `/wa-autopilot` already does better.
 
 ### Sprint test branch
 

@@ -15,7 +15,17 @@ A Claude Code plugin for your development flow: tasks, code, review, wiki.
 /wa-setup
 ```
 
-Answer a few questions. Then describe a task:
+Answer a few questions.
+
+Starting from scratch? Pitch the project:
+
+```bash
+/wa-pitch A habit tracker for iPhone, one tap a day, streaks, no account
+```
+
+`/wa-pitch` asks questions until the scope is clear, shows an HTML preview of the screens (UI projects), then fills the backlog with sprints and draft tasks. The pitch is kept in the wiki.
+
+Or describe a single task:
 
 ```bash
 /wa-task Add the Sign in with Apple button on the login screen
@@ -43,6 +53,7 @@ Each command ends with the next one to run.
 | --- | --- |
 | `/wa-setup` | Configures the project. Run again to change settings. |
 | `/wa-board [sprint]` | Shows the backlog and the next step. |
+| `/wa-pitch <pitch>` | Starts a project: grills the pitch, previews the UI, creates sprints and tasks. |
 | `/wa-draft <idea>` | Notes an idea as a task, without questions. |
 | `/wa-task <idea\|task>` | Clarifies a task with you, then reorders the backlog. |
 | `/wa-task` | Reorders the backlog. |
@@ -127,7 +138,7 @@ In `.whackagent/config.md`:
   conventions/       # your code rules, editable
   BACKLOG.md         # task order (files backend)
   tasks/<slug>.md    # one file per task
-  wiki/              # project knowledge, [[wikilinks]]
+  wiki/              # project knowledge, [[wikilinks]] — pitch.md + its UI preview live here
   reports/           # one report per delivered task
 ```
 
@@ -139,7 +150,7 @@ With Xcode 27+, `/wa-setup` can also export Apple's own SwiftUI guidance from yo
 
 ## Requires
 
-- **grill-me** — used by `/wa-task`
+- **grill-me** — used by `/wa-task` and `/wa-pitch`
 - **caveman** — compresses the config and wiki to save tokens (`compress_wiki`)
 
 ## Credits
