@@ -1,7 +1,7 @@
 {
   "name": "whackagent",
   "description": "Dev workflow with Claude Code: tasks, code, review and wiki.",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "author": {
     "name": "Benjamin Pisano"
   },
@@ -19,6 +19,7 @@
     "./skills/wa-close",
     "./skills/wa-review",
     "./skills/wa-wiki",
-    "./skills/wa-autopilot"
+    "./skills/wa-autopilot",
+    "./skills/wa-wording"
   ]
 }

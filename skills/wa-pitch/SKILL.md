@@ -38,9 +38,16 @@ Never codes, never grills task in detail: pitch grill settles *product*, `/wa-ta
    - Stop when every v1 feature can be named in one line and placed on a screen (or command, endpoint). Not before, not after: task-level detail (edge cases, error copy, exact files) belongs to `/wa-task`.
    - User cuts short (*"enough, go"*) → remaining forks take your recommended answer, listed under `## Open guesses` in pitch page.
 3. **UI preview** — UI project only, see *UI preview* below. Not skippable for UI project; skipped silently otherwise.
+   - **Wording module first.** UI project and `{conventions}/wording.md` absent (setup ran on empty repo, saw no UI) → before drawing anything:
+     - Copy `${CLAUDE_PLUGIN_ROOT}/conventions/wording.md` + `${CLAUDE_PLUGIN_ROOT}/conventions/wording/` into `{conventions}/`.
+     - Ask **wa-setup → question 11** (tone, person, audience), previews written from pitch's own screens. Fill **Project voice** + **Voice**.
+     - Add `wording.md` to `review.modules` in `.whackagent/config.md`.
+     - `{conventions}/glossary.md` absent too → copy `${CLAUDE_PLUGIN_ROOT}/templates/glossary.md`, add to `review.modules`.
+     - Say what was added, one line. No extra yes: pitching a UI project is the ask.
 4. **Write pitch page** `{wiki}/pitch.md` (format below).
    - Link it in `{wiki}/index.md` (`- [[pitch]] — what we build, for whom, v1 scope`).
    - Not compressed, whatever `compress_wiki` says: humans reread it.
+   - **Seed the glossary**: core concepts the grill named (one row each, term + what it means) → show rows, add to `{conventions}/glossary.md` on yes. Pitch page, preview and tasks then use those terms only.
 5. **Split into sprints and tasks** — rules in *Split* below.
    - Show plan as **one list**, sprint by sprint, **wa-board list format** without ids.
    - **One yes for whole plan.**
@@ -63,7 +70,7 @@ HTML mockup of v1, shown **after grill, before split** — user sees product, co
 - **One screen per v1 feature**, side by side in core-loop order, each labeled with feature name. Feature spanning states that matter (empty, filled) → both. Nothing from `Later`.
 - **Platform frame + native look**: iPhone frame and iOS components for `ios`, Android for `android`, browser window for web.
   - Platform defaults, system font, neutral accent: preview of *features*, not brand design. Say so once on page.
-- **Real content.** Sample data that fits pitch (real-looking names, amounts, dates), UI strings in `ui_strings_language`. Never lorem ipsum, never `Title` / `Button`.
+- **Real content.** Sample data that fits pitch (real-looking names, amounts, dates), UI strings in `ui_strings_language`, written per `{conventions}/wording.md` (ladder, project voice) with glossary terms. Never lorem ipsum, never `Title` / `Button`.
 - **Static.** No app logic. Navigation between screens shown by order + labels, not wired.
 - **Write** `{wiki}/pitch-preview.html` — one self-contained file, inline CSS, light + dark.
 - **Publish as artifact**:
@@ -117,7 +124,7 @@ Sprint and task rules stay **wa-board → Sprints**, **Titles and summaries**, *
 - Never create `todo`: pitch tasks are `draft`, grilled one by one with `/wa-task <id>`.
 - Never write `## Context / Decisions` or `## Acceptance criteria`, never take lock, never create branch.
 - Never create sprint file or sprint section — sprint exists because tasks name it.
-- Never code, scaffold or install anything: first sprint's first task does.
+- Never code, scaffold or install anything: first sprint's first task does. Convention modules (wording, glossary) are not code — step 3 may add them.
 - Never commit. Pitch page, preview and task files left in tree for user (`github`: issues already created — say how many).
 
 ## Stop and ask

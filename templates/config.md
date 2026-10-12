@@ -59,6 +59,10 @@ review:
                                # Setup add apple.md when it exported Xcode's own SwiftUI
                                # guidance into {conventions}/apple/ (Xcode 27+) — index only,
                                # agents open one reference per topic they touch.
+                               # Setup add glossary.md (every project: one word per product
+                               # concept, used in UI, tasks, reports and what Claude say) and,
+                               # for UI project, wording.md + {conventions}/wording/ (UI copy
+                               # rules, project voice set at setup).
                                # ONE verifier, not one per lens: isolated agent cost ~50k tokens
                                # context before reading a line, and every lens judge same diff
                                # against same rulebook — splitting pay twice, leave duplicate

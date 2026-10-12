@@ -108,7 +108,8 @@ Rules = `/wa-code` → *Resuming, rounds 2+*, in full — delta only, anti-stale
    Unclear which bucket → **stop and ask**. Never silently widen scope.
 3. **Capture the rule.**
    - Feedback stating general preference must land in `{conventions}/<module>.md`, not just this fix: that how rule stop being forgotten next round.
-   - Pick module by what it govern (style / elegance / architecture-\* / testing).
+   - Pick module by what it govern (style / elegance / architecture-\* / testing / wording).
+   - Word choice ("no, say *Delete*", "we call it Trip") → `{conventions}/glossary.md` row: term, plus rejected word in `Never`. Tone or copy preference → **Voice** in `{conventions}/wording.md`.
    - Draft line in module own voice, **show it and ask before writing**.
    - Never rewrite unrelated parts of module.
    - Belong nowhere → put in `.whackagent/config.md` free-form notes instead (that file never move).

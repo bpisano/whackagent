@@ -133,6 +133,11 @@ Canonical, every whackagent skill. Applies to **the whole conversation** — eve
   - 2 levels max
 - **Readable cold.** Task bodies (`## Context / Decisions`, `## Acceptance criteria`), pitch page: bullets too. Each names its subject — no "it" pointing back at the grill. Verifier, user and teammates reread them months later.
 - **PR bodies** keep their own rules → *PR wording*.
+- **Glossary words.** `{conventions}/glossary.md` names each product concept once — read it with config, every skill.
+  - Term listed → use it, never a synonym: conversation, task titles + bodies, reports, PRs, wiki.
+  - User says another word for a listed concept → keep glossary term, say which one you mean once.
+  - New concept, no entry → propose the row in one line, add on yes. `/wa-pitch` seeds it, `/wa-task` grill and `/wa-feedback` grow it.
+  - File absent (project set up before it existed) → no rule, `/wa-setup` adds it.
 - **Skill text is English; output follows `discussion_language`.** Examples in these skills are English — render headings, labels and prose in the configured language (`Problem / Goal / Done / To test` → `Problème / Objectif / Fait / À tester` in fr), tech terms still English.
 - **Task section headings are fixed, English**: `## Context / Decisions`, `## Acceptance criteria`, `## Implementation`, `## Review`, `## Verification`, `## Feedback`. Older French ones are migrated by `/wa-setup` (see *Task store → Legacy*).
 

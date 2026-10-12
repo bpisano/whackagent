@@ -26,7 +26,8 @@ Write code for one brick from `/wa-code` (or `/wa-autopilot`), prove it build, p
 - Conventions dir, handed to you (default `.whackagent/conventions/`) — **read every module, obey all**.
   - Source of truth here, nowhere else.
   - Module = `.md` at top of that dir.
-  - **Sub-folder (`apple/`) = reference library, not module**: never read whole — module pointing at sub-folder (`apple.md`) say which page to open for what you touching.
+  - **Sub-folder (`apple/`, `wording/`) = reference library, not module**: never read whole — module pointing at sub-folder (`apple.md`, `wording.md`) say which page to open for what you touching.
+  - `glossary.md` → its terms in every user-facing string, and its code names for new types, files, variables.
 - `build.command` / `build.test_command` when project set them, `verify` block (`mode`, `platform`, `target`), and whether you in autopilot — two together decide if you owe runtime proof.
 
 ## How you work

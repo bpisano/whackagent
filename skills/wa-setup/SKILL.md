@@ -42,6 +42,13 @@ Detect first, ask second. Scan repo to guess:
 - **Apple references** — Swift + SwiftUI only.
   - Found = `xcrun agent skills export --output-dir <temp dir>` succeeds and yields `swiftui-*` folders (Xcode 27+).
   - Fails or none → no Apple references, question 10 never asked.
+- **UI project** — kind `app`, or a UI framework in source (SwiftUI/UIKit, React/Vue/Svelte, Compose). CLI, package, server → no.
+  - UI project → also scan, silently, for question 11:
+    - languages: localization catalogs (`.xcstrings`, `*.lproj`, `locales/`, `values-*/strings.xml`); source = development region / default locale
+    - existing copy: 20–40 user-facing strings → current person (*tu*/*vous*, formal/casual) and tone
+    - product context: README, App Store metadata (`fastlane/metadata`), landing copy in repo
+  - Existing copy poor (verbose, narrating, literal translations) → not the reference tone. Say so in one line.
+- **Recurring terms** — every project: domain nouns used consistently in code, strings, README (Project, Workspace, Trip…) → glossary candidates.
 - **Its own build wrapper**
   - repo-local CLI (`cli/`, `bin/`, `scripts/`)
   - `Makefile` with build target
@@ -100,7 +107,24 @@ Then confirm with user:
       - it's **Apple-written content committed in your repo** — on a public repo, their call;
       - it's a snapshot of this Xcode, `/wa-setup` refreshes it after an update.
 
-Keep short — 7 to 11 questions:
+11. **Wording** — UI project only. Sets **Project voice** in `{conventions}/wording.md`. Up to 3 sub-questions, `AskUserQuestion`, in user's language:
+    - **Base tone** — 4 most plausible of `neutral`, `sober`, `complice`, `premium`, `energetic` (defined in `${CLAUDE_PLUGIN_ROOT}/conventions/wording/tones.md`). "Other" → `base: custom`, answer goes in **Voice**.
+    - **Person** — only for languages with the distinction (fr: tu / vous / impersonal; de: du / Sie; es: tú / usted…). English-only → skip.
+    - **Audience** — `general`, `tech`, `young`, `pro`.
+    - Detected value = first option, marked recommended.
+    - **Every option carries a preview**: same 3–4 strings rewritten in that option — one button, one empty state, one error, one destructive confirmation.
+      ```
+      Button       Create project → C'est parti
+      Empty        Rien pour l'instant.
+      Error        Pas de réseau. On réessaie ?
+      Delete       Supprimer « Voyage » ?
+                   12 photos seront perdues.
+      ```
+    - Previews use **real strings from the project** when it has copy. Generic examples (projects list) only when it has none.
+    - Answer unambiguous from the scan → skip that sub-question, confirm it in the summary.
+
+Keep short — 7 to 12 questions:
+- wording only for UI projects
 - build one fires only on detected wrapper
 - close policy only when `per_task`
 - task storage only with a GitHub remote
@@ -134,7 +158,16 @@ Create directory and files (do not overwrite existing without asking).
     - Delete the temp export.
     - **Commit `apple/` with the rest** — autopilot worktrees only see committed files.
     - Never `xcrun agent skills export` straight into `{conventions}/`: it dumps all ten skills.
+  - **Wording** (UI project):
+    - Copy `${CLAUDE_PLUGIN_ROOT}/conventions/wording.md` and the whole `${CLAUDE_PLUGIN_ROOT}/conventions/wording/` folder.
+    - Fill **Project voice** from question 11: `languages` (source first, matches `ui_strings_language`), `person`, `base`, `audience`.
+    - Write **Voice** (2–3 sentences) from the scan, keep the `<!-- to review -->` mark.
+    - Leave **Validated examples** empty.
+  - **Glossary** (every project): copy `${CLAUDE_PLUGIN_ROOT}/templates/glossary.md` to `{conventions}/glossary.md`.
+    - One column per UI language (source first). No UI → keep the single `en` column for what Claude says.
+    - Seed **Terms** from recurring terms found by the scan. Show the rows, ask once (recommend keeping), then write. Nothing found → leave table empty.
   - **TypeScript / generic**: copy single `${CLAUDE_PLUGIN_ROOT}/conventions/<lang>.md` and set `review.modules` to it alone.
+  - `wording.md` and `glossary.md` go in `review.modules` **on top of** the language modules (TypeScript / generic too).
   - Set `review.modules` in config to exactly what you copied. Verifier reads that list and nothing else: module copied but left out of list = rulebook nobody opens.
 - **Xcode projects only** (repo has `.xcodeproj`/`.xcworkspace`): create `.xcodebuildmcp/config.yaml` at repo root (not in `.whackagent/`) so XcodeBuildMCP builds incrementally instead of full rebuild every time. Content:
   ```yaml
@@ -245,7 +278,12 @@ Everything the user wrote is theirs: config values, free-form notes, edited conv
    - References differ, or a `swiftui-*` folder appeared/vanished (new SDK) → ⚠️ row, refresh behind a yes.
    - Same → no row.
    - No Xcode 27 on this machine → leave what's there, no row.
-7. **`github` wiring.** Check:
+7. **Wording + glossary.**
+   - `{conventions}/glossary.md` absent → 🆕 row, seeded like first setup.
+   - UI project, `{conventions}/wording.md` absent → 🆕 row, question 11 asked like a new key.
+   - `{conventions}/wording/` differs from `${CLAUDE_PLUGIN_ROOT}/conventions/wording/` → ⚠️ row, refresh behind a yes.
+   - Project became UI since setup → say so, offer the module.
+8. **`github` wiring.** Check:
    - Hook installed on default branch (`.github/workflows/whackagent-board.yml`)?
    - Its `template version:` header vs `${CLAUDE_PLUGIN_ROOT}/templates/github-board.yml` — older → offer update PR (same branch + PR path as *GitHub scaffold* step 3).
    - Secret `WA_PROJECT_TOKEN` present (`gh secret list`)?
@@ -304,6 +342,10 @@ With an arg (`/wa-setup paths`), skip the table's unrelated rows and go straight
 - Delete the `swiftui-*` folders, copy the fresh ones. Delete first — Xcode exports files read-only, copying over them fails.
 - Skip the refresh entirely when only `SKILL.md` frontmatter order differs (pure diff noise).
 - `apple.md` itself is a normal module: additive rule above — but **never copied without its `apple/` folder**. Plugin ships the index, Xcode ships the pages; index alone points agents at nothing.
+
+**`{conventions}/wording/` — same exception: replace whole on refresh.** Plugin text, nobody edits it.
+- `wording.md` and `glossary.md` are normal modules: additive rule above. **Project voice**, **Voice**, glossary rows are the user's — never overwritten.
+- `wording.md` never copied without its `wording/` folder.
 
 **Never re-scaffold what exists.**
 - Backlog, task files, reports and wiki pages are content — this command doesn't touch their contents.

@@ -25,7 +25,7 @@ One agent, not one per lens:
 
 - **`modules`** — project convention module paths (`review.modules`).
   - **Read every one**, before judge anything.
-  - Module pointing at reference folder (`apple.md` → `apple/`) → open only pages diff's topics call for, never the folder.
+  - Module pointing at reference folder (`apple.md` → `apple/`, `wording.md` → `wording/`) → open only pages diff's topics call for, never the folder.
 - **The change, already located for you**: changed files with **diff hunks inline**.
   - Judge from hunks; open file only when genuinely need wider context.
   - No hunks → derive from `git diff` or the task's `## Implementation`.

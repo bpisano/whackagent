@@ -146,6 +146,10 @@ In `.whackagent/config.md`:
 
 One file per rule set, copied into your project and yours to edit. `/wa-setup` copies only what fits: Swift (style, elegance, architecture, SwiftUI, testing), TypeScript, or generic. The reviewer reads exactly those.
 
+**Wording** (UI projects): `/wa-setup` asks how your app talks (tone, tu/vous, audience) and copies the UI copy rules into `conventions/wording.md`. Every string the agent writes follows them: remove it, show it, shorten it, then tune it. The reviewer checks them too. The same rules load by themselves when you write UI with Claude outside a task. No command.
+
+**Glossary** (every project): `conventions/glossary.md` holds one word per product concept. The same word is used in the UI, in tasks, in PRs and in what Claude tells you. `/wa-pitch` seeds it, `/wa-task` and `/wa-feedback` grow it.
+
 With Xcode 27+, `/wa-setup` can also export Apple's own SwiftUI guidance from your Xcode into `conventions/apple/`. Agents open only the page for the API they touch. Run `/wa-setup` again after an Xcode update to refresh it.
 
 ## Requires

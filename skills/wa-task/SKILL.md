@@ -58,6 +58,7 @@ Wording (whole conversation + reports + PRs): **wa-board → Voice** — telegra
        - `github` → `github-board release <n> grilling --reset-to draft`.
        - `files` → `status: draft`.
        - Echo `/wa-task <id>` to grill later.
+   - **Glossary.** Grill coins or settles a product term (new concept, or two words used for one thing) → propose the `{conventions}/glossary.md` row in one line, add on yes (**wa-board → Voice → Glossary words**). UI project → grill settles copy that carries meaning (destructive confirmations, errors, empty states) against `{conventions}/wording.md`, never the full string list.
    - **Grill abandoned** (user says stop) → same reset. Left mid-grill without a word → lock stays; `/wa-task <id>` resumes, `/wa-task release <id>` frees.
 4. **Write the task file** per **wa-board → Task store**, content from `${CLAUDE_PLUGIN_ROOT}/templates/task.md`:
    - `files`: `{tasks}/<slug>.md`, `title`, `status: todo`, `created` = today, `blocked_by:` slugs.
