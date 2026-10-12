@@ -9,18 +9,34 @@ Dashboard. Lift lid on backlog, point next move.
 
 ## Do
 
-0. **Read arg.** None → whole backlog. Sprint name (`/wa-board "Login refacto"`, `/wa-board login-refacto`) → **filtered view**: only that sprint's tasks, plus progress line. Resolve per **Sprints** below; unknown name → say so, list known sprints, stop.
+0. **Read arg.**
+   - None → whole backlog.
+   - Sprint name (`/wa-board "Login refacto"`, `/wa-board login-refacto`) → **filtered view**: only that sprint's tasks, plus progress line.
+     - Resolve name per **Sprints** below.
+     - Unknown name → say so, list known sprints, stop.
 1. Read `.whackagent/config.md` (respect discussion language). Missing → tell user run `/wa-setup`, stop.
-2. **List the backlog** per **Task store** — every task with its `title`, `summary`, `size`, `sprint`, `status`, in priority order. Legacy task spotted (see *Task store → Legacy*) → say `/wa-setup` migrates it, stop.
-3. Render as **list**, one section per state (see Display format below), priority order within each. `github` backend → then one line for open repo issues not on the board (see *Task store → Outside issues*).
-4. Suggest exactly **one** next action, by state (filtered run → scope suggestion to sprint):
-   - `github`: sprint complete (every task `done`) and its sprint branch not merged, no open sprint PR → propose sprint PR per **wa-close → Sprint landing** (ask, never open it here).
-   - something in `to-close` → reviewed, waiting user retest: `/wa-close <id>` to finish (or `/wa-feedback` if retest found something). Highest precedence — one step from done.
-   - something in `to-test` → coded, waiting user test: `/wa-feedback <id> <notes>` if notes, else `/wa-validate <id>` to fire verifier. Beats starting new work.
+2. **List the backlog** per **Task store**.
+   - Every task with its `title`, `summary`, `size`, `sprint`, `status`, in priority order.
+   - Legacy task spotted (see *Task store → Legacy*) → say `/wa-setup` migrates it, stop.
+3. Render as **list**.
+   - One section per state (see Display format below), priority order within each.
+   - `github` backend → then one line for open repo issues not on the board (see *Task store → Outside issues*).
+4. Suggest exactly **one** next action, by state. Filtered run → scope suggestion to sprint.
+   - `github`: sprint complete (every task `done`), its sprint branch not merged, no open sprint PR → propose sprint PR per **wa-close → Sprint landing**. Ask, never open it here.
+   - something in `to-close` → reviewed, waiting user retest. Highest precedence: one step from done.
+     - `/wa-close <id>` to finish
+     - retest found something → `/wa-feedback`
+   - something in `to-test` → coded, waiting user test. Beats starting new work.
+     - notes → `/wa-feedback <id> <notes>`
+     - else → `/wa-validate <id>` to fire verifier
    - something `coding` → resume it (`/wa-code <id>`)
-   - top **unblocked** `todo` → `/wa-code <id>` (blocked task never suggested — see **Dependencies**). Backlog order maintained by `/wa-task` prioritization pass — never suggest reprioritizing as step (if user *asks* to reorder, that `/wa-task` with no arg).
+   - top **unblocked** `todo` → `/wa-code <id>`
+     - blocked task never suggested — see **Dependencies**
+     - backlog order maintained by `/wa-task` prioritization pass → never suggest reprioritizing as step
+     - user *asks* to reorder → that's `/wa-task` with no arg
    - no `todo`, top `draft` not locked → `/wa-task <id>` to grill it
-   - nothing in todo or draft → `/wa-task <description>` to create one (`/wa-draft` to just note an idea). Backlog empty and no `{wiki}/pitch.md` → `/wa-pitch <pitch>` instead: whole project, sprints and tasks in one go
+   - nothing in todo or draft → `/wa-task <description>` to create one (`/wa-draft` to just note an idea)
+     - backlog empty and no `{wiki}/pitch.md` → `/wa-pitch <pitch>` instead: whole project, sprints and tasks in one go
    - batch of small `todo` tasks → mention `/wa-autopilot` as option
 
 ## States
@@ -38,11 +54,21 @@ One lifecycle, both backends. Each state says **what's left to do** — never wh
 | `done` | closed | — |
 | `canceled` | dropped, reason noted | — |
 
-`/wa-draft` creates `draft`, `/wa-pitch` creates a whole project of them. `/wa-task` always grills: takes the `grilling` lock, ends at `todo`. "Review" names only the verifier's pass, never a state.
+- `/wa-draft` creates `draft`.
+- `/wa-pitch` creates a whole project of them.
+- `/wa-task` always grills: takes the `grilling` lock, ends at `todo`.
+- "Review" names only the verifier's pass, never a state.
 
-**Locks** (`grilling`, `coding`) — one grill, one coding round per task at a time. `github`: atomic claim (see **Task store → Locks**). `files`: one checkout, one agent — plain status, no lock to take.
+**Locks** (`grilling`, `coding`) — one grill, one coding round per task at a time.
 
-**`coding` = code being written, nothing else.** `/wa-code` and `/wa-feedback` set it. Coded task sits in `to-test`; review rounds (`/wa-validate`, `/wa-close`) lock it **without moving it** — never back to `coding` while verifier reads or while waiting on user's yes.
+- `github`: atomic claim (see **Task store → Locks**).
+- `files`: one checkout, one agent — plain status, no lock to take.
+
+**`coding` = code being written, nothing else.**
+
+- `/wa-code` and `/wa-feedback` set it.
+- Coded task sits in `to-test`.
+- Review rounds (`/wa-validate`, `/wa-close`) lock it **without moving it**: never back to `coding` while verifier reads or while waiting on user's yes.
 
 ## Display format
 
@@ -72,10 +98,16 @@ Canonical way tasks shown anywhere in flow (here, `/wa-task` prioritization pass
 
 Rules:
 
-- **Line 1** = `<id> · <size> **<title>**`, then `` · <sprint>`` when task has one, then `` · ⛔ #12`` when blocked (open blockers, see **Dependencies**), then `` · 🔒 alice@mbp 2h`` when a lock is held (`github`: owner + age; `stale` → `🔒⏳`).
+- **Line 1** = `<id> · <size> **<title>**`, then, in this order:
+  - `` · <sprint>`` when task has one
+  - `` · ⛔ #12`` when blocked (open blockers, see **Dependencies**)
+  - `` · 🔒 alice@mbp 2h`` when a lock is held (`github`: owner + age; `stale` → `🔒⏳`)
 - **Line 2** = task `summary`, indented 4 spaces. Never dump task body.
-- **Id** — per **Task ids**: display index `2 ·` for `files` (never `2.`: markdown renumbers it), issue number `#42 ·` for `github`.
-- **Section order = lifecycle, left to right like the GitHub board**: Draft → Grilling → Todo → Coding → To test → To close → Done → Canceled. Display indexes number **continuously across sections**, top to bottom — never restart per section, so user cites one without ambiguity.
+- **Id** — per **Task ids**.
+  - `files` → display index `2 ·`. Never `2.`: markdown renumbers it.
+  - `github` → issue number `#42 ·`.
+- **Section order = lifecycle, left to right like the GitHub board**: Draft → Grilling → Todo → Coding → To test → To close → Done → Canceled.
+- Display indexes number **continuously across sections**, top to bottom. Never restart per section, so user cites one without ambiguity.
 - **Size** maps `size`: 🟢 `quickwin` · 🟡 `medium` · 🔴 `large`.
 - **Sprint tag** only on tasks that have one. Filtered run (`/wa-board <sprint>`) drops it — every task is that sprint.
 - Skip empty sections. Show only few recent under **Done**.
@@ -90,8 +122,17 @@ Canonical, every whackagent skill. Applies to **the whole conversation** — eve
 - **Telegraphic.** Fragments OK. No articles filler, no pleasantries, no hedging, no re-explaining the flow. One idea per line.
 - **Tech terms stay English, in every language.** Conversation in French (or any other language) → write franglais, on purpose. build, branch, merge, commit, review, worktree, simulator, entitlement, loading, fix, main thread, hang, puck, layout, render, state, callback… Never translate them literally: a calque (`fil principal`, `branche fusionnée`, `interrupteur`, `process fils`, `marqueurs des jobs`) is harder to read than the English word the dev says out loud. Target: `bouton Apple pas disabled pendant le loading`, `le main thread passe de 51 % à 10 %`.
 - **Short common words.** `fix` not "proceed with the correction", `test it` not "please proceed to test".
-- **Clarity beats brevity.** Fragment readable two ways → write the full sentence.
-- **Task bodies are the exception** — `## Context / Decisions`, `## Acceptance criteria` in full simple sentences (franglais still OK): verifier, user and teammates reread them months later, fragments there get misread.
+- **Grammar goes first.** Simple + short beats correct.
+- **Meaning never.** Fragment readable two ways → add the missing word.
+- **Bullets over prose.**
+  - 3+ items in a sentence → bullets
+  - explanation past 2 lines → bullets, one idea each
+  - order matters → numbered
+  - one idea → one line, no lone bullet
+  - two dimensions → table (board: list, never table)
+  - 2 levels max
+- **Readable cold.** Task bodies (`## Context / Decisions`, `## Acceptance criteria`), pitch page: bullets too. Each names its subject — no "it" pointing back at the grill. Verifier, user and teammates reread them months later.
+- **PR bodies** keep their own rules → *PR wording*.
 - **Skill text is English; output follows `discussion_language`.** Examples in these skills are English — render headings, labels and prose in the configured language (`Problem / Goal / Done / To test` → `Problème / Objectif / Fait / À tester` in fr), tech terms still English.
 - **Task section headings are fixed, English**: `## Context / Decisions`, `## Acceptance criteria`, `## Implementation`, `## Review`, `## Verification`, `## Feedback`. Older French ones are migrated by `/wa-setup` (see *Task store → Legacy*).
 
@@ -122,11 +163,18 @@ Summary = **the goal, plain**, ≤ 8 words. What it gives once done. Not the mec
 
 ### Sprint names
 
-Sprint = **human title**, ≤ 3 words, names the body of work — same rules as a task title minus the verb (`Login refacto`, `Map architecture`, `Perf hangs`). Shown as-is on board, milestone and PR. Kebab-case exists only in its branch (`sprint/login-refacto`).
+Sprint = **human title**, ≤ 3 words, names the body of work.
+
+- Same rules as a task title minus the verb (`Login refacto`, `Map architecture`, `Perf hangs`).
+- Shown as-is on board, milestone and PR.
+- Kebab-case exists only in its branch (`sprint/login-refacto`).
 
 ### PR wording
 
-A PR is read by people who **don't know the task** — teammates, reviewers, you in six months. Tech allowed, but the surface stays simple enough for anyone on the team. Same rules as **Voice** (language = `discussion_language`, tech terms English).
+A PR is read by people who **don't know the task** — teammates, reviewers, you in six months.
+
+- Tech allowed, but the surface stays simple enough for anyone on the team.
+- Same rules as **Voice** (language = `discussion_language`, tech terms English).
 
 **Title = area, 1–3 words.** What a teammate would call it in standup. The part of the app it touches + the kind of change. No metric, no number, no em-dash, no colon, no list of components, no narrative.
 
@@ -137,7 +185,10 @@ A PR is read by people who **don't know the task** — teammates, reviewers, you
 | same perf work, only the map touched | `Map performance` |
 | `Add Sign in with Apple button on login screen and entitlement` | `Add Apple login` |
 
-Wider change → shorter, more generic word (`Performance`). Narrower → add the area (`Map performance`). **Task PR → task `title` as-is** (verb + thing: `Add Apple login`) — one precise action, the verb helps. **Sprint PR → area in 1–3 words** (`Login`, `Map architecture`) — it covers several actions, a verb would lie. Never list its tasks.
+- Wider change → shorter, more generic word (`Performance`).
+- Narrower → add the area (`Map performance`).
+- **Task PR → task `title` as-is** (verb + thing: `Add Apple login`): one precise action, the verb helps.
+- **Sprint PR → area in 1–3 words** (`Login`, `Map architecture`): it covers several actions, a verb would lie. Never list its tasks.
 
 **Body = telegraphic, three blocks max:**
 
@@ -153,7 +204,10 @@ Wider change → shorter, more generic word (`Performance`). Narrower → add th
 Closes #42        ← github backend: one `Closes #n` per task the PR delivers
 ```
 
-- **`github` backend → always link.** Task PR: `Closes #<n>` + `github-board link-pr <n> <pr>` (base ≠ default branch → `Closes` alone links nothing). Sprint PR: `Closes #<n>` for every task of the sprint, plus the sprint's milestone set on the PR. GitHub then shows the PR on each issue and closes them at merge into the default branch.
+- **`github` backend → always link.**
+  - Task PR: `Closes #<n>` + `github-board link-pr <n> <pr>` (base ≠ default branch → `Closes` alone links nothing).
+  - Sprint PR: `Closes #<n>` for every task of the sprint, plus the sprint's milestone set on the PR.
+  - GitHub then shows the PR on each issue and closes them at merge into the default branch.
 - **Opening line = one short sentence, never a feature list.** Every new behavior, and every fix, goes in its own **Changes** bullet.
 - **One bullet = one subject, named.** Name the screen or feature the user knows (`The settings screen opens…`), never a subject-less `Opens…`.
 - **Bullet form.** Describing how a feature now behaves → a plain sentence (`The list keeps its scroll position`). Anything else → action word first: `Add` / `Fix` / `Remove` (in `discussion_language`). Never `Fix:` or `Feature:` prefixes.
@@ -178,37 +232,74 @@ Closes #42        ← github backend: one `Closes #n` per task the PR delivers
 
 Sprint = **optional human title** on task (`sprint: Login refacto`), grouping big work split across several tasks. Canonical rules, every skill refers here. Naming → **Voice → Sprint names**.
 
-- **No sprint file, no create command.** Sprint exists moment a task names it. `files`: nothing to declare. `github`: it **is** a milestone — created on first use (see **Task store**), never deleted by whackagent.
-- **Truth is the task.** `files`: task `sprint:` field; `{backlog}` echoes it as `· <Sprint>` after link — two disagree → task file wins, fix backlog line. `github`: the issue's milestone.
+- **No sprint file, no create command.** Sprint exists moment a task names it.
+  - `files`: nothing to declare.
+  - `github`: it **is** a milestone — created on first use (see **Task store**), never deleted by whackagent.
+- **Truth is the task.**
+  - `files`: task `sprint:` field. `{backlog}` echoes it as `· <Sprint>` after link. Two disagree → task file wins, fix backlog line.
+  - `github`: the issue's milestone.
 - **Not a state.** Sprint cuts across states — has tasks in todo, to-test and done at once. Sections stay per state, always.
 - **Contiguity.** Tasks of one sprint stay adjacent inside each section, in sprint own internal order. `/wa-task` prioritization pass maintains that — sprint moves as block.
-- **Resolving a name**: exact title first, then case-insensitive / kebab-normalized match (`login-refacto` finds `Login refacto`). No match → say so and list known sprints (sprint with no live task is complete, not typo). Ambiguous → list candidates, stop.
+- **Resolving a name**:
+  - exact title first, then case-insensitive / kebab-normalized match (`login-refacto` finds `Login refacto`)
+  - no match → say so and list known sprints (sprint with no live task is complete, not typo)
+  - ambiguous → list candidates, stop
 - **Task id vs sprint**: task id wins over sprint of same name. Clash → say which one you took.
 
-- **One branch, when `branch.per_task`.** `<branch.sprint_prefix><kebab(sprint)>` (default `sprint/login-refacto`), created from `branch.base` by whoever needs it first — `/wa-code` step 0 or `/wa-autopilot` wave. Tasks of sprint fork off it and `/wa-close` merges them back, so each task starts from sprint current state. `branch.sprint_prefix: ""` turns that off: tasks use `branch.base` like any other. Nothing merges into sprint branch before its task is reviewed and closed — testing every delivered task at once is **Sprint test branch** job, below.
-- **A sprint is complete, never `done`.** No sprint state exists. Complete when no task of it left in `draft`/`todo`/`coding`/`to-test`/`to-close` — `/wa-close` notices and offers to land sprint branch.
+- **One branch, when `branch.per_task`.** `<branch.sprint_prefix><kebab(sprint)>` (default `sprint/login-refacto`).
+  - Created from `branch.base` by whoever needs it first: `/wa-code` step 0 or `/wa-autopilot` wave.
+  - Tasks of sprint fork off it, `/wa-close` merges them back → each task starts from sprint current state.
+  - `branch.sprint_prefix: ""` turns that off: tasks use `branch.base` like any other.
+  - Nothing merges into sprint branch before its task is reviewed and closed. Testing every delivered task at once is **Sprint test branch** job, below.
+- **A sprint is complete, never `done`.** No sprint state exists.
+  - Complete when no task of it left in `draft`/`todo`/`coding`/`to-test`/`to-close`.
+  - `/wa-close` notices and offers to land sprint branch.
 
-Commands taking sprint name: `/wa-board <sprint>` (filtered view), `/wa-autopilot <sprint>` (batch its todo tasks), `/wa-task` (assigns and inherits). `/wa-pitch` mints them, several at once. `/wa-code`, `/wa-validate`, `/wa-feedback`, `/wa-close` stay **per task** — one task is their unit, and whole sprint unattended is what `/wa-autopilot` already does better.
+Commands taking sprint name:
+
+- `/wa-board <sprint>` → filtered view
+- `/wa-autopilot <sprint>` → batch its todo tasks
+- `/wa-task` → assigns and inherits
+
+`/wa-pitch` mints them, several at once.
+
+`/wa-code`, `/wa-validate`, `/wa-feedback`, `/wa-close` stay **per task**: one task is their unit, and whole sprint unattended is what `/wa-autopilot` already does better.
 
 ### Sprint test branch
 
 One local branch holding **every delivered task of sprint**: user launches project once, tests them all. Name = `<sprint branch>-test` (default `sprint/login-refacto-test`). Exists whenever sprint has a branch.
 
-- **Not the sprint branch.** Sprint branch only takes reviewed, closed tasks. `github`: task merged into it and pushed = task PR marked merged = card `Done` before anyone tested. Test branch changes nothing on GitHub.
+- **Not the sprint branch.** Sprint branch only takes reviewed, closed tasks.
+  - `github`: task merged into it and pushed = task PR marked merged = card `Done` before anyone tested.
+  - Test branch changes nothing on GitHub.
 - **Local, throwaway.** Never pushed, never PR'd, never a fork point, never committed on. Rebuilt from scratch every time — task branches get rebased, merges kept from last build would conflict.
-- **Who builds**: every round delivering a sprint task — `/wa-code`, `/wa-feedback`, `/wa-validate` at round end; `/wa-autopilot` once, end of run. Then **checks it out**: user tests from there. Always, even with one delivered task — user never wonders which branch to launch.
+- **Who builds**: every round delivering a sprint task.
+  - `/wa-code`, `/wa-feedback`, `/wa-validate` → at round end
+  - `/wa-autopilot` → once, end of run
+  - Builder then **checks it out**: user tests from there. Always, even with one delivered task — user never wonders which branch to launch.
 - **Build** (main checkout, never a worktree):
   ```
   git checkout -B <sprint branch>-test <base>   # github: origin/<sprint branch>, fetched · files: <sprint branch>
   git merge --no-ff --no-edit <task branch>     # every sprint task in to-test / to-close, board order
   ```
-  `github` → merge `origin/<task branch>` (round end pushed it). Merge commits as `commit.author_name` / `author_email`, **never Claude**.
-- **Needs committed work.** `files` attended round leaves code uncommitted → nothing to merge: stay on task branch (already sprint + this task), say so. Other delivered sprint tasks waiting on own branches → name them.
-- **Two tasks conflict** → `git merge --abort`, skip that task, keep merging the rest. Report `⚠️ #45 not in test branch — conflicts with #42 (AuthStore.swift)`. Never resolve on throwaway branch: resolution dies at next build, real one happens when task lands.
-- **Dirty tree** → no build, no checkout. Attended: say what's dirty, ask (recommend staying on task branch). Autopilot: skip, say so in report.
-- **Commits made on it** (`git log --first-parent --no-merges <base>..<sprint branch>-test` non-empty) → rebuild would drop them. Attended: ask, recommend moving them to their task with `/wa-feedback`. Autopilot: leave branch untouched, say so.
+  - `github` → merge `origin/<task branch>` (round end pushed it).
+  - Merge commits as `commit.author_name` / `author_email`, **never Claude**.
+- **Needs committed work.**
+  - `files` attended round leaves code uncommitted → nothing to merge: stay on task branch (already sprint + this task), say so.
+  - Other delivered sprint tasks waiting on own branches → name them.
+- **Two tasks conflict** → `git merge --abort`, skip that task, keep merging the rest.
+  - Report `⚠️ #45 not in test branch — conflicts with #42 (AuthStore.swift)`.
+  - Never resolve on throwaway branch: resolution dies at next build, real one happens when task lands.
+- **Dirty tree** → no build, no checkout.
+  - Attended: say what's dirty, ask (recommend staying on task branch).
+  - Autopilot: skip, say so in report.
+- **Commits made on it** (`git log --first-parent --no-merges <base>..<sprint branch>-test` non-empty) → rebuild would drop them.
+  - Attended: ask, recommend moving them to their task with `/wa-feedback`.
+  - Autopilot: leave branch untouched, say so.
 - **Echo**: `test branch: sprint/login-refacto-test = sprint + #42 · #43 — you're on it`.
-- **Leaving it.** Task command starting on test branch (`/wa-code`, `/wa-feedback`, `/wa-validate`, `/wa-close`) → check out task branch **without asking** when tree clean: whackagent own branch, nothing to lose. Edits made while testing (dirty) → usual dirty-tree question, recommend carrying them over to task branch.
+- **Leaving it.** Task command starting on test branch (`/wa-code`, `/wa-feedback`, `/wa-validate`, `/wa-close`):
+  - Tree clean → check out task branch **without asking**: whackagent own branch, nothing to lose.
+  - Edits made while testing (dirty) → usual dirty-tree question, recommend carrying them over to task branch.
 - **Deleted** when sprint lands (`/wa-close` → *Sprint landing*).
 
 ## Task ids
@@ -221,7 +312,9 @@ How a task is named in commands, board, branches, worktrees and reports.
 | **board** | `3 ·` | `#42 ·` |
 | **key** (branch, worktree, report) | `<slug>` → `wa/add-apple-login` | `<n>-<slug>` → `wa/42-add-apple-login` |
 
-- **Slug** = kebab-case of title, set at creation, never moves after (`files`: file name). `github`: slug in key derived from title at branch creation, then fixed by the branch — later skills find it by prefix (`git branch --list '<branch.prefix><n>-*'`), so a renamed issue never loses its branch.
+- **Slug** = kebab-case of title, set at creation, never moves after (`files`: file name).
+  - `github`: slug in key derived from title at branch creation, then fixed by the branch.
+    - Later skills find branch by prefix (`git branch --list '<branch.prefix><n>-*'`), so a renamed issue never loses its branch.
 - **Display index** (`files` only) is display-only, derived from current backlog order, never written anywhere — shifts when order shifts. Resolve by re-deriving same numbering (rules above).
 - **Issue number** (`github`) is stable: no display index there, nothing to re-derive.
 - Echo resolved mapping (`3 → add-apple-login`, `#42 → Add Apple login`) before work, so user catches a stale or wrong id.
@@ -234,10 +327,20 @@ Everywhere skills write `<id>` they mean input form; `<key>` means the branch/re
 
 Task **blocked by** others = needs their code landed first. Canonical rules, every skill refers here.
 
-- **Where**: `files` → `blocked_by: [add-apple-login, …]` (slugs) in task frontmatter. `github` → issue relationship *blocked by* — `github-board depend <n> --on <x>[,<y>]`, read back in `github-board get <n>` → `blocked_by: [{number, state}]`. Tracker metadata like size and sprint — known before any task file exists.
-- **Who sets**: `/wa-task` and `/wa-draft` at creation (user names it, or it builds on another task), grill when it finds one, split → each child blocked by the sibling it builds on.
+- **Where**:
+  - `files` → `blocked_by: [add-apple-login, …]` (slugs) in task frontmatter.
+  - `github` → issue relationship *blocked by* — `github-board depend <n> --on <x>[,<y>]`, read back in `github-board get <n>` → `blocked_by: [{number, state}]`.
+    - Tracker metadata like size and sprint — known before any task file exists.
+- **Who sets**:
+  - `/wa-task` and `/wa-draft` at creation (user names it, or it builds on another task)
+  - grill, when it finds one
+  - split → each child blocked by the sibling it builds on
 - **Open blocker** = not `done` (`github`: issue still open). `canceled` blocker → no longer blocks; say so once.
-- **Effects**: `/wa-board` tags line `⛔ #12`, never suggests blocked task as next. `/wa-code` on blocked task → warn, recommend coding blocker first, go on only on yes. `/wa-autopilot` → blocked task runs in wave after its blocker, **stacked** on blocker branch (below); blocker not coded and outside batch → skip it. Prioritization pass → blocker always above what it blocks.
+- **Effects**:
+  - `/wa-board` → tags line `⛔ #12`, never suggests blocked task as next.
+  - `/wa-code` on blocked task → warn, recommend coding blocker first, go on only on yes.
+  - `/wa-autopilot` → blocked task runs in wave after its blocker, **stacked** on blocker branch (below). Blocker not coded and outside batch → skip it.
+  - Prioritization pass → blocker always above what it blocks.
 - **Attended: no stacking.** `/wa-code` on blocked task warns and recommends landing blocker first — user is there, that's cheaper than a stack.
 
 ### Stacking — `/wa-autopilot`
@@ -245,13 +348,20 @@ Task **blocked by** others = needs their code landed first. Canonical rules, eve
 Blocker **delivered but not landed** (`to-test` / `to-close`, or delivered earlier in same run) → dependent task branch starts **from blocker branch**, not from base. **It's the rule: never a question, never a confirmation.** Parallel wherever tasks are independent, stacked wherever one needs another.
 
 - **`files`** → fork task branch off blocker branch tip instead of base.
-- **`github`** → task branch exists since grill, only grill commits on it: in its worktree, `git rebase --onto origin/<blocker branch> <its base>`. **No push before round end** (push ends round); round-end push → `--force-with-lease`. Draft PR opened `--base <blocker branch>`: PR shows task alone, not blocker code.
-- **Several open blockers** → chained (A ← B ← C) → stack on last one. Independent → stack on first in board order, `git merge` the others into task branch. Conflict there → blocker rule of `/wa-autopilot`: skip and log.
+- **`github`** → task branch exists since grill, only grill commits on it.
+  - In its worktree: `git rebase --onto origin/<blocker branch> <its base>`.
+  - **No push before round end** (push ends round). Round-end push → `--force-with-lease`.
+  - Draft PR opened `--base <blocker branch>`: PR shows task alone, not blocker code.
+- **Several open blockers**:
+  - Chained (A ← B ← C) → stack on last one.
+  - Independent → stack on first in board order, `git merge` the others into task branch. Conflict there → blocker rule of `/wa-autopilot`: skip and log.
 - **Nothing to stack on** → blocker not coded and outside batch (`draft` / `grilling` / `todo` / `coding` elsewhere), or blocked in this run → dependent skipped, `⛔ waits #x`.
 - **Record it**: first line of `## Implementation` = `stacked on: <blocker branch> @ <short sha>`. Every later skill reads stack point there.
 - **Review scope** (`/wa-validate`, `/wa-close`) = diff from stack point, never from base: blocker code gets its own review.
 - **Blocker moves after** (feedback round, rebase) → next round on dependent rebases its own commits (after stack point) onto blocker new tip, updates the record.
-- **Landing order: blocker first.** `/wa-close` on stacked task, blocker not landed → stop, say `/wa-close <blocker>` first. Blocker landed → rebase task own commits onto real base (sprint branch or `branch.base`), `github`: `gh pr edit <pr> --base <base>`, drop the `stacked on:` line.
+- **Landing order: blocker first.**
+  - `/wa-close` on stacked task, blocker not landed → stop, say `/wa-close <blocker>` first.
+  - Blocker landed → rebase task own commits onto real base (sprint branch or `branch.base`), `github`: `gh pr edit <pr> --base <base>`, drop the `stacked on:` line.
 - **Board**: stacked task shows `⛔ #42` as long as blocker is open — delivered on a stack ≠ unblocked.
 
 ## Task store
@@ -293,32 +403,62 @@ Helper: `${CLAUDE_PLUGIN_ROOT}/scripts/github-board <verb>` (internal, Python 3 
 | PR merged (any base) | `done`, issue closed, milestone closed when empty |
 | PR closed unmerged | `todo` |
 
-**Never set `todo`, `to-test`, `to-close`, `done` on the board yourself** — write `status:` in file, push; hook moves card. Code drives board. Hook slow → wait, don't patch; hook that never ran → repair per *task branch and rounds → Round end confirms card moved*.
+**Never set `todo`, `to-test`, `to-close`, `done` on the board yourself**:
+
+- Write `status:` in file, push; hook moves card. Code drives board.
+- Hook slow → wait, don't patch.
+- Hook that never ran → repair per *task branch and rounds → Round end confirms card moved*.
 
 ### `github` — task branch and rounds
 
-- **Branch** created at grill by `gh issue develop <n> --name <branch.prefix><n>-<slug> --base <base>` (base = sprint branch when task in sprint, else `branch.base`) — only GitHub-created branches link in issue **Development**. Never `git checkout -b` + push for it.
-- **Every round ends with commit + push** on task branch — grill (`status: todo`), `/wa-code`, `/wa-feedback`, `/wa-validate`, `/wa-autopilot`. Commit author = `commit.author_name`/`author_email`, never Claude. That push releases the lock. **No push mid-round** — hook would end round early.
-- **Draft PR** opened by first coding delivery: `gh pr create --draft --base <base> --head <branch>`, title/body per **Voice → PR wording**, then `link-pr`. Later rounds push to it. `/wa-close` marks it ready; user merges.
+- **Branch** created at grill by `gh issue develop <n> --name <branch.prefix><n>-<slug> --base <base>`.
+  - Base = sprint branch when task in sprint, else `branch.base`.
+  - Only GitHub-created branches link in issue **Development** → never `git checkout -b` + push for it.
+- **Every round ends with commit + push** on task branch: grill (`status: todo`), `/wa-code`, `/wa-feedback`, `/wa-validate`, `/wa-autopilot`.
+  - Commit author = `commit.author_name`/`author_email`, never Claude.
+  - That push releases the lock.
+  - **No push mid-round**: hook would end round early.
+- **Draft PR** opened by first coding delivery: `gh pr create --draft --base <base> --head <branch>`.
+  - Title/body per **Voice → PR wording**, then `link-pr`.
+  - Later rounds push to it.
+  - `/wa-close` marks it ready; user merges.
 - **PR ready + new round** (`/wa-feedback`) → `gh pr ready --undo` first: nobody merges code that moves again.
-- **Round end confirms card moved.** After push, `github-board get <n>` — up to ~1 min, hook needs it. Card still `Coding`, or lock still held → hook never ran on this branch: say it, with cause from `gh run list --branch <branch> --workflow whackagent-board.yml --limit 1` (no run = workflow file missing on branch forked before hook merged; failed = secret). Then repair: `github-board release <n> coding --reset-to <file status>`. Coded task never stays in `Coding`.
-- **Round end checks mergeable**: `gh pr view --json mergeable` → `CONFLICTING` → rebase task range on base, rebuild, `push --force-with-lease` (own task branch only), check again. Conflict needs a design call → stop, say which files.
-- **Task ref for subagents.** Implementer and verifier never read config and never write the task. Hand them the task file path (worktree or checkout on task branch). Orchestrator records what they return.
+- **Round end confirms card moved.** After push, `github-board get <n>` — up to ~1 min, hook needs it.
+  - Card still `Coding`, or lock still held → hook never ran on this branch.
+    - Say it, with cause from `gh run list --branch <branch> --workflow whackagent-board.yml --limit 1`: no run = workflow file missing on branch forked before hook merged; failed = secret.
+    - Then repair: `github-board release <n> coding --reset-to <file status>`.
+  - Coded task never stays in `Coding`.
+- **Round end checks mergeable**: `gh pr view --json mergeable`.
+  - `CONFLICTING` → rebase task range on base, rebuild, `push --force-with-lease` (own task branch only), check again.
+  - Conflict needs a design call → stop, say which files.
+- **Task ref for subagents.**
+  - Implementer and verifier never read config and never write the task.
+  - Hand them the task file path (worktree or checkout on task branch).
+  - Orchestrator records what they return.
 
 ### Locks (`github`)
 
 - `claim <n> grilling` from `draft` · `claim <n> coding` from `todo`, `to-test`, `to-close`. Atomic: git ref `refs/wa-claims/<n>/<phase>`, N agents → one wins.
-- **Review round** (`/wa-validate`, `/wa-close`) → `claim <n> coding --keep-state`, from `to-test` / `to-close`. Same lock, **card stays in its column**: nobody is coding. Plain `claim <n> coding` there = bug — card back in Coding for whole review, and for as long as user takes to answer `ok?`.
+- **Review round** (`/wa-validate`, `/wa-close`) → `claim <n> coding --keep-state`, from `to-test` / `to-close`.
+  - Same lock, **card stays in its column**: nobody is coding.
+  - Plain `claim <n> coding` there = bug: card back in Coding for whole review, and for as long as user takes to answer `ok?`.
 - **Exit 3 = taken** → name owner and age (`🔒 #42 grilling — alice@mbp since 2h`), stop. Never retry, never steal.
 - **Exit 4 = wrong state** → say state, point to right command.
-- Released by the push ending the round (hook), or `release <n> <phase> --reset-to <state>` on abort: grill abandoned → `--reset-to draft`; coding round aborted before any push → `--reset-to` the state it was claimed from; review round aborted → `release <n> coding` alone, card never moved.
-- **No expiry** — grill is interactive, answer may come in two days. `github-board claims` flags `stale` (no push past `WA_STALE_AFTER_HOURS`); `/wa-board` shows it. `/wa-task release <n>` clears one — human-triggered only.
+- Released by the push ending the round (hook), or `release <n> <phase> --reset-to <state>` on abort:
+  - grill abandoned → `--reset-to draft`
+  - coding round aborted before any push → `--reset-to` the state it was claimed from
+  - review round aborted → `release <n> coding` alone, card never moved
+- **No expiry** — grill is interactive, answer may come in two days.
+  - `github-board claims` flags `stale` (no push past `WA_STALE_AFTER_HOURS`); `/wa-board` shows it.
+  - `/wa-task release <n>` clears one — human-triggered only.
 
 ### `github` — other rules
 
 - **Auth.** `gh` needs `project` scope. Missing → say `! gh auth refresh -h github.com -s project`, stop. Never fall back to `files` silently.
 - **Closing.** `done` comes from the merge (hook). `canceled` → `github-board cancel <n> --reason "<why>"`.
-- **Outside issues.** Every issue opened lands on board as `draft` (hook), `wa-ignore` label opts out. Board draft items (Project-only, no issue) → `/wa-board` lists them, suggests converting.
+- **Outside issues.**
+  - Every issue opened lands on board as `draft` (hook), `wa-ignore` label opts out.
+  - Board draft items (Project-only, no issue) → `/wa-board` lists them, suggests converting.
 - **Comments = trail only.** Hook and claims post one line per move. whackagent never writes task content in comments or issue body — it lives in the file.
 - **`{backlog}` unused.** `{tasks}` lives on task branches. `{reports}`, `{wiki}`, `{conventions}` stay in repo as in `files`.
 - **Hook needs** secret `WA_PROJECT_TOKEN` (classic PAT, `project` + `repo`) and must be on default branch **and** on base branches (sprint branches forked after it carry it). Set up by `/wa-setup`.
@@ -336,7 +476,11 @@ Helper: `${CLAUDE_PLUGIN_ROOT}/scripts/github-board <verb>` (internal, Python 3 
 | **reorder** | backlog line order |
 | **sprint / size / blockers** | `sprint:` field + `· <Sprint>` suffix · `size:` · `blocked_by:` |
 
-**Legacy** — task still carrying old states (`in-progress`, `review`, `validated`), a `grilled:` field, or French headings (`## Contexte / Décisions`, `## Critères d'acceptation`, `## Implémentation`, `## Vérification`) → project predates this lifecycle. `github` task whose content lives in the issue body (no task file on its branch, body holds `## Acceptance criteria`) or size as `size:*` label → pre-0.13 GitHub layout. Don't guess, don't alias: say `/wa-setup` migrates it (one plan, one yes), stop.
+**Legacy**:
+
+- Task still carrying old states (`in-progress`, `review`, `validated`), a `grilled:` field, or French headings (`## Contexte / Décisions`, `## Critères d'acceptation`, `## Implémentation`, `## Vérification`) → project predates this lifecycle.
+- `github` task whose content lives in the issue body (no task file on its branch, body holds `## Acceptance criteria`) or size as `size:*` label → pre-0.13 GitHub layout.
+- Either one → don't guess, don't alias: say `/wa-setup` migrates it (one plan, one yes), stop.
 
 ## Paths
 
@@ -345,7 +489,8 @@ Every whackagent skill writes `{backlog}` `{tasks}` `{wiki}` `{reports}` `{conve
 - **Key missing → the default** (`.whackagent/BACKLOG.md`, `.whackagent/tasks`, `.whackagent/wiki`, `.whackagent/reports`, `.whackagent/conventions`). Config written before `paths:` existed keep working untouched.
 - **Relative resolves from repo root**, not cwd. Absolute paths allowed.
 - **`.whackagent/config.md` is the one fixed path** — it carry the others.
-- Path points at nothing → say which key and what it points at, suggest `/wa-setup`. Never fall back to `.whackagent/` behind user back, never create folder somewhere else: wiki silently written to default is wiki team never sees.
+- Path points at nothing → say which key and what it points at, suggest `/wa-setup`.
+  - Never fall back to `.whackagent/` behind user back, never create folder somewhere else: wiki silently written to default is wiki team never sees.
 
 ## Output
 

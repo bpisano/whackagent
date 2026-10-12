@@ -7,7 +7,7 @@ description: Reviews any code, outside a task. --fix applies the fixes.
 
 Standalone review — audit existing code, diff, or whole project. Same engine as `/wa-code` verify phase, usable anywhere.
 
-Wording (whole conversation + reports + PRs): **wa-board → Voice** — telegraphic, tech terms stay English in every language (franglais, never literal translation).
+Wording (whole conversation + reports + PRs): **wa-board → Voice** — telegraphic, grammar last, bullets over prose, tech terms stay English in every language (franglais, never literal translation).
 
 ## Scope (argument)
 
@@ -19,22 +19,42 @@ Wording (whole conversation + reports + PRs): **wa-board → Voice** — telegra
 ## Conventions
 
 - `.whackagent/config.md` exists: use its `review.modules` + project `{conventions}/` — `paths.conventions`, default `.whackagent/conventions/` (project copies + toggles win).
-- No config (fresh existing project): detect language + kind, fall back to plugin defaults in `${CLAUDE_PLUGIN_ROOT}/conventions/` — load `swift/` modules (style, elegance, matching architecture-\*, swiftui if SwiftUI, testing) or single `<lang>.md`. Tell user it run on defaults; suggest `/wa-setup` to customize.
+- No config (fresh existing project):
+  - Detect language + kind, fall back to plugin defaults in `${CLAUDE_PLUGIN_ROOT}/conventions/`.
+  - Load `swift/` modules (style, elegance, matching architecture-\*, swiftui if SwiftUI, testing) or single `<lang>.md`.
+  - Tell user it run on defaults; suggest `/wa-setup` to customize.
 
 ## Do
 
 1. Resolve scope + changed/target files.
-2. **Dispatch one **wa-verifier**.** **Note `agentId`** — how later rounds resume it. Pass module paths (`review.modules`), target files **plus diff hunks when scope is diff**, and toggles.
-3. **Check `LENSES:` line** — `style`, `elegance`, `structure`, `correctness`, all four ✓; missing one goes back for that lens alone. Then show findings severity-ordered, grouped by lens tag.
+2. **Dispatch one **wa-verifier**.**
+   - **Note `agentId`** — how later rounds resume it.
+   - Pass: module paths (`review.modules`), target files **plus diff hunks when scope is diff**, and toggles.
+3. **Check `LENSES:` line**
+   - `style`, `elegance`, `structure`, `correctness`: all four ✓.
+   - Missing one → goes back for that lens alone.
+   - Then show findings severity-ordered, grouped by lens tag.
 4. **Fix?**
    - Default → **report only**. No mutate existing code unasked.
-   - `--fix` → dispatch **wa-implementer** in **fix mode** with aggregated findings + conventions dir (tell it: fix only what findings name, re-read style, add no comments), note `agentId`, then re-review. Loop until clean or no progress (cap 3 rounds). `BLOCKED:` → stop and ask.
+   - `--fix` → dispatch **wa-implementer** in **fix mode** with aggregated findings + conventions dir. Tell it: fix only what findings name, re-read style, add no comments. Note `agentId`, then re-review.
+     - Loop fix + re-review until clean or no progress (cap 3 rounds).
+     - `BLOCKED:` → stop and ask.
    - **Rounds 2+ resume same agent by id** instead of respawn — per **`/wa-code` → step 3** (delta only, anti-stale warning, respawn fresh past 3 rounds, fall back to fresh spawn if id lost).
 5. If invoked on whackagent task (path is task files), record findings in task `## Review`.
 
 ## Lenses
 
-**style** — how written. **elegance** — idiomatic, not C-in-Swift. **structure** — layers, boundaries, naming, file tree. **correctness** — real bugs, and whether code does what it claims. One agent sweep all four: isolated agent cost ~50k tokens context before it read a line, and every lens judge same diff against same rulebook. Cost of one agent: forgetting lens now silent — that what `LENSES:` line is for.
+- **style** — how written.
+- **elegance** — idiomatic, not C-in-Swift.
+- **structure** — layers, boundaries, naming, file tree.
+- **correctness** — real bugs, and whether code does what it claims.
+
+One agent sweep all four. Why:
+
+- Isolated agent cost ~50k tokens context before it read a line.
+- Every lens judge same diff against same rulebook.
+
+Cost of one agent: forgetting lens now silent — that what `LENSES:` line is for.
 
 ## Note
 

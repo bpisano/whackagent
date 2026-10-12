@@ -7,21 +7,37 @@ description: Applies your notes on a coded task, then re-checks it. Use after /w
 
 You saw build. You have notes. This apply them **without losing rules**.
 
-Wording (whole conversation + reports + PRs): **wa-board → Voice** — telegraphic, tech terms stay English in every language (franglais, never literal translation).
+Wording (whole conversation + reports + PRs): **wa-board → Voice** — telegraphic, grammar last, bullets over prose, tech terms stay English in every language (franglais, never literal translation).
 
-Feedback where quality leak: change feel small, so code patched straight from main thread — no convention modules loaded, no reviewer look, nothing re-run. Three rounds later feature drift off style, off architecture, nobody re-check it work. This skill make that impossible: **inline fix safe because reviewer still see it before commit** — never because it looked small.
+Feedback where quality leak:
+- Change feel small, so code patched straight from main thread: no convention modules loaded, no reviewer look, nothing re-run.
+- Three rounds later: feature drift off style, off architecture, nobody re-check it work.
+- This skill make that impossible: **inline fix safe because reviewer still see it before commit** — never because it looked small.
 
 ## Hard rules
 
-1. **Route fix by size, not by feel.** **Micro-fix** (see *Micro-fix or implementer*) you apply yourself, here. Anything else — and anything unsure — go through **wa-implementer** in fix mode. Fresh one get conventions dir and re-read every module before touching; resumed one already hold them (see *Reusing the coding run's agents*).
-2. **Always re-verify before task close.** *When* depend on `review.when`: `each_round` → verifier round after every fix; `on_validation` (default) → none here, one pass over whole diff at `/wa-validate`. Never allowed: zero. Tiny changes exactly ones that break style and architecture. None reach commit unreviewed.
-3. **Re-run app per `verify.mode`.** `always` → re-drive every round: prior runtime proof void moment code changed. `autopilot` (attended here) or `off` → nobody drive; say `run: yours`, user re-test. Never allowed: claim check that wasn't run.
+1. **Route fix by size, not by feel.**
+   - **Micro-fix** (see *Micro-fix or implementer*) → you apply yourself, here.
+   - Anything else, and anything unsure → go through **wa-implementer** in fix mode.
+   - Fresh implementer get conventions dir and re-read every module before touching. Resumed one already hold them (see *Reusing the coding run's agents*).
+2. **Always re-verify before task close.** *When* depend on `review.when`:
+   - `each_round` → verifier round after every fix.
+   - `on_validation` (default) → none here, one pass over whole diff at `/wa-validate`.
+   - Never allowed: zero. Tiny changes exactly ones that break style and architecture. None reach commit unreviewed.
+3. **Re-run app per `verify.mode`.**
+   - `always` → re-drive every round: prior runtime proof void moment code changed.
+   - `autopilot` (attended here) or `off` → nobody drive; say `run: yours`, user re-test.
+   - Never allowed: claim check that wasn't run.
 4. **Never mark task done, ever.** This command iterate; **`/wa-validate`** review, **`/wa-close`** close. Round end at `to-test`, waiting user next test.
 5. **`github`: one round = one lock + one push.** Claim at start, commit + push at end — **wa-board → Task store → `github` — task branch and rounds**. Nothing pushed mid-round.
 
 ## Micro-fix or implementer
 
-Isolated agent cost ~50k tokens before reading line. For "make button secondary" that absurd — **review still run before commit anyway** (always: `review.when: each_round` review the round, `on_validation` review cumulative diff at `/wa-validate`). So main thread may apply fix itself, under bounded definition.
+- Isolated agent cost ~50k tokens before reading line.
+- For "make button secondary" that absurd — **review still run before commit anyway**. Always:
+  - `review.when: each_round` → review the round
+  - `on_validation` → review cumulative diff at `/wa-validate`
+- So main thread may apply fix itself, under bounded definition.
 
 **Micro-fix — all of these, no exception:**
 - ≤ 2 files touched, ≤ ~20 changed lines total;
@@ -30,20 +46,34 @@ Isolated agent cost ~50k tokens before reading line. For "make button secondary"
 - local edits only: wording, string, color, spacing, constant, rename inside file, condition tweak, parameter default, swap component variant;
 - triage said **defect** or **adjustment** — never *new scope*.
 
-Anything else → **implementer**. Doubt → **implementer**. `review.inline_micro_fixes: false` in config → implementer, always.
+Otherwise:
+- Anything else → **implementer**.
+- Doubt → **implementer**.
+- `review.inline_micro_fixes: false` in config → implementer, always.
 
 **Applying micro-fix yourself, cost of shortcut:**
 1. **Read governing convention module first** — `style.md`, plus `swiftui.md` for view, `elegance.md` for logic. Once per session enough. You hold rules for this edit; nobody hand them to you.
 2. **Minimal diff, no explanatory comments** (`style.md`), same as implementer would.
 3. **Re-run build + tests** yourself (`build.command` / `build.test_command`, else language default). Red → fix or escalate; never leave red tree.
-4. **Re-run app** only when `verify.mode: always` and surface run. Can't drive from here → escalate to implementer, it hold build session. Other modes → nothing to drive, user test it.
-5. **Tag hunks `inline`** in `## Feedback`. At review time (step 5, or `/wa-validate`) tell verifier explicit: *"these hunks written by main thread, no convention pass — judge harder."* Inline fix = one place rulebook wasn't in context.
+4. **Re-run app** only when `verify.mode: always` and surface run.
+   - Can't drive from here → escalate to implementer, it hold build session.
+   - Other modes → nothing to drive, user test it.
+5. **Tag hunks `inline`** in `## Feedback`.
+   - At review time (step 5, or `/wa-validate`) tell verifier explicit: *"these hunks written by main thread, no convention pass — judge harder."*
+   - Inline fix = one place rulebook wasn't in context.
 
-**Escalate mid-fix, without finishing.** Need third file, or new type, or "one line" turn out layer decision → **stop, hand whole item to implementer.** Micro-fix that grew exactly the change that shouldn't be inline; don't push through because you started.
+**Escalate mid-fix, without finishing.** Any of these → **stop, hand whole item to implementer.**
+- Need third file.
+- Need new type.
+- "One line" turn out layer decision.
+
+Micro-fix that grew exactly the change that shouldn't be inline; don't push through because you started.
 
 ## Reusing the coding run's agents
 
-`/wa-code` noted `agentId` of every agent it spawned (implementer, verifier). Same session → still reachable, still hold conventions, BRIEF, code, runtime checklist. **Resume them** (`SendMessage` to id) instead of fresh spawn: feedback round then cost delta, not full re-read of feature.
+- `/wa-code` noted `agentId` of every agent it spawned (implementer, verifier).
+- Same session → still reachable, still hold conventions, BRIEF, code, runtime checklist.
+- **Resume them** (`SendMessage` to id) instead of fresh spawn: feedback round then cost delta, not full re-read of feature.
 
 Rules = `/wa-code` → *Resuming, rounds 2+*, in full — delta only, anti-stale warning every time, respawn fresh past 3 rounds. Two things specific here:
 
@@ -52,30 +82,79 @@ Rules = `/wa-code` → *Resuming, rounds 2+*, in full — delta only, anti-stale
 
 ## Do
 
-1. **Resolve task.** Arg = task id (`/wa-feedback 42 the button should be secondary`), resolve per **wa-board → Task ids**. No task given → the `coding` one, else most recent `to-test`. Ambiguous → ask, don't guess. Read `.whackagent/config.md` + the task per **wa-board → Task store** (need `## Acceptance criteria`, `## Implementation`, `## Review`, `## Verification`). `{…}` paths come from config `paths:` block — see **wa-board → Paths**.
+1. **Resolve task.**
+   - Arg = task id (`/wa-feedback 42 the button should be secondary`), resolve per **wa-board → Task ids**.
+   - No task given → the `coding` one, else most recent `to-test`. Ambiguous → ask, don't guess.
+   - Read `.whackagent/config.md` + the task per **wa-board → Task store** (need `## Acceptance criteria`, `## Implementation`, `## Review`, `## Verification`).
+   - `{…}` paths come from config `paths:` block — see **wa-board → Paths**.
    - **`to-close` → review it passed now stale.** Apply notes as usual, then set back to `to-test`: task need fresh `/wa-validate` before `/wa-close`. Never close on review predating last edit.
-   - **Right branch first.** Task delivered by `/wa-autopilot` — or `/wa-code` with `branch.per_task: true` — live on `<branch.prefix><key>`. Check current branch; if work not here, say which branch it on and switch **only after user confirms** (their tree may be dirty). On sprint test branch with clean tree → switch without asking (**wa-board → Sprint test branch → Leaving it**); values tweaked there while testing → carry them over, they're feedback. Never apply feedback to branch that don't hold the code — never to test branch itself. `github` → `git fetch` + pull first: last round may come from another machine.
-   - **Stacked task** (`stacked on:` line in `## Implementation`) → blocker branch moved since → rebase task own commits onto its new tip first, update the line (**wa-board → Dependencies → Stacking**). Feedback on blocker itself → say its stacked dependents go stale until their next round.
-   - **`github` → take the task.** `github-board claim <n> coding` (from `to-test` / `to-close`). Exit 3 → name owner + age, stop. Exit 4 → say state, stop. PR already **ready** (`/wa-close` ran) → `gh pr ready --undo` before touching code: nobody merges code that moves again.
+   - **Right branch first.** Task delivered by `/wa-autopilot` — or `/wa-code` with `branch.per_task: true` — live on `<branch.prefix><key>`. Check current branch:
+     - Work not here → say which branch it on, switch **only after user confirms** (their tree may be dirty).
+     - On sprint test branch with clean tree → switch without asking (**wa-board → Sprint test branch → Leaving it**). Values tweaked there while testing → carry them over, they're feedback.
+     - Never apply feedback to branch that don't hold the code — never to test branch itself.
+     - `github` → `git fetch` + pull first: last round may come from another machine.
+   - **Stacked task** (`stacked on:` line in `## Implementation`):
+     - Blocker branch moved since → rebase task own commits onto its new tip first, update the line (**wa-board → Dependencies → Stacking**).
+   - Feedback on blocker itself (other tasks stacked on it) → say its stacked dependents go stale until their next round.
+   - **`github` → take the task.** `github-board claim <n> coding` (from `to-test` / `to-close`).
+     - Exit 3 → name owner + age, stop.
+     - Exit 4 → say state, stop.
+     - Claim won, PR already **ready** (`/wa-close` ran) → `gh pr ready --undo` before touching code: nobody merges code that moves again.
 2. **Triage each feedback item** — say out loud which bucket, one line each:
    - **defect** — don't match acceptance criteria → fix, criteria unchanged.
    - **adjustment** — work, but not what user want (naming, placement, wording, behavior detail) → fix, and **update `## Acceptance criteria`** so criteria match reality; else verify re-fail on old criterion forever.
    - **new scope** — feature task never covered → **do not code it**. Propose `/wa-task <desc>`. Say plain: "that's a new task, not feedback."
    - **rule** — durable preference ("always X", "never Y", "I told you this last time") → see *Capture the rule* below, then treat as adjustment.
    Unclear which bucket → **stop and ask**. Never silently widen scope.
-3. **Capture the rule.** Feedback stating general preference must land in `{conventions}/<module>.md`, not just this fix — that how rule stop being forgotten next round. Pick module by what it govern (style / elegance / architecture-\* / testing), draft line in module own voice, **show it and ask before writing**. Never rewrite unrelated parts of module. Belong nowhere → put in `.whackagent/config.md` free-form notes instead (that file never move).
+3. **Capture the rule.**
+   - Feedback stating general preference must land in `{conventions}/<module>.md`, not just this fix: that how rule stop being forgotten next round.
+   - Pick module by what it govern (style / elegance / architecture-\* / testing).
+   - Draft line in module own voice, **show it and ask before writing**.
+   - Never rewrite unrelated parts of module.
+   - Belong nowhere → put in `.whackagent/config.md` free-form notes instead (that file never move).
 4. **Fix.** **Route each item first** (*Micro-fix or implementer*) and **say route out loud**, one word per item: `inline` or `implementer`. Mixed batch → apply inline ones yourself, dispatch rest; never split single item across both.
    - **Inline** — apply per five steps of that section: governing module read, minimal diff, build + tests, runtime check if mode owe one, hunks tagged `inline`. Grew past bounds → escalate whole item, don't finish it.
-   - **Implementer** — **wa-implementer** in **fix mode**, one dispatch per coherent batch (sequential — builds collide otherwise). Resume task implementer by id when you have one: send feedback items **verbatim in user words** plus your triage, nothing else — it already have task, conventions, code it wrote. Fresh spawn otherwise (note id for next round): task ref, conventions dir, feedback + triage, changed-files context from `## Implementation`, `build.command`/`build.test_command` when config set them, `autopilot: false`. Either way tell it: fix only what named, minimal diff, no explanatory comments, re-run build/tests.
+   - **Implementer** — **wa-implementer** in **fix mode**, one dispatch per coherent batch (sequential — builds collide otherwise).
+     - Resume task implementer by id when you have one: send feedback items **verbatim in user words** plus your triage, nothing else. It already have task, conventions, code it wrote.
+     - Fresh spawn otherwise (note id for next round). Send: task ref, conventions dir, feedback + triage, changed-files context from `## Implementation`, `build.command`/`build.test_command` when config set them, `autopilot: false`.
+     - Either way tell it: fix only what named, minimal diff, no explanatory comments, re-run build/tests.
    - `RESULT: blocked` → **stop and ask** the `BLOCKED:` question. Don't guess what user meant.
-5. **Re-verify — only when `review.when: each_round`.** `on_validation` (default) → skip, echo `review: → /wa-validate`, go to step 6: feedback round then implementer + runtime check only, verifier judge everything at once when user give green light. Keep round diff hunks noted in `## Implementation` — `/wa-validate` need cumulative diff.
-   Dispatch one **wa-verifier**, scoped to files this fix touched, diff hunks inline, **flagging which hunks came from inline fix** so they get harder look. Resume by id when you have one: send hunks plus its earlier findings to re-state as fixed or still open; fresh spawn with modules + hunks otherwise. Check its `LENSES:` line cover all four, then severity-order findings. Autofix loop per `review.autofix` (cap 3 rounds, same as `/wa-code`). Append to task `## Review` under dated feedback round — don't overwrite original.
-6. **Re-run it — only when `verify.mode: always`.** Re-driven in step 4 — by you for inline fix, by implementer otherwise — against **updated** acceptance criteria; tell it explicit when triage moved them, it reuse its checklist otherwise. Failed checks → back through step 4. Can't run → stop and ask. Append to `## Verification`, keep previous round entry.
-   Other modes → append `round <n>: manual validation — not run by agent` and hand ball back: summary in step 8 say what to test, one line, so user know exactly what changed under their fingers.
-7. **Log it.** Append round to task `## Feedback`: what user asked (their words), triage, what changed, review verdict (`deferred` when `review.when: on_validation`), verify verdict, any rule captured. Refresh `{reports}/<key>.md`.
-   - **`github` → round end**: file `status: to-test`, commit (config author, **never Claude**), push to task branch — PR updates, lock released, card → To test (hook). Mergeable check per **Task store**. Round aborted before any push → `github-board release <n> coding --reset-to <state claimed from>`.
+5. **Re-verify — only when `review.when: each_round`.**
+   - `on_validation` (default) → skip, echo `review: → /wa-validate`, go to step 6.
+     - Feedback round then implementer + runtime check only. Verifier judge everything at once when user give green light.
+     - Keep round diff hunks noted in `## Implementation` — `/wa-validate` need cumulative diff.
+   - Otherwise dispatch one **wa-verifier**, scoped to files this fix touched, diff hunks inline, **flagging which hunks came from inline fix** so they get harder look.
+     - Resume by id when you have one: send hunks plus its earlier findings to re-state as fixed or still open.
+     - Fresh spawn with modules + hunks otherwise.
+     - Check its `LENSES:` line cover all four, then severity-order findings.
+     - Autofix loop per `review.autofix` (cap 3 rounds, same as `/wa-code`).
+     - Append to task `## Review` under dated feedback round — don't overwrite original.
+6. **Re-run it — only when `verify.mode: always`.**
+   - Re-driven in step 4 — by you for inline fix, by implementer otherwise — against **updated** acceptance criteria.
+     - Tell implementer explicit when triage moved criteria; it reuse its checklist otherwise.
+     - Failed checks → back through step 4.
+     - Can't run → stop and ask.
+     - Append to `## Verification`, keep previous round entry.
+   - Other modes → append `round <n>: manual validation — not run by agent` and hand ball back: summary in step 8 say what to test, one line, so user know exactly what changed under their fingers.
+7. **Log it.**
+   - Append round to task `## Feedback`:
+     - what user asked (their words)
+     - triage
+     - what changed
+     - review verdict (`deferred` when `review.when: on_validation`)
+     - verify verdict
+     - any rule captured
+   - Refresh `{reports}/<key>.md`.
+   - **`github` → round end**:
+     - File `status: to-test`, commit (config author, **never Claude**), push to task branch → PR updates, lock released, card → To test (hook).
+     - Mergeable check per **Task store**.
+     - Round aborted before any push → `github-board release <n> coding --reset-to <state claimed from>`.
    - **Task in sprint → rebuild sprint test branch**, check it out, per **wa-board → Sprint test branch** — user retests fix next to every other sprint feature. `files`: fix uncommitted → no build, stay on task branch.
-8. **Report + loop.** **wa-code → Report card**, feedback variant: header `## 🟢 <title> · feedback round <n>`, **Asked** (user words, short) replaces Problem + Goal, rest identical — Done, To test, status line, next. More notes → run again, next round. Feature match spec now → **`/wa-validate <id>`**: that fire verifier; **`/wa-close <id>`** end it after your retest. **Never set `done` here, never commit** (`github`: round-end commit + push only) — say next command instead.
+8. **Report + loop.**
+   - **wa-code → Report card**, feedback variant: header `## 🟢 <title> · feedback round <n>`, **Asked** (user words, short) replaces Problem + Goal, rest identical — Done, To test, status line, next.
+   - More notes → run again, next round.
+   - Feature match spec now → **`/wa-validate <id>`**: that fire verifier; **`/wa-close <id>`** end it after your retest.
+   - **Never set `done` here, never commit** (`github`: round-end commit + push only) — say next command instead.
 
 ## Asking
 

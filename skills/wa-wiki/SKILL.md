@@ -7,7 +7,7 @@ description: Answers from the project wiki. No argument: syncs the wiki with rec
 
 Two modes, picked by argument.
 
-Wording (whole conversation + reports + PRs): **wa-board → Voice** — telegraphic, tech terms stay English in every language (franglais, never literal translation).
+Wording (whole conversation + reports + PRs): **wa-board → Voice** — telegraphic, grammar last, bullets over prose, tech terms stay English in every language (franglais, never literal translation).
 
 - **`/wa-wiki`** (no arg) → **update** mode: sync wiki with changes.
 - **`/wa-wiki <feature or question>`** → **query** mode: look up project knowledge, answer.
@@ -18,16 +18,26 @@ Read `.whackagent/config.md` first — its `paths:` block say where `{wiki}` and
 
 Task status + report handled by `/wa-code`. This step keep shared knowledge true.
 
-**`/wa-close` runs it automatically**, scoped to the task it closes (its diff, `wiki:` field, report) — before its commit. Manual `/wa-wiki` = sync outside a task (hand-made changes, backlog of closed tasks never synced).
+- **`/wa-close` runs it automatically**, before its commit, scoped to the task it closes (its diff, `wiki:` field, report).
+- Manual `/wa-wiki` = sync outside a task (hand-made changes, backlog of closed tasks never synced).
 
-1. **Figure out what changed** — called by `/wa-close` → that task only. Manual → recent `done` tasks, latest `{reports}/*.md`, and/or git diff since last sync.
+1. **Figure out what changed**
+   - Called by `/wa-close` → that task only.
+   - Manual → recent `done` tasks, latest `{reports}/*.md`, and/or git diff since last sync.
 2. **Wiki.** Update or create affected pages, under `{wiki}/`:
    - Reflect new/changed behavior in relevant `[[page]]`(s).
    - Cross-link: wiki↔wiki, link task where useful.
    - Create any page a task's `wiki:` flagged missing.
    - Keep narrative (*why* + shape), not code dump.
-   - **Compress** (if `compress_wiki: true`): run **caveman-compress** on each page written, then delete `*.original.md` backup. Wiki only, and never `pitch.md` (`/wa-pitch` page — humans reread it). **`{wiki}` outside `.whackagent/` → say it once and recommend `compress_wiki: false`**: wiki moved into project tree is one humans read, caveman prose buys tokens at their expense.
-3. **Commit (only if allowed).** Called by `/wa-close` → **never commit here**: close commits pages with code, one commit. Manual run: if `commit.auto_commit_after_validation: true` AND task is `to-close` or `done` (i.e. went through `/wa-validate`), commit with configured author name/email — **never** as Claude. Else leave it. Outside autopilot, never commit unvalidated work.
+   - **Compress** (if `compress_wiki: true`): run **caveman-compress** on each page written, then delete `*.original.md` backup.
+     - Wiki only, and never `pitch.md` (`/wa-pitch` page — humans reread it).
+     - **`{wiki}` outside `.whackagent/` → say it once and recommend `compress_wiki: false`**: wiki moved into project tree is one humans read, caveman prose buys tokens at their expense.
+3. **Commit (only if allowed).**
+   - Called by `/wa-close` → **never commit here**: close commits pages with code, one commit.
+   - Manual run → commit only if `commit.auto_commit_after_validation: true` AND task is `to-close` or `done` (i.e. went through `/wa-validate`).
+     - Then: configured author name/email — **never** as Claude.
+     - Else leave it.
+   - Outside autopilot, never commit unvalidated work.
 
 Stop and ask if can't tell which page a change belongs to — don't scatter duplicates.
 
