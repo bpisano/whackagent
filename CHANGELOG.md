@@ -4,6 +4,16 @@ All notable changes to whackagent are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- GitHub provider: `wa-backlog merge <pr>` merges one ticket PR through GitHub's async merge API, the only one that accepts a stacked PR. It refuses while a PR below it in the stack is still open, never bypasses repository rules, and waits for GitHub's result.
+
+### Changed
+
+- GitHub provider: stacked tickets now form a real [GitHub stack](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs) instead of PRs merely chained by base branch. `/wa-autopilot` links each dependent PR on top of its blocker with the new `wa-backlog stack` verb, and a round that pushes to a lower ticket rebases the tickets above so the stack stays mergeable. The hooks mark a ticket merged mid-stack `done` on the stack's base.
+- GitHub provider: `/wa-close` merges with `wa-backlog merge` instead of `gh pr merge`, which GitHub refuses for stacked PRs.
+- Board contract 2.1: `BOARD.md` tells every agent to merge with the board CLI's `merge`, to put a stacked PR in its blocker's GitHub stack, and to rebase the tickets above after pushing a lower one (claiming each first). `/wa-setup backlog` offers the refresh PR, which also updates the CLI copy in `.github/board/`.
+
 ## [1.0.0] - 2026-10-09
 
 ### Added

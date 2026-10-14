@@ -116,7 +116,7 @@ flowchart LR
 | `/wa-feedback <n> <notes>` | `coding` | ready PR → back to draft first, commit + push | draft |
 | `/wa-validate <n>` | `coding` | verifier + autofix. Clean → wiki sync, rebase if base moved, commit + push | **ready**, reviewers requested. Findings open → stays draft |
 | `/wa-autopilot` | `coding` per ticket | same as code + validate, unattended | ready (clean) · draft (findings) |
-| `/wa-close <n>` | `coding` (while merging) | checks → plan → your yes → `gh pr merge --squash` | merged → `done` |
+| `/wa-close <n>` | `coding` (while merging) | checks → plan → your yes → `wa-backlog merge` (squash, async API: works for stacked PRs) | merged → `done` |
 | `/wa-close <sprint>` | — | sprint PR, then merge (merge commit) on second yes | merged → sprint parent closed |
 
 - Every PR assigned to `@me`, plus `pr.assignees`.
@@ -179,7 +179,7 @@ sequenceDiagram
         A-->>U: plan block, ok?
         U->>A: yes
         A->>B: claim coding (no round pushes meanwhile)
-        A->>G: gh pr merge --squash
+        A->>G: wa-backlog merge (squash)
         G->>H: pull_request closed, merged
         H->>B: Status → done, issue closed, claim dropped
         A->>A: remove local worktree + branch

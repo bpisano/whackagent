@@ -185,7 +185,7 @@ Merges the ready PR for you, so you don't have to open GitHub. Merging there you
 
 1. Checks the PR can merge: checks green (or waits for pending ones), required reviews in, base not another ticket's open branch. A conflicting PR adds a rebase of the ticket's own commits to the plan. Criteria still unchecked in the body are named.
 2. Shows the plan (squash merge, base, branch and worktree cleanup) and waits for your yes, every time.
-3. Claims `coding` so no other round pushes meanwhile, then runs `gh pr merge --squash` (a merge commit for a track landing). Never `--admin`: when GitHub refuses, the claim is released back to `review` with the reason.
+3. Claims `coding` so no other round pushes meanwhile, then runs `wa-backlog merge <pr>`: a squash merge (a merge commit for a track landing) through GitHub's async merge API, the only one that accepts stacked PRs. Never `--admin`: when GitHub refuses, the claim is released back to `review` with the reason.
 4. The hook sets `done`, closes the issue and drops the claim. Locally, the worktree and branch go away.
 5. When that was the sprint's last ticket, it offers the sprint PR, and merging it (merge commit), as a second yes.
 
@@ -214,9 +214,16 @@ Same flow as with files. Readiness comes from `wa-backlog list --milestone`, and
 - **Sprint** = parent issue (`wa-sprint` label) with the tickets as sub-issues. `set-field <n> sprint <name>` creates the parent on first use; a grill split turns the split ticket itself into the parent. Ticket branches fork off the sprint branch `sprint/<name>`, and ticket PRs target it. When the last ticket lands, `/wa-close` proposes the sprint PR onto `close.target`; merging it closes the parent. A sprint left open after that (the PR declined, tickets closed elsewhere) lands later with `/wa-close <sprint>`: sprint PR if its branch still holds unlanded work, else the parent is closed (asked first). The backlog pane shows such a sprint with a `close` button. Without sprint branches (`WA_SPRINT_PREFIX=none`), the parent closes when its last sub-issue lands.
 - **Milestone** = release scope, not a sprint. You create milestones on GitHub. New tickets join the highest open one (version order of titles), so they never grow the scope that's about to ship. The hooks never touch milestones.
 - **Track** = long-shot feature on its own long-lived trunk (`branch.tracks: {server: develop_synchro}` in the config, keyed by milestone title). Tickets in that milestone fork from and PR into the track branch, and new tickets never land there by default: `/wa-setup` passes each track to `provision --track`, stored in the `WA_TRACKS` repo variable, so `create` skips it. The hooks need nothing new: track PRs merge like any other, and sync branches (`wa-sync/<track>-<date>`) don't match the ticket prefix. See [Tracks](README.md#tracks).
-- **Dependencies** = "blocked by" relationships. `/wa-autopilot` makes a ticket wait for its blocker's wave, or **stacks** it: the dependent PR targets the blocker's branch. Provisioning turns on `delete_branch_on_merge`, so merging the bottom PR deletes its branch and GitHub retargets the next PR automatically.
+- **Dependencies** = "blocked by" relationships. `/wa-autopilot` makes a ticket wait for its blocker's wave, or **stacks** it: the dependent PR targets the blocker's branch and `wa-backlog stack <pr> --on <blocker pr>` puts it in a [GitHub stack](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs) on top of the blocker. A chain of dependent tickets becomes one stack.
 
-> **Don't delete a stacked branch by hand.** GitHub retargets dependent PRs only when the branch is deleted at merge time. Deleting it later (`git push --delete`, the API) **closes** every PR based on it. Retarget those PRs first.
+### Stacked PRs
+
+- **Merging.** The merge box shows the stack map. `gh pr merge` refuses a stacked PR, so `/wa-close` merges through `wa-backlog merge`, one ticket at a time, bottom first: it refuses a PR while one below it is still open. On GitHub you can also merge a PR together with every PR below it, each squashed onto the stack's base, all or nothing. Either way, the PRs above retarget to the stack's base and GitHub rebases them itself, and the hooks mark every merged ticket `done`, landed on the stack's base.
+- **Rules and CI** come from the stack's base branch (usually the sprint branch), for every PR in the stack.
+- **The stack must stay linear.** GitHub refuses to merge a stack whose upper branch doesn't descend from the one below, even when each PR says it's mergeable. So any agent round that pushes to a lower ticket cascades: it claims each ticket above, rebases its ticket range onto the new branch below and pushes it.
+- **Stacks are linear, not trees.** When a blocker already has another PR on top of it, the new PR can't join the stack: it stays chained on the blocker's branch and its body names the merge order. For such chained PRs, provisioning turns on `delete_branch_on_merge`, so merging the blocker deletes its branch and GitHub retargets the PR.
+
+> **Don't delete a chained PR's base branch by hand.** GitHub retargets dependent PRs only when the branch is deleted at merge time. Deleting it later (`git push --delete`, the API) **closes** every PR based on it. Retarget those PRs first.
 
 ## Squash merges and the ticket range
 

@@ -1,4 +1,4 @@
-# whackagent board hooks — template version: 16 · board-contract: 2.0
+# whackagent board hooks — template version: 16 · board-contract: 2.1
 # Installed by /wa-setup from the whackagent plugin (providers/github/whackagent-board.yml).
 # Caller only: the logic lives in rlatapy-luna/whackagent and updates itself through the `hooks-v2` tag,
 # so this file changes only when its triggers, permissions or secrets do (/wa-setup backlog offers it).

@@ -1,4 +1,4 @@
-<!-- board-contract: 2.0 · sections BOARD.md → Pull requests requires: keep the three headings -->
+<!-- board-contract: 2.1 · sections BOARD.md → Pull requests requires: keep the three headings -->
 ## Ticket
 
 Closes #

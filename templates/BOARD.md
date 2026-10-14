@@ -1,4 +1,4 @@
-<!-- board-contract: 2.0 -->
+<!-- board-contract: 2.1 -->
 <!-- Installed by setup, its angle-bracket placeholders filled for this repository. Update through the setup PR, never by hand: the hooks,
      the board CLI and the PR template carry the same contract version. -->
 
@@ -109,7 +109,7 @@ A winning claim assigns your account to the issue. Leave that assignment alone.
 
 - Claim `coding` first (from `review`), so no other round pushes while you merge. Exit `3` → stop.
 - Merge only a **ready** PR whose checks are green, whose required reviews are in, and whose base is not another ticket's open branch (stacked: the PR below merges first).
-- Use the merge style below: `gh pr merge <pr> --squash` for a ticket. Never `--admin`, never bypass branch protection.
+- Use the merge style below: `<board-cli> merge <pr>` for a ticket (squash; `--method merge` for a track landing). It merges that one PR through GitHub's async merge API, the only one that accepts a stacked PR, and refuses while a PR below it in the stack is open. Never `--admin`, never bypass branch protection.
 - GitHub refuses (checks, reviews, conflict) → `release <n> coding --reset-to review --reason "…"` and say why.
 
 Never merge a ticket branch locally. The workflow sets `done`, drops the claim and closes the issue on merge.
@@ -146,7 +146,9 @@ Never merge a ticket branch locally. The workflow sets `done`, drops the claim a
 ## Dependencies
 
 - Record them: `depend <n> --on <x>`. Read them: `get <n>` → `blocked_by`.
-- Ticket with an open blocker: wait, or **stack**: fork from the blocker's branch, PR base = that branch, body line `Stacked on #<pr>: merge it first`.
+- Ticket with an open blocker: wait, or **stack**: fork from the blocker's branch, PR base = that branch, then `<board-cli> stack <pr> --on <blocker pr>` puts the PR in the blocker's GitHub stack. Stacks are linear: when the blocker already has a PR on top (exit `4`), the PR stays chained on the blocker's branch with the body line `Stacked on #<pr>: merge it first`.
+- **Keep a stack linear.** GitHub refuses to merge a stack whose upper branch does not descend from the one below. A round that pushes to a ticket with PRs above it in its stack rebases each of them onto the new branch below: claim it `coding` first (exit `3` → leave it, say it needs a rebase), rebase only its own commits, push with `--force-with-lease`.
+- After a stacked PR merges, GitHub retargets the PRs above it and rebases their branches itself: start your next round from the remote branch, never push an older local copy over it.
 - **Never delete a branch by hand** while PRs are based on it: GitHub retargets them only when the branch is deleted by a merge. Deleting it later closes them.
 
 ## Locks
@@ -171,9 +173,9 @@ Read those comments when you take a ticket, and fix what they name.
 - Merge a PR your user did not ask you to merge, merge with an admin override, or merge a ticket branch locally.
 - Push in the middle of a round to a branch with an open PR.
 - Create, rename or close milestones; create labels.
-- Force-push without `--force-with-lease`, or force-push a branch that is not your ticket's.
+- Force-push without `--force-with-lease`, or force-push a branch whose ticket you have not claimed.
 - Delete a branch other PRs are based on.
 
 ## Version
 
-This file carries `board-contract: 2.0` in its first line. The board CLI, the board workflow and the PR template sections carry the same version. The CLI warns when this file's version differs from its own: update them together with the setup PR, never one file by hand.
+This file carries `board-contract: 2.1` in its first line. The board CLI, the board workflow and the PR template sections carry the same version. The CLI warns when this file's version differs from its own: update them together with the setup PR, never one file by hand.

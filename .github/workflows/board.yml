@@ -1,4 +1,4 @@
-# whackagent board hooks — reusable logic, board contract 2.0 (templates/BOARD.md, installed in each project as
+# whackagent board hooks — reusable logic, board contract 2.1 (templates/BOARD.md, installed in each project as
 # BOARD.md). Projects never copy this file: their caller (providers/github/whackagent-board.yml, installed by
 # /wa-setup) holds the triggers, permissions and concurrency, and runs this through
 # `uses: rlatapy-luna/whackagent/.github/workflows/board.yml@hooks-v2`. Each release moves `hooks-v2`, so every
@@ -21,7 +21,8 @@
 #   push to a ticket PR, no coding claim    → reported on the PR, board untouched
 #   PR merged (any base)                   → done, issue closed, run report of the PR body (between
 #                                            <!-- wa-report --> markers) posted on it; sprint parent closed when the
-#                                            sprint has no branch and its last sub-issue is done
+#                                            sprint has no branch and its last sub-issue is done. Stacked PR: landed
+#                                            on its GitHub stack's base, not on the parent branch it targeted
 #   sprint branch PR merged                → sprint parent issue closed (sprint landed)
 #   PR closed unmerged                     → grilled, unless a coding claim or another open PR keeps the ticket going
 #   schedule / manual run                  → report-only check: board vs repository, one comment per problem on the
@@ -538,17 +539,19 @@ jobs:
               }
 
               if (action === "closed" && pr.merged) {
+                // mid-stack PR keeps its parent branch as base; a stack merge lands it on the stack base
+                const landed = pr.stack?.base?.ref ?? pr.base.ref;
                 await setState(ticket, "done");
                 await release(number, "grilling");
                 await release(number, "coding");
                 if (ticket.issue.state === "open") await closeIssue(number);
                 // run report: local file the skills copy into the PR body, posted only when there
                 const report = /<!-- wa-report -->([\s\S]*?)<!-- \/wa-report -->/.exec(pr.body ?? "")?.[1].trim();
-                await comment(number, `🎉 **done** — #${pr.number} merged into \`${pr.base.ref}\`${report ? `\n\n${report}` : ""}`);
+                await comment(number, `🎉 **done** — #${pr.number} merged into \`${landed}\`${report ? `\n\n${report}` : ""}`);
                 // Sprint without branch: tickets land straight on the target, so the last one lands the sprint.
                 // With a branch, they land in it and the sprint lands with the sprint branch PR (above).
                 const parent = await sprintParent(number);
-                if (parent && parent.state === "OPEN" && pr.base.ref !== sprintPrefix + sprintName(parent.title)) {
+                if (parent && parent.state === "OPEN" && landed !== sprintPrefix + sprintName(parent.title)) {
                   const { data: subs } = await github.request("GET /repos/{owner}/{repo}/issues/{issue_number}/sub_issues",
                     { owner, repo, issue_number: parent.number, per_page: 100 });
                   if (subs.every((s) => s.state === "closed")) await closeSprint(parent.number, `last ticket #${number} landed`);

@@ -31,6 +31,8 @@ Local cache: `<git-common-dir>/whackagent/github-cache.json` (ids, shared by all
 | excluded | label `wa-ignore` |
 | dependencies | issue **Relationships** (blocked by) — `depend`, read back in `get` → `blocked_by` |
 | ticket PR | issue linked in PR **Development** by hooks, any base (GitHub alone links `Closes #<n>` only when base = default branch). No PR milestone: ticket carries it. `link-pr <n> <pr>` = manual repair |
+| stacked PRs | GitHub stack (REST `repos/{repo}/stacks`) — `stack <pr> --on <blocker pr>` creates it or adds PR on top (PR base must = blocker branch, blocker must be top, else exit 4); `stack <pr>` reads it (base, PRs bottom → top with ticket) |
+| ticket merge | `merge <pr> [--method squash\|merge]` — async merge API (`pulls/<pr>/merge-async`, head sha pinned), waits for the result. Only API that merges a stacked PR; open PR below it in stack, draft or closed → exit 4, GitHub refusal → exit 4 with reason. Never bypasses rules |
 | PR screenshots | GitHub user-attachments via `gh image` (extension `drogers0/gh-image`), never a branch — `screenshots <pr> <files>` uploads and rewrites the body's `## Screenshots` section (UI changes only); `<caption>=<url>` = image already uploaded (browser fallback when `gh image` has no upload token) |
 
 Every issue = ticket (opt-out `wa-ignore`). Project draft items = not tickets: no number, no branch, no `Closes #`. `/wa-board` lists them to convert.
@@ -47,7 +49,7 @@ Every issue = ticket (opt-out `wa-ignore`). Project draft items = not tickets: n
 | `pull_request: ready_for_review/converted_to_draft` | — | nothing moves, claim untouched (agent mid-round may flip it) — draft = human tests, ready = human merges (GitHub UI or `/wa-close`) |
 | `pull_request: synchronize` | coding claim exists | `review`, claim deleted (agent round over); `## Feedback` rounds new since previous head linked (line permalink, embedded snippet) on ticket and PR |
 | `pull_request: synchronize` | no coding claim, not `done`, head not a GitHub web merge | reported on PR (push without claim), board untouched |
-| `pull_request: closed`, merged | any base | `done`, issue closed, claims deleted. Sprint without branch + last sub-issue closed → sprint parent closed |
+| `pull_request: closed`, merged | any base — stacked PR: landed on stack base (`pull_request.stack.base.ref`), not its parent branch | `done`, issue closed, claims deleted. Sprint without branch + last sub-issue closed → sprint parent closed |
 | `pull_request: closed`, merged, head `<WA_SPRINT_PREFIX><name>` | — | sprint parent `<name>` closed (sprint landed) |
 | `pull_request: closed`, unmerged | not `done`, no coding claim, no other open PR for ticket | `grilled`, coding claim deleted |
 | `schedule` (`17 6 * * 1-5`, weekdays 06:17 UTC) / `workflow_dispatch` | — | **report-only check**: per ticket, card vs repo data (lock column without claim, claim with nothing new for `WA_STALE_AFTER_HOURS`, `review` without open PR, PR open but card `todo`/`grilled`, merged but not `done`, `grilled` without spec, criteria in body but `todo`, `done` but issue open, closed but lock column, closed as completed but not `done`). One comment per problem (marker `<!-- board-check:<kind> -->`), flipped to resolved once cleared; job summary table. Never moves cards |

@@ -20,6 +20,7 @@ import os
 import socket
 import subprocess
 import sys
+import time
 from pathlib import Path
 from urllib.parse import quote
 
@@ -62,7 +63,7 @@ SPRINT_LABEL = "wa-sprint"
 EXIT_ERROR, EXIT_USAGE, EXIT_TAKEN, EXIT_WRONG_STATE = 1, 2, 3, 4
 # Board contract this script implements: the project's BOARD.md, its PR template sections and its workflow
 # caller carry the same stamp. Installed and updated together by the setup PR.
-CONTRACT_VERSION = "2.0"
+CONTRACT_VERSION = "2.1"
 # Built-in Project workflows that set Status on their own, against the board contract.
 CONFLICTING_WORKFLOWS = {"Pull request linked to issue"}
 
@@ -863,6 +864,92 @@ def op_link_pr(args):
     emit({"number": args.number, "pr": args.pr, "linked": True})
 
 
+def stack_view(config, number):
+    stack = rest("GET", f"repos/{config['repo']}/stacks/{number}")
+    pattern = re.compile(re.escape(config["branch_prefix"]) + r"(\d+)-")
+    prs = []
+    for pr in stack["pull_requests"]:
+        ticket = pattern.match(pr["head"]["ref"])
+        prs.append(
+            {
+                "pr": pr["number"],
+                "ticket": int(ticket.group(1)) if ticket else None,
+                "branch": pr["head"]["ref"],
+                "state": "merged" if pr.get("merged_at") else pr["state"],
+                "draft": pr.get("draft", False),
+            }
+        )
+    return {"stack": stack["number"], "base": stack["base"]["ref"], "open": stack["open"], "prs": prs}
+
+
+def op_stack(args):
+    """Show the GitHub stack PR <pr> belongs to, or with --on put <pr> on top of <blocker>'s stack.
+
+    GitHub stacks are linear: <pr> must target <blocker>'s branch and <blocker> must be the top.
+    """
+    config = load()
+    repo = config["repo"]
+    pr = rest("GET", f"repos/{repo}/pulls/{args.pr}")
+    if args.on is None:
+        if not pr.get("stack"):
+            emit({"pr": args.pr, "stack": None})
+            return
+        emit(stack_view(config, pr["stack"]["number"]))
+        return
+    blocker = rest("GET", f"repos/{repo}/pulls/{args.on}")
+    if pr["base"]["ref"] != blocker["head"]["ref"]:
+        raise Failure(f"#{args.pr} targets {pr['base']['ref']}, not #{args.on}'s branch {blocker['head']['ref']}", EXIT_WRONG_STATE)
+    below, mine = blocker.get("stack"), pr.get("stack")
+    if mine:
+        if below and mine["number"] == below["number"]:
+            emit(stack_view(config, mine["number"]))
+            return
+        raise Failure(f"#{args.pr} already in stack {mine['number']}", EXIT_WRONG_STATE)
+    if not below:
+        stack = rest("POST", f"repos/{repo}/stacks", {"pull_requests": [args.on, args.pr]})
+    elif below["position"] == below["size"]:
+        stack = rest("POST", f"repos/{repo}/stacks/{below['number']}/add", {"pull_requests": [args.pr]})
+    else:
+        raise Failure(f"#{args.on} is not the top of stack {below['number']}: stacks are linear", EXIT_WRONG_STATE)
+    emit(stack_view(config, stack["number"]))
+
+
+def op_merge(args):
+    """Merge PR <pr> alone through the async merge API, the only one GitHub accepts for a stacked PR.
+
+    A stack merge also lands every open PR below, so a PR with open PRs below it is refused.
+    """
+    config = load()
+    repo = config["repo"]
+    pr = rest("GET", f"repos/{repo}/pulls/{args.pr}")
+    if pr.get("merged"):
+        emit({"pr": args.pr, "status": "merged", "sha": pr.get("merge_commit_sha")})
+        return
+    if pr["state"] != "open" or pr.get("draft"):
+        raise Failure(f"#{args.pr} is {'draft' if pr.get('draft') else pr['state']}", EXIT_WRONG_STATE)
+    if pr.get("stack"):
+        prs = stack_view(config, pr["stack"]["number"])["prs"]
+        below = [p["pr"] for p in prs[: pr["stack"]["position"] - 1] if p["state"] == "open"]
+        if below:
+            raise Failure(f"#{below[-1]} below it in stack {pr['stack']['number']} merges first", EXIT_WRONG_STATE)
+    path = f"repos/{repo}/pulls/{args.pr}/merge-async"
+    code, result = rest("PUT", path, {"merge_method": args.method, "sha": pr["head"]["sha"]}, check=False)
+    result = result or {}
+    uuid = (result.get("details") or {}).get("uuid")
+    if code != 0 and not uuid:
+        raise Failure(f"merge #{args.pr}: {result.get('message') or result}")
+    deadline = dt.datetime.now() + dt.timedelta(seconds=args.timeout)
+    while result.get("status") == "pending" or (code != 0 and uuid):
+        if dt.datetime.now() > deadline:
+            raise Failure(f"merge #{args.pr} still pending after {args.timeout}s (request {uuid})")
+        time.sleep(2)
+        code, result = 0, rest("GET", f"{path}/{uuid}")
+    details = result.get("details") or {}
+    if result.get("status") == "failed":
+        raise Failure(f"merge #{args.pr} refused: {details.get('message') or result}", EXIT_WRONG_STATE)
+    emit({"pr": args.pr, "status": result.get("status"), "sha": details.get("sha") or details.get("oid")})
+
+
 def blocked_by(config, number):
     rows = rest("GET", f"repos/{config['repo']}/issues/{number}/dependencies/blocked_by")
     return [{"number": r["number"], "state": r["state"]} for r in rows]
@@ -947,7 +1034,7 @@ def op_provision(args):
         number, created = project["number"], True
     project_id, url, fields = project_fields(owner_kind, owner, number)
     repo_id = rest("GET", f"repos/{repo}")["node_id"]
-    # Stacked PRs retarget to the next base only when their base branch is deleted on merge.
+    # A PR based on a branch outside a GitHub stack retargets only when that branch is deleted on merge.
     rest("PATCH", f"repos/{repo}", {"delete_branch_on_merge": True})
     graphql(
         "mutation($p:ID!,$r:ID!){linkProjectV2ToRepository(input:{projectId:$p,repositoryId:$r}){clientMutationId}}",
@@ -1104,6 +1191,17 @@ def parser():
     s.add_argument("number", type=int)
     s.add_argument("pr", type=int)
     s.set_defaults(func=op_link_pr)
+
+    s = sub.add_parser("stack", help="GitHub stack of PR <pr>; --on <blocker pr> puts it on top of the blocker")
+    s.add_argument("pr", type=int)
+    s.add_argument("--on", type=int, help="blocker PR, its branch = <pr>'s base")
+    s.set_defaults(func=op_stack)
+
+    s = sub.add_parser("merge", help="merge PR <pr> alone (async API, works for stacked PRs); open PRs below it → exit 4")
+    s.add_argument("pr", type=int)
+    s.add_argument("--method", choices=["squash", "merge"], default="squash")
+    s.add_argument("--timeout", type=int, default=300, help="seconds to wait for GitHub to finish the merge")
+    s.set_defaults(func=op_merge)
 
     s = sub.add_parser("screenshots", help="upload images with gh image, show them in the PR body")
     s.add_argument("pr", type=int)
