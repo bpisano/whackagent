@@ -4,6 +4,8 @@ All notable changes to whackagent are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-14
+
 ### Added
 
 - GitHub provider: `wa-backlog merge <pr>` merges one ticket PR through GitHub's async merge API, the only one that accepts a stacked PR. It refuses while a PR below it in the stack is still open, never bypasses repository rules, and waits for GitHub's result.
