@@ -1041,7 +1041,23 @@ def op_provision(args):
     owner_kind, owner_id = owner_node(owner)
     created = False
     if args.project:
+        if args.template:
+            raise Failure("--template copies into a new project: pass it with --title, not --project", EXIT_USAGE)
         number = args.project
+    elif args.template:
+        source_owner, _, source_number = args.template.rpartition("/")
+        source_owner = source_owner or owner
+        if not source_number.isdigit():
+            raise Failure(f"--template expects [OWNER/]NUMBER, got {args.template!r}", EXIT_USAGE)
+        source_id = project_fields(owner_node(source_owner)[0], source_owner, int(source_number))[0]
+        project = graphql(
+            """mutation($p:ID!,$o:ID!,$t:String!){copyProjectV2(input:{
+                projectId:$p,ownerId:$o,title:$t,includeDraftIssues:false}){projectV2{number}}}""",
+            p=source_id,
+            o=owner_id,
+            t=args.title,
+        )["copyProjectV2"]["projectV2"]
+        number, created = project["number"], True
     else:
         project = graphql(
             "mutation($o:ID!,$t:String!){createProjectV2(input:{ownerId:$o,title:$t}){projectV2{number}}}",
@@ -1106,6 +1122,7 @@ def op_provision(args):
             "project_url": url,
             "project_number": number,
             "project_created": created,
+            "project_template": args.template,
             "status_options_added": changed_status,
             "size_field_created": size_created,
             "variables": variables,
@@ -1114,6 +1131,17 @@ def op_provision(args):
             "conflicting_workflows": conflicting,
         }
     )
+
+
+def op_templates(args):
+    owner = args.owner or current_repo().split("/")[0]
+    kind = owner_node(owner)[0]
+    nodes = graphql(
+        f"""query($l:String!){{{kind}(login:$l){{projectsV2(first:100,query:"is:template"){{
+            nodes{{number title url template closed}}}}}}}}""",
+        l=owner,
+    )[kind]["projectsV2"]["nodes"]
+    emit([{"number": n["number"], "title": n["title"], "url": n["url"]} for n in nodes if n["template"] and not n["closed"]])
 
 
 # ---------------------------------------------------------------- cli
@@ -1246,6 +1274,9 @@ def parser():
     target.add_argument("--title", help="create a new project with this title")
     target.add_argument("--project", type=int, help="adopt an existing project number")
     s.add_argument("--owner", help="project owner login (default: repo owner)")
+    s.add_argument(
+        "--template", metavar="[OWNER/]NUMBER", help="with --title: copy this project template (views, fields, workflows)"
+    )
     s.add_argument("--status-field", default="Status")
     s.add_argument("--size-field", default="Size")
     s.add_argument("--state", action="append", metavar="STATE=OPTION", help="map a state onto an existing option")
@@ -1255,6 +1286,10 @@ def parser():
     s.add_argument("--stale-after-hours", type=int, default=24)
     s.add_argument("--track", action="append", metavar="MILESTONE", help="branch.tracks key: never a default milestone")
     s.set_defaults(func=op_provision)
+
+    s = sub.add_parser("templates", help="project templates an owner offers to provision --template")
+    s.add_argument("--owner", help="owner login (default: repo owner)")
+    s.set_defaults(func=op_templates)
     return p
 
 
