@@ -58,7 +58,7 @@ Where it sit: `/wa-task` → `/wa-code` → *you test, `/wa-feedback`, you test 
    - Any other mode → **say plainly code moved since user tested it** and name files, so nobody treat stale test as proof.
 7. **Set state `to-close`** per **Task store**. Never `done` here — that's user's second look, not yours.
    - **`github` → round end**:
-     - File `status: to-close` + `## Review`, commit (config author, **never Claude**), push.
+     - File `status: to-close` + `## Review`, commit (author per **wa-board → Commits**, **never Claude**), push.
      - Push → PR updates, lock released, card → To close (hook).
      - Findings still open (step 8, third case) → `status: to-test` instead: not reviewed clean, not closable.
      - Round aborted before any push → `github-board release <n> coding` (card never moved).

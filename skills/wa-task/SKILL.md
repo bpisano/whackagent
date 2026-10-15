@@ -96,7 +96,7 @@ End of grill, `github` only. Task file lives on task branch (**wa-board → Task
    - Else → `branch.base`.
 2. **Branch** — `gh issue develop <n> --name <branch.prefix><n>-<slug> --base <base>` (links it in issue **Development**). Never `git checkout -b` + push.
 3. **Temporary worktree** — `git fetch origin <branch>`, `git worktree add ../.wa-worktrees/<n>-<slug> <branch>`. Never switch user's checkout: dirty tree untouched, grill never hijacks what they're on.
-4. **Write** `{tasks}/<n>-<slug>.md` there (step 4), `git add` that one file, commit `Grill #<n> <title>` as `commit.author_name`/`author_email` — **never Claude** — push.
+4. **Write** `{tasks}/<n>-<slug>.md` there (step 4), `git add` that one file, commit `Grill #<n> <title>` author per **wa-board → Commits** — **never Claude** — push.
 5. **Remove worktree** (`git worktree remove`). Branch stays on remote; `/wa-code` picks it up.
 6. Hook: card → Todo, grilling lock released, `✅ grilled` comment linking the file. Push failed → lock still held: say so, stop — never `release` over an unpushed spec.
 

@@ -69,7 +69,9 @@ Then confirm with user:
    - Nothing detected → leave both empty, don't ask.
    - **Project win over plugin default**: repo that documents own build path documents it for agents too. Implementer torn between two mandates picks one silently.
 6. **Commit policy** — _"Once YOU validate a feature, may I commit it myself, or always wait for you to commit?"_ → sets `auto_commit_after_validation`.
-   - Remind: commits always use your name, never Claude's.
+   - Remind: commits use this machine's git config (`git config user.name` / `user.email`, read at each commit), never Claude's, no co-author — **wa-board → Commits**.
+   - **Never ask for an author, never write one in config.**
+   - `git config user.email` empty → say so now, before any skill needs to commit.
    - Outside autopilot, nothing committed before you validate.
 7. **Branch policy**
    - `github` backend → skip whole question:
@@ -219,7 +221,7 @@ ok? [y/n]
    - Pass `--tasks-path {tasks}`, `--branch-prefix <branch.prefix>` so hook and helper agree with config.
    - One board per repo — never repurpose a team board without asking.
 3. **Hook — mandatory.**
-   - In order: copy `${CLAUDE_PLUGIN_ROOT}/templates/github-board.yml` to `.github/workflows/whackagent-board.yml` on branch `wa-setup/board-hooks` (from default branch) → commit (configured author, never Claude) → push → `gh pr create`.
+   - In order: copy `${CLAUDE_PLUGIN_ROOT}/templates/github-board.yml` to `.github/workflows/whackagent-board.yml` on branch `wa-setup/board-hooks` (from default branch) → commit (author per **wa-board → Commits**, never Claude) → push → `gh pr create`.
    - **Never push default branch directly.**
    - Custom `branch.prefix` → edit `branches:` filter to match.
    - Cards move only once that PR merges — say so. Sprint branches forked before it don't carry it.
@@ -263,6 +265,8 @@ Everything the user wrote is theirs: config values, free-form notes, edited conv
 3. **Diff the config's keys against `${CLAUDE_PLUGIN_ROOT}/templates/config.md`.**
    - Keys in the template and missing from the config = features shipped after this project was set up (`paths:` is exactly that for anything set up before it existed).
    - They're the main reason to re-run this command: list them with their default and what they buy, and ask.
+   - Keys in the config and gone from the template = retired.
+   - `commit.author_name` / `author_email` → **delete them, no question**, say so: author always comes from the machine's git config (**wa-board → Commits**).
 4. **Check the paths resolve.**
    - A `paths.*` key pointing at nothing means files moved by hand: say which key and what it points at.
    - Offer to re-point the key or move the files back.
@@ -412,7 +416,7 @@ ok? [y/n]
      - `wiki:` / `note:` from body header lines
      - `created:` = issue `createdAt`
    - Issue body sections copied as-is into task file. Title, summary, size, sprint never in file.
-   - Commit (configured author, never Claude), push. Hook (once live) places card from `status:` — until hook PR merges, card stays where it is, fine.
+   - Commit (author per **wa-board → Commits**, never Claude), push. Hook (once live) places card from `status:` — until hook PR merges, card stays where it is, fine.
    - Issue body → `<summary>` + blank line + link to task file on branch (`https://github.com/<owner>/<repo>/blob/<branch>/{tasks}/<n>-<slug>.md`). Re-read body right before, `gh issue edit <n> --body-file`.
 4. **Draft issues** (not grilled) → untouched: body = idea note, `/wa-task <n>` grills them later.
 5. **Any step fails → stop**, report what landed per issue. Never rewrite an issue body before its task file is pushed — body is the only copy until then.

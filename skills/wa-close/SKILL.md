@@ -50,7 +50,7 @@ Where sit: `/wa-task` → `/wa-code` → *you test, `/wa-feedback`* → (`/wa-va
 5. **Commit**
    - `files`: when `commit.auto_commit_after_validation`.
    - `github`: always (round ends with push).
-   - Author: `commit.author_name` / `commit.author_email`, **never as Claude**.
+   - Author per **wa-board → Commits**: your git identity, **never Claude**, no co-author.
    - Already clean → skip, say so.
    - Nothing committed and tree dirty → **stop before any branch move.** Uncommitted work plus merge = how work disappear.
 6. **Land branch** — *Landing* below.
@@ -164,7 +164,7 @@ Rules:
 - Task branch + draft PR exist since `/wa-code`.
 - `close.strategy` and `close.delete_branch` ignored.
 
-1. **Status** — task file `status: to-close` (Review set it). Commit review round, wiki pages, autofix — one commit, configured author.
+1. **Status** — task file `status: to-close` (Review set it). Commit review round, wiki pages, autofix — one commit, author per **wa-board → Commits**.
 2. **Rebase if needed**
    - Base = sprint branch when task in sprint, else `branch.base`.
    - `gh pr view --json mergeable,baseRefName` + `git fetch`.
@@ -282,7 +282,7 @@ A sprint is never `done` as a thing — there's no sprint status to set. It's co
 - `github`: never merge the PR, never set `done`, never close the issue — the merge and the hook do.
 - Never force-push, never rewrite a shared branch, never touch a branch that isn't this task's or its sprint's.
 - Never delete a branch whose work isn't somewhere else.
-- Never commit as Claude.
+- Never commit as Claude, never add a `Co-Authored-By:` — **wa-board → Commits**.
 - Never write to a literal `.whackagent/` path when the config's `paths:` points elsewhere.
 
 ## Asking

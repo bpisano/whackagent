@@ -147,7 +147,7 @@ Rules = `/wa-code` → *Resuming, rounds 2+*, in full — delta only, anti-stale
      - any rule captured
    - Refresh `{reports}/<key>.md`.
    - **`github` → round end**:
-     - File `status: to-test`, commit (config author, **never Claude**), push to task branch → PR updates, lock released, card → To test (hook).
+     - File `status: to-test`, commit (author per **wa-board → Commits**, **never Claude**), push to task branch → PR updates, lock released, card → To test (hook).
      - Mergeable check per **Task store**.
      - Round aborted before any push → `github-board release <n> coding --reset-to <state claimed from>`.
    - **Task in sprint → rebuild sprint test branch**, check it out, per **wa-board → Sprint test branch** — user retests fix next to every other sprint feature. `files`: fix uncommitted → no build, stay on task branch.

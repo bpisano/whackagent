@@ -280,7 +280,7 @@ One local branch holding **every delivered task of sprint**: user launches proje
 - **Local, throwaway.** Never pushed, never PR'd, never a fork point, never committed on. Rebuilt from scratch every time — task branches get rebased, merges kept from last build would conflict.
 - **Who builds**: every round delivering a sprint task.
   - `/wa-code`, `/wa-feedback`, `/wa-validate` → at round end
-  - `/wa-autopilot` → once, end of run
+  - `/wa-autopilot` → once, end of run — or a **run test branch** (`wa/autopilot-<date>-test`) when run delivered tasks outside one sprint, per **wa-autopilot → Test branch**
   - Builder then **checks it out**: user tests from there. Always, even with one delivered task — user never wonders which branch to launch.
 - **Build** (main checkout, never a worktree):
   ```
@@ -288,7 +288,7 @@ One local branch holding **every delivered task of sprint**: user launches proje
   git merge --no-ff --no-edit <task branch>     # every sprint task in to-test / to-close, board order
   ```
   - `github` → merge `origin/<task branch>` (round end pushed it).
-  - Merge commits as `commit.author_name` / `author_email`, **never Claude**.
+  - Merge commits per **Commits** — your git identity, **never Claude**.
 - **Needs committed work.**
   - `files` attended round leaves code uncommitted → nothing to merge: stay on task branch (already sprint + this task), say so.
   - Other delivered sprint tasks waiting on own branches → name them.
@@ -302,7 +302,7 @@ One local branch holding **every delivered task of sprint**: user launches proje
   - Attended: ask, recommend moving them to their task with `/wa-feedback`.
   - Autopilot: leave branch untouched, say so.
 - **Echo**: `test branch: sprint/login-refacto-test = sprint + #42 · #43 — you're on it`.
-- **Leaving it.** Task command starting on test branch (`/wa-code`, `/wa-feedback`, `/wa-validate`, `/wa-close`):
+- **Leaving it.** Task command starting on test branch — sprint or run (`/wa-code`, `/wa-feedback`, `/wa-validate`, `/wa-close`):
   - Tree clean → check out task branch **without asking**: whackagent own branch, nothing to lose.
   - Edits made while testing (dirty) → usual dirty-tree question, recommend carrying them over to task branch.
 - **Deleted** when sprint lands (`/wa-close` → *Sprint landing*).
@@ -420,7 +420,7 @@ Helper: `${CLAUDE_PLUGIN_ROOT}/scripts/github-board <verb>` (internal, Python 3 
   - Base = sprint branch when task in sprint, else `branch.base`.
   - Only GitHub-created branches link in issue **Development** → never `git checkout -b` + push for it.
 - **Every round ends with commit + push** on task branch: grill (`status: todo`), `/wa-code`, `/wa-feedback`, `/wa-validate`, `/wa-autopilot`.
-  - Commit author = `commit.author_name`/`author_email`, never Claude.
+  - Commit author per **Commits** — your git identity, never Claude.
   - That push releases the lock.
   - **No push mid-round**: hook would end round early.
 - **Draft PR** opened by first coding delivery: `gh pr create --draft --base <base> --head <branch>`.
@@ -486,6 +486,18 @@ Helper: `${CLAUDE_PLUGIN_ROOT}/scripts/github-board <verb>` (internal, Python 3 
 - Task still carrying old states (`in-progress`, `review`, `validated`), a `grilled:` field, or French headings (`## Contexte / Décisions`, `## Critères d'acceptation`, `## Implémentation`, `## Vérification`) → project predates this lifecycle.
 - `github` task whose content lives in the issue body (no task file on its branch, body holds `## Acceptance criteria`) or size as `size:*` label → pre-0.13 GitHub layout.
 - Either one → don't guess, don't alias: say `/wa-setup` migrates it (one plan, one yes), stop.
+
+## Commits
+
+Every commit any skill makes — round end, grill, close, wiki, setup PR, test-branch merges, rebases.
+
+- **Author = this machine's git config. Fetched every time, right before every commit:** `git config user.name` + `git config user.email` (git's own resolution: repo-local, else global).
+  - Never cached from an earlier commit, never read from `.whackagent/config.md`, never written there. **Author never lives in whackagent config.**
+  - Plain `git commit` / `git merge`. Never `--author`, never `-c user.name=…`, never `GIT_AUTHOR_*` / `GIT_COMMITTER_*`.
+  - Why: whoever runs the command signs the commit. Config is shared through the repo — author in it = every teammate commits as one person.
+- **Never Claude.** No `Co-Authored-By:` trailer, no *Generated with Claude Code*, no 🤖 line — commit messages and PR bodies alike.
+- **Identity unset** (`git config user.email` empty) → stop before committing. Ask user to set it (`! git config --global user.email you@example.com`). Never invent one.
+- `commit.author_name` / `author_email` found in config (legacy) → ignored, never used. `/wa-setup` deletes them.
 
 ## Paths
 

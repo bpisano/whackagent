@@ -95,8 +95,8 @@ commit:
   auto_commit_after_validation: false   # may Claude commit once YOU validate feature?
                                # (name kept for old configs: it gate the commit /wa-close make)
                                # github backend: ignored — every round commit + push (board need it)
-  author_name: "Benjamin Pisano"        # commits ALWAYS use this — never "Claude"
-  author_email: "benjamin.pisano@icloud.com"
+                               # no author here, ever: each commit reads git config user.name/email
+                               # of the machine running it. Never "Claude", never Co-Authored-By.
 
 branch:
   per_task: false              # /wa-code work on own branch per task instead of current one

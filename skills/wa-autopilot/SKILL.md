@@ -116,8 +116,8 @@ Each task get own checkout, so parallel implementers never see each other's edit
 ## 3. Close each task
 
 1. **State `to-test`** + notes in `## Implementation` / `## Verification`, per **wa-board → Task store** — never `done`, never `to-close`.
-2. **Commit in its worktree**, on its branch, with the configured author name/email — task file included.
-   - **Never as Claude. Never merge to base. Never touch another branch.**
+2. **Commit in its worktree**, on its branch, author per **wa-board → Commits** — task file included.
+   - **Never as Claude, never a co-author. Never merge to base. Never touch another branch.**
    - Commit is the delivery, not a close: code unreviewed by verifier, unseen by user, sitting on a branch nobody merged.
    - **`github` → round end** per **wa-board → Task store → task branch and rounds**:
      - Push (hook moves card to `To test`, drops lock).
@@ -126,7 +126,7 @@ Each task get own checkout, so parallel implementers never see each other's edit
      - Conflict needing a design call → leave it, log as blocker.
    - A task leaves autopilot waiting for the user to test it, exactly like one from `/wa-code`.
    - **Never merge into the sprint branch here** — that's `/wa-close`, after the user's review. Why: unreviewed merge poisons base of every later task in the sprint (`github`: and marks the task PR merged → `Done` untested).
-   - Testing them together is the **sprint test branch**, step 4.
+   - Testing them together is the **test branch**, step 4.
    - **Don't** sync wiki/graph unattended — that's `/wa-wiki` after it closes.
 3. **Remove the worktree** (`git worktree remove ../.wa-worktrees/<key>`) — the branch survives, that's what you review later. A blocked task keeps its worktree; say so in the report.
 
@@ -134,21 +134,31 @@ Skip the report-and-iterate phase entirely — nobody's there to iterate with.
 
 Save the report to `{reports}/<key>.md` (`{…}` from the config's `paths:` block, see **wa-board → Paths**) — **in the main checkout, never inside a worktree**: worktree gets removed and report with it.
 
-## 4. Sprint test branch — once, end of run
+## 4. Test branch — mandatory, end of run
 
-Batch delivered sprint tasks → user must not check out N branches to test N features.
+User comes back, launches project, **every feature coded this run is there**. Never N branches to check out for N features. Not optional, not skipped because tasks are standalone.
 
-- After last wave, worktrees removed: **build sprint test branch and check it out**, per **wa-board → Sprint test branch**.
-- `<sprint branch>-test` = sprint branch + every task of sprint in `to-test` / `to-close` (this run's and earlier ones).
-- User comes back, launches project, everything is there.
-- Main checkout, never a worktree. Local only: never pushed, nothing changes on GitHub, sprint branch untouched.
-- Several sprints in batch → build each, check out the one with most tasks delivered this run, name the others.
-- Unattended rules:
-  - Dirty main checkout → skip, say so.
-  - Two tasks conflict → skip that task, keep the rest, log `⚠️ #45 not in test branch — conflicts with #42 (<files>)`.
-  - Commits found on existing test branch → leave it untouched, say so.
-  - Never ask.
-- No sprint task delivered (standalone tasks only, or all blocked) → nothing to build: branches listed in report as before.
+After last wave, worktrees removed, pick by what was delivered:
+
+- **One task delivered** → check out its branch (sprint task: sprint test branch, per **wa-board → Sprint test branch**).
+- **Every delivered task in one sprint** → sprint test branch, per **wa-board → Sprint test branch**: sprint + every task of sprint in `to-test` / `to-close` (this run's and earlier ones).
+- **Anything else** (standalone tasks, several sprints, mix) → **run test branch** `<branch.prefix>autopilot-<YYYY-MM-DD>-test` (default `wa/autopilot-2026-10-15-test`):
+  ```
+  git checkout -B <run test branch> <branch.base>   # github: origin/<branch.base>, fetched
+  git merge --no-ff --no-edit <task branch>         # every task delivered this run, board order, blocker before stacked
+  ```
+  - `github` → merge `origin/<task branch>` (round end pushed it).
+  - Sprint task branch brings its sprint branch along — expected.
+  - Same rules as sprint test branch: local, throwaway, never pushed, never PR'd, never a fork point, never committed on, rebuilt from scratch. Merge commits per **wa-board → Commits**.
+  - Same name already there with commits made on it → don't rebuild, use `-2`, `-3`… suffix.
+  - Older `autopilot-*-test` branches whose tasks are all `done` → delete them, say so.
+- **Nothing delivered** (all blocked / skipped) → no branch, stay put, say so.
+
+Unattended rules — never ask:
+- **Two tasks conflict** → `git merge --abort`, skip that task, keep the rest, log `⚠️ #45 not in test branch — conflicts with #42 (<files>)`. Never resolve on throwaway branch.
+- **Commits found on existing sprint test branch** → leave it untouched, fall back to run test branch instead.
+- **Dirty main checkout** → never stash, never discard. Build branch anyway in temp worktree (`git worktree add ../.wa-worktrees/autopilot-test -B <branch> <base>`, merges there, remove worktree), don't check out, report `⚠️ built <branch>, not checked out — dirty tree (<files>) · git checkout <branch>`.
+- Check `git branch --show-current` before final report — the line says where user actually is.
 
 ## Blockers — skip and log, never ask, never guess
 
@@ -177,7 +187,7 @@ Print and save `{reports}/autopilot-<date>.md`:
 #48 · 🟡 **Add passkey login** · ⛔ #12 — skipped
 #46 · 🟢 **Fix login errors** · 🔒 alice@mbp 2h — skipped
 
-test branch: sprint/login-refacto-test = sprint + #42 · #43 — you're on it
+test branch: wa/autopilot-2026-09-18-test = #42 · #43 · #44 — you're on it
 
 ---
 ## 🟢 #42 Add Apple login · branch wa/42-add-apple-login
@@ -202,17 +212,17 @@ Three parts, always this order:
    - `— skipped` (blocker not coded or itself blocked, lock taken, state moved).
 
    Sprint in play → progress line in title. Several sprints → group recap by sprint.
-   Then **test branch line** (step 4): what's in it, what's not and why — or why it wasn't built.
+   Then **test branch line** (step 4), always: name, what's in it, what's not and why, `you're on it` — or why not checked out / not built.
 2. **One card per delivered task** — **wa-code → Report card**, branch in header instead of sprint tag (`github`: draft PR link too). Same skeleton as attended `/wa-code`.
 3. **Blocked** — per task: open question + your recommended answer, one line each. Kept worktree → say so.
 
 - One branch per task still: user reviews and lands task by task.
-- Test branch is only where they're tested together — never reviewed, never landed.
+- Test branch (sprint or run) is only where they're tested together — never reviewed, never landed.
 - Never write `review: clean` for a task the verifier never saw.
 
 ## Next step
 
-Test — sprint tasks from the test branch you're on, standalone ones from their own branch.
+Test — everything from the test branch you're on.
 
 - Notes on one → **`/wa-feedback <id> <notes>`** (checks it out, applies them through the same pipeline).
 - Matches spec → **`/wa-validate <id>`** (verifier on the whole branch), then **`/wa-close <id>`** after your retest.

@@ -35,7 +35,7 @@ Task status + report handled by `/wa-code`. This step keep shared knowledge true
 3. **Commit (only if allowed).**
    - Called by `/wa-close` → **never commit here**: close commits pages with code, one commit.
    - Manual run → commit only if `commit.auto_commit_after_validation: true` AND task is `to-close` or `done` (i.e. went through `/wa-validate`).
-     - Then: configured author name/email — **never** as Claude.
+     - Then: author per **wa-board → Commits** — **never** as Claude.
      - Else leave it.
    - Outside autopilot, never commit unvalidated work.
 

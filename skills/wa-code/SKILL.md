@@ -39,7 +39,7 @@ Arg = task id (`/wa-code 3`, `/wa-code 42`, or slug) — resolve per **wa-board 
 ## 0. Branch — only if `branch.per_task: true` (`github`: always)
 
 **`github`** → branch already exists since grill (`<branch.prefix><n>-<slug>`, from `github-board get <n>` → `branch`).
-- `git fetch`, check it out (worktree or checkout), pull.
+- `git fetch`, check it out **in main checkout**, pull. Never a worktree here: user tests from main checkout (step 4 *End on coded branch*).
 - Never create or rename it.
 - Dirty tree → rule 4 below.
 - Echo, skip 1–3.
@@ -173,7 +173,7 @@ Then:
 - **Save** to `{reports}/<key>.md`: same card, plus full file/folder list, key decisions, review findings.
 - Set state `to-test` — means *waiting for user to test it*, nothing more.
 - **`github` → round end** per **wa-board → Task store → `github` — task branch and rounds**:
-  - File `status: to-test` + `## Implementation`/`## Verification` written, commit (config author, **never Claude**), push.
+  - File `status: to-test` + `## Implementation`/`## Verification` written, commit (author per **wa-board → Commits**, **never Claude**), push.
   - First delivery → `gh pr create --draft --base <base> --head <branch>`, title/body per **wa-board → Voice → PR wording**, then `github-board link-pr <n> <pr>`. PR exists → push alone updates it.
   - Then mergeable check (`CONFLICTING` → rebase task range, rebuild, `push --force-with-lease`).
   - Push = lock released, card → To test (hook).
@@ -182,6 +182,13 @@ Then:
 - **Task in sprint → sprint test branch**, per **wa-board → Sprint test branch**: rebuild it (sprint + every delivered task), check it out, echo it.
   - User launches project from there, every sprint feature in.
   - `files`: work uncommitted → no build, stay on task branch, say so.
+- **End on coded branch — always.** Main checkout ends on branch holding this code, user tests straight away, no checkout to do.
+  - Sprint task, test branch built → test branch (contains this task).
+  - Else → task branch. Already there in normal flow (step 0); anything moved you off it (test-branch build skipped, worktree) → check it back out.
+  - `branch.per_task: false` → coded on current branch, stay.
+  - Check `git branch --show-current` before report, never assume.
+  - Dirty main checkout blocking the switch → never stash, never discard: say what's dirty, give the `git checkout` to run.
+  - Echo in report: `branch: wa/42-add-apple-login — you're on it`.
 - **Say what to do next, in this order**:
   - Test it.
   - Notes → **`/wa-feedback`**.
@@ -225,12 +232,15 @@ build ✅ · tests ✅ · run ✅ · review → /wa-validate
 - **To test** — checklist: acceptance criteria agent did **not** prove, plus regression zones the diff touches. Agent proved everything → `nothing required` + one optional smoke test. Never empty silently.
 - **✅ checked by agent** — one line, criteria the runtime check proved (+ screenshot path). Omit when nothing proven.
 - **Status line** — build · tests · run (`✅` / `yours`) · review (`clean` / `→ /wa-validate`). Never claim check nobody ran.
-- **Sprint task** → one line above status line: `test branch: sprint/login-refacto-test = sprint + #42 · #43`. Not built → say why there (`⚠️ #45 not in`, dirty tree, uncommitted).
+- **Branch line** above status line, always — where user is now:
+  - Sprint task → `test branch: sprint/login-refacto-test = sprint + #42 · #43`. Not built → say why there (`⚠️ #45 not in`, dirty tree, uncommitted).
+  - Else → `branch: wa/42-add-apple-login — you're on it`.
+  - Couldn't switch → `⚠️ still on <branch> — dirty tree · git checkout <task branch>`.
 - Headings follow `discussion_language` (`Problème / Objectif / Fait / À tester` in fr).
 
 ## 5. Closing — not yours
 
-`files`: commit, branch landing and `status: done` belong to **`/wa-close`**. Nothing in this file commits or moves branch after step 0 — sprint test branch aside (local, throwaway).
+`files`: commit, branch landing and `status: done` belong to **`/wa-close`**. Nothing in this file commits or moves branch after step 0 — sprint test branch and step 4 return to coded branch aside.
 
 `github`: round-end commit + push + draft PR (step 4) are the only git moves here that reach GitHub. Marking PR ready, merge, `done` → `/wa-close` and the merge hook.
 
@@ -249,6 +259,7 @@ Every question you put to user — `BLOCKED:`, architecture fork, failed check �
 - Never mark task `done`.
 - Never code a task whose lock you lost.
 - Never switch branches with dirty tree.
+- Never end anywhere but the coded branch (or its sprint test branch).
 - Never let subagents touch backlog/wiki/reports — you own those.
 - Never write to literal `.whackagent/` path when config `paths:` points elsewhere.
 

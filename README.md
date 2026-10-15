@@ -118,6 +118,8 @@ No sprint file, no create command. A sprint exists as soon as a task names it (a
 - `/wa-board login-refacto` shows only that sprint, with its progress: `🏁 Login refacto — 2/5`.
 - Tasks branch off `sprint/login-refacto` and merge back into it. Task 3 starts from tasks 1 and 2.
 - After each delivery, and at the end of `/wa-autopilot`, you land on `sprint/login-refacto-test`: the sprint plus every task waiting for your test. Run the project there to test them all. It's local and rebuilt each time, nothing changes on GitHub.
+
+Outside a sprint, `/wa-code` leaves you on the task branch. `/wa-autopilot` always ends on one branch holding every feature of the run (`wa/autopilot-2026-10-15-test` when they span several sprints or none).
 - When the last task closes, `/wa-close` offers to ship the sprint branch.
 
 ## Settings worth knowing
