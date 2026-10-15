@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Orchestrated dev workflow: backlog + wiki + task lifecycle with isolated subagents and an overnight autopilot.",
-    "version": "1.3.0"
+    "version": "1.4.0"
   },
   "plugins": [
     {
       "name": "whackagent",
       "source": "./",
       "description": "Backlog + wiki + task lifecycle (setup → task → grill → code → your test → validate → close), isolated implementer/verifier subagents, and an overnight autopilot. Works on any stack (iOS, Android, web, desktop, server, CLI), language-template driven.",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "author": {
         "name": "Rémi Latapy"
       },
