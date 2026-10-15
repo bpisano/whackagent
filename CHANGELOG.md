@@ -4,6 +4,8 @@ All notable changes to whackagent are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-15
+
 ### Added
 
 - GitHub provider: `/wa-setup backlog` can start the board from a GitHub Project template. `wa-backlog templates` lists the owner's templates, and `wa-backlog provision --title <name> --template [<owner>/]<number>` copies one (views, fields, Project workflows) before wiring it like any new board. Setup recommends the template when the owner has one.
