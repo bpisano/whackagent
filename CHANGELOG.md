@@ -4,6 +4,10 @@ All notable changes to whackagent are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- PR bodies now carry numbered manual test steps under `How to test`: setup, the navigation path from launch to the feature (screens, URL, endpoint or command, named as in the code), then each action with its expected result. They go into the template's own testing section when it has one.
+
 ## [1.3.0] - 2026-10-15
 
 ### Added
