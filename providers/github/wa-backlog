@@ -63,7 +63,7 @@ SPRINT_LABEL = "wa-sprint"
 EXIT_ERROR, EXIT_USAGE, EXIT_TAKEN, EXIT_WRONG_STATE = 1, 2, 3, 4
 # Board contract this script implements: the project's BOARD.md, its PR template sections and its workflow
 # caller carry the same stamp. Installed and updated together by the setup PR.
-CONTRACT_VERSION = "2.1"
+CONTRACT_VERSION = "2.2"
 # Built-in Project workflows that set Status on their own, against the board contract.
 CONFLICTING_WORKFLOWS = {"Pull request linked to issue"}
 
@@ -882,10 +882,25 @@ def stack_view(config, number):
     return {"stack": stack["number"], "base": stack["base"]["ref"], "open": stack["open"], "prs": prs}
 
 
+def shared_group(config, pr, blocker):
+    """Sprint or track both tickets belong to, or None: only tickets of one body of work stack."""
+    pattern = re.compile(re.escape(config["branch_prefix"]) + r"(\d+)-")
+    numbers = [pattern.match(p["head"]["ref"]) for p in (pr, blocker)]
+    if not all(numbers):
+        raise Failure("only ticket PRs stack", EXIT_WRONG_STATE)
+    mine, theirs = (find(config, int(n.group(1)), with_owners=False) for n in numbers)
+    if mine["sprint"] and mine["sprint"] == theirs["sprint"]:
+        return f"sprint {mine['sprint']}"
+    if mine["milestone"] in config.get("tracks", []) and mine["milestone"] == theirs["milestone"]:
+        return f"track {mine['milestone']}"
+    return None
+
+
 def op_stack(args):
     """Show the GitHub stack PR <pr> belongs to, or with --on put <pr> on top of <blocker>'s stack.
 
     GitHub stacks are linear: <pr> must target <blocker>'s branch and <blocker> must be the top.
+    Both tickets must share a sprint or a track.
     """
     config = load()
     repo = config["repo"]
@@ -905,6 +920,8 @@ def op_stack(args):
             emit(stack_view(config, mine["number"]))
             return
         raise Failure(f"#{args.pr} already in stack {mine['number']}", EXIT_WRONG_STATE)
+    if not shared_group(config, pr, blocker):
+        raise Failure(f"#{args.pr} and #{args.on} share no sprint or track: no stack, PR goes on base", EXIT_WRONG_STATE)
     if not below:
         stack = rest("POST", f"repos/{repo}/stacks", {"pull_requests": [args.on, args.pr]})
     elif below["position"] == below["size"]:
@@ -1192,7 +1209,7 @@ def parser():
     s.add_argument("pr", type=int)
     s.set_defaults(func=op_link_pr)
 
-    s = sub.add_parser("stack", help="GitHub stack of PR <pr>; --on <blocker pr> puts it on top of the blocker")
+    s = sub.add_parser("stack", help="GitHub stack of PR <pr>; --on <blocker pr> puts it on top (same sprint or track only)")
     s.add_argument("pr", type=int)
     s.add_argument("--on", type=int, help="blocker PR, its branch = <pr>'s base")
     s.set_defaults(func=op_stack)

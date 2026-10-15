@@ -31,7 +31,7 @@ Local cache: `<git-common-dir>/whackagent/github-cache.json` (ids, shared by all
 | excluded | label `wa-ignore` |
 | dependencies | issue **Relationships** (blocked by) — `depend`, read back in `get` → `blocked_by` |
 | ticket PR | issue linked in PR **Development** by hooks, any base (GitHub alone links `Closes #<n>` only when base = default branch). No PR milestone: ticket carries it. `link-pr <n> <pr>` = manual repair |
-| stacked PRs | GitHub stack (REST `repos/{repo}/stacks`) — `stack <pr> --on <blocker pr>` creates it or adds PR on top (PR base must = blocker branch, blocker must be top, else exit 4); `stack <pr>` reads it (base, PRs bottom → top with ticket) |
+| stacked PRs | GitHub stack (REST `repos/{repo}/stacks`) — `stack <pr> --on <blocker pr>` creates it or adds PR on top (PR base must = blocker branch, blocker must be top, both tickets in same sprint or same track milestone, else exit 4); `stack <pr>` reads it (base, PRs bottom → top with ticket) |
 | ticket merge | `merge <pr> [--method squash\|merge]` — async merge API (`pulls/<pr>/merge-async`, head sha pinned), waits for the result. Only API that merges a stacked PR; open PR below it in stack, draft or closed → exit 4, GitHub refusal → exit 4 with reason. Never bypasses rules |
 | PR screenshots | GitHub user-attachments via `gh image` (extension `drogers0/gh-image`), never a branch — `screenshots <pr> <files>` uploads and rewrites the body's `## Screenshots` section (UI changes only); `<caption>=<url>` = image already uploaded (browser fallback when `gh image` has no upload token) |
 

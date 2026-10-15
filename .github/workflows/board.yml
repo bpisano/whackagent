@@ -1,4 +1,4 @@
-# whackagent board hooks — reusable logic, board contract 2.1 (templates/BOARD.md, installed in each project as
+# whackagent board hooks — reusable logic, board contract 2.2 (templates/BOARD.md, installed in each project as
 # BOARD.md). Projects never copy this file: their caller (providers/github/whackagent-board.yml, installed by
 # /wa-setup) holds the triggers, permissions and concurrency, and runs this through
 # `uses: rlatapy-luna/whackagent/.github/workflows/board.yml@hooks-v2`. Each release moves `hooks-v2`, so every
