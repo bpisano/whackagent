@@ -4,6 +4,8 @@ All notable changes to whackagent are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-15
+
 ### Changed
 
 - GitHub provider: only tickets of the same sprint or track stack. A ticket blocked by one from another sprint or track (or none) works from its own base with its own PR, whose body says `Blocked by #<x>: merge order is yours`; `wa-backlog stack` refuses such a pair. Board contract 2.2: `BOARD.md` says the same, `/wa-setup backlog` offers the refresh PR.
