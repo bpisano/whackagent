@@ -5,50 +5,54 @@ description: Answers from the project wiki. No argument: syncs the wiki with rec
 
 # /wa-wiki
 
-Two modes, picked by argument.
+No arg → **update**: sync `{wiki}` with changes. Arg → **query**: answer from the wiki.
 
-Wording (whole conversation + reports + PRs): **wa-board → Voice** — telegraphic, grammar last, bullets over prose, tech terms stay English in every language (franglais, never literal translation).
+Read: voice, tasks, git
 
-- **`/wa-wiki`** (no arg) → **update** mode: sync wiki with changes.
-- **`/wa-wiki <feature or question>`** → **query** mode: look up project knowledge, answer.
+## Steps
 
-Read `.whackagent/config.md` first — its `paths:` block say where `{wiki}` and `{reports}` live (see **wa-board → Paths**). Wiki most often moved out of `.whackagent/`, so team can read it: write there, never default.
+1. **Read config** → **tasks → Config and paths**. Write `{wiki}` where it points, never the default.
+2. **Pick the mode.**
+   - No arg → **Update**.
+   - `<feature or question>` → **Query**.
 
-## Update mode — `/wa-wiki`
+## Update
 
-Task status + report handled by `/wa-code`. This step keep shared knowledge true.
+1. **Scope.**
+   - Called by `/wa-close` → that task only: its diff, `wiki:` field, report.
+   - Manual → recent `done` tasks, latest `{reports}/*.md`, git diff since last sync.
+2. **Write** pages under `{wiki}/`:
+   - Reflect new or changed behavior in the right `[[page]]`.
+   - Cross-link wiki↔wiki, link the task where useful.
+   - Create every page a task's `wiki:` flagged missing.
+   - Narrative (why + shape), never a code dump.
+3. **Compress** — only if `compress_wiki: true`:
+   - Run **caveman-compress** on each page written, delete its `*.original.md`.
+   - Never `pitch.md`.
+   - `{wiki}` outside `.whackagent/` → say it once, recommend `compress_wiki: false`.
+4. **Commit.**
+   - Called by `/wa-close` → never: it commits pages with the code.
+   - Manual → only if `commit.auto_commit_after_validation: true` and task is `to-close` or `done`. Author → **git → Commits**.
+   - Else leave it uncommitted.
 
-- **`/wa-close` runs it automatically**, before its commit, scoped to the task it closes (its diff, `wiki:` field, report).
-- Manual `/wa-wiki` = sync outside a task (hand-made changes, backlog of closed tasks never synced).
+## Query
 
-1. **Figure out what changed**
-   - Called by `/wa-close` → that task only.
-   - Manual → recent `done` tasks, latest `{reports}/*.md`, and/or git diff since last sync.
-2. **Wiki.** Update or create affected pages, under `{wiki}/`:
-   - Reflect new/changed behavior in relevant `[[page]]`(s).
-   - Cross-link: wiki↔wiki, link task where useful.
-   - Create any page a task's `wiki:` flagged missing.
-   - Keep narrative (*why* + shape), not code dump.
-   - **Compress** (if `compress_wiki: true`): run **caveman-compress** on each page written, then delete `*.original.md` backup.
-     - Wiki only, and never `pitch.md` (`/wa-pitch` page — humans reread it).
-     - **`{wiki}` outside `.whackagent/` → say it once and recommend `compress_wiki: false`**: wiki moved into project tree is one humans read, caveman prose buys tokens at their expense.
-3. **Commit (only if allowed).**
-   - Called by `/wa-close` → **never commit here**: close commits pages with code, one commit.
-   - Manual run → commit only if `commit.auto_commit_after_validation: true` AND task is `to-close` or `done` (i.e. went through `/wa-validate`).
-     - Then: author per **wa-board → Commits** — **never** as Claude.
-     - Else leave it.
-   - Outside autopilot, never commit unvalidated work.
+Read-only.
 
-Stop and ask if can't tell which page a change belongs to — don't scatter duplicates.
+1. Search `{wiki}/` pages, follow `[[links]]`.
+2. Wiki thin → targeted Grep/Glob in source, scoped to the ask. Never a full-tree scan.
+3. Answer short, synthesized. Cite `[[page]]` and task ids used. Never dump files.
 
-## Query mode — `/wa-wiki <feature or question>`
+## Never
 
-Read-only. Answer what user asked about project.
+- Never commit unvalidated work outside autopilot.
+- Never edit files in query mode.
 
-1. Search wiki pages (`{wiki}/`) for matching content; follow `[[links]]` — wiki first, cheap answer.
-2. Wiki thin on it → targeted Grep/Glob in source, scoped to what was asked. No full-tree scan.
-3. Answer concise, cite pages + related tasks used (`[[page]]`, task ids). Don't dump whole files — synthesize.
+## Ask
 
-## Next step
+- Unsure which page a change belongs to → ask. Never scatter duplicates.
 
-After manual update mode: suggest **`/wa-board`** for next task. Inside `/wa-close`: back to its step 4.
+## Next
+
+- Manual update → `→ next: /wa-board`.
+- Inside `/wa-close` → back to `/wa-close`.

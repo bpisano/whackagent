@@ -5,132 +5,110 @@ description: Starts a project from your pitch: grills it, previews the UI, split
 
 # /wa-pitch
 
-Project pitch → grilled scope → UI preview (UI projects) → sprints + `draft` tasks on backlog. Start of project, or whole new product area. One idea, one task → `/wa-task`.
+Pitch → grilled scope → UI preview → sprints of `draft` tasks. Owns pitch page, preview, first backlog. One idea → `/wa-task`.
 
-Wording (whole conversation + reports + PRs): **wa-board → Voice** — telegraphic, grammar last, bullets over prose, tech terms stay English in every language (franglais, never literal translation).
+Read: voice, components, tasks, store
 
-Owns three things:
-- **pitch page** (`{wiki}/pitch.md`)
-- **UI preview** (`{wiki}/pitch-preview.html`)
-- **first backlog**
+## Steps
 
-Never codes, never grills task in detail: pitch grill settles *product*, `/wa-task <id>` settles each task.
+1. **Read the arg** — pitch text, any shape. Empty → ask `Pitch the project: what, for whom, why.`, stop.
+2. **Context** — config (**tasks → Config and paths**), `{wiki}/index.md`.
+   - Code there → skim entry point, folders, deps. Never ask what the repo tells.
+   - `{wiki}/pitch.md` exists → re-pitch: say so, grill only changes, update page + preview.
+3. **Grill** — **grill-me** skill, one **Question** at a time, in this order:
+   1. **Who + problem** — one user, one pain. Vague → push back.
+   2. **Core loop** — the one thing done every open.
+   3. **v1 scope** — YAGNI hard: not needed by core loop → `Later`. Recommend the cut.
+   4. **Surface** — screens, what's on each, moves between them; CLI commands + output; endpoints / public API.
+   5. **Data** — what, where, accounts, offline.
+   6. **Stack + skeleton** — platforms, min OS, frameworks, services. Read `{conventions}/` architecture module first; name top-level folders.
+   7. **Out of scope** — written down.
+   - Stop when each v1 feature fits one line on a screen / command / endpoint. Task detail → `/wa-task`.
+   - User cuts short → your picks, under `## Open guesses`.
+4. **Preview** → **UI preview**. UI project: never skipped. Else silently skipped.
+5. **Write the pitch page** → **Pitch page**. Link in `{wiki}/index.md`: `- [[pitch]] — what we build, for whom, v1 scope`.
+6. **Seed glossary** — grill's core concepts, one row each. Show, add to `{conventions}/glossary.md` on yes. Use only those terms after.
+7. **Split** → **Split**. Show the plan as one **Task list**, sprint by sprint, no ids.
+   - One yes for all. Edits → apply, show again.
+8. **Create tasks** — each `draft`, per **store → create**, plan order = priority.
+   - `files` → `created` today, `sprint`, `size`, `blocked_by`, `wiki: [[pitch]]`.
+   - `github` → `create --title … --summary … --size … --sprint … --note …`, then `depend <n> --on …`. No branch, no task file.
+   - `note` = what the pitch decided for it, 1–3 lines (screen, data, cut). Seeds its grill.
+   - Re-pitch → only tasks no live task covers (title + summary).
+   - Backlog not empty → land below existing drafts, say `/wa-task` reorders.
+9. **Show the board** — **Task list**, 🏁 line per sprint.
 
-## Do
+## Wording module
 
-0. **Read arg.** Pitch text, any length, any shape. Empty → ask for it (*"Pitch the project: what, for whom, why."*), stop.
-1. **Context.**
-   - Read `.whackagent/config.md`. Missing → `/wa-setup` first, stop.
-   - `{…}` paths per **wa-board → Paths**, task writes per **wa-board → Task store**.
-   - Read `{wiki}/index.md`.
-   - Code already there → skim it (targeted Glob: entry point, folders, dependencies), so grill never asks what repo tells.
-   - **`{wiki}/pitch.md` exists** → re-pitch:
-     - Say so, grill only what changed, update page + preview.
-     - Add only tasks no live task covers (match by title + summary). Never duplicate, never touch task past `draft`.
-2. **Grill the pitch.** Invoke **grill-me** skill, one question at a time. Format per **wa-task → Grill question format**: every question carries recommendation + why. Settle, in this order:
-   - **Who + problem** — one user, one pain. Vague (*"everyone"*) → push back.
-   - **Core loop** — one thing user does every time they open it. Everything else hangs off it.
-   - **v1 scope** — **YAGNI, hard.** Each feature: needed for core loop to work? No → `Later`. Recommend the cut, never kitchen sink.
-   - **Screens / surface** (UI project) — which screens, what's on each, how user moves between them. CLI → commands + output. Server/package → endpoints / public API.
-   - **Data** — what's stored, where (local, backend, which one), accounts or not, offline or not.
-   - **Stack + architecture skeleton** — platforms, min OS, frameworks, third-party services. Read architecture module in `{conventions}/` first: top-level features/folders named now, so tasks land in real places.
-   - **Out of scope** — said out loud, written down. Stops it creeping back in task grills.
-   - Stop when every v1 feature can be named in one line and placed on a screen (or command, endpoint). Not before, not after: task-level detail (edge cases, error copy, exact files) belongs to `/wa-task`.
-   - User cuts short (*"enough, go"*) → remaining forks take your recommended answer, listed under `## Open guesses` in pitch page.
-3. **UI preview** — UI project only, see *UI preview* below. Not skippable for UI project; skipped silently otherwise.
-   - **Wording module first.** UI project and `{conventions}/wording.md` absent (setup ran on empty repo, saw no UI) → before drawing anything:
-     - Copy `${CLAUDE_PLUGIN_ROOT}/conventions/wording.md` + `${CLAUDE_PLUGIN_ROOT}/conventions/wording/` into `{conventions}/`.
-     - Ask **wa-setup → question 11** (tone, person, audience), previews written from pitch's own screens. Fill **Project voice** + **Voice**.
-     - Add `wording.md` to `review.modules` in `.whackagent/config.md`.
-     - `{conventions}/glossary.md` absent too → copy `${CLAUDE_PLUGIN_ROOT}/templates/glossary.md`, add to `review.modules`.
-     - Say what was added, one line. No extra yes: pitching a UI project is the ask.
-4. **Write pitch page** `{wiki}/pitch.md` (format below).
-   - Link it in `{wiki}/index.md` (`- [[pitch]] — what we build, for whom, v1 scope`).
-   - Not compressed, whatever `compress_wiki` says: humans reread it.
-   - **Seed the glossary**: core concepts the grill named (one row each, term + what it means) → show rows, add to `{conventions}/glossary.md` on yes. Pitch page, preview and tasks then use those terms only.
-5. **Split into sprints and tasks** — rules in *Split* below.
-   - Show plan as **one list**, sprint by sprint, **wa-board list format** without ids.
-   - **One yes for whole plan.**
-   - User edits (drop, merge, move, rename) → apply, show again.
-6. **Create tasks** — each a `draft`, per **wa-board → Task store → create**, in plan order (order = priority):
-   - `files`:
-     - `{tasks}/<slug>.md` from `${CLAUDE_PLUGIN_ROOT}/templates/task.md`, with `status: draft`, `created` = today, `sprint`, `size`, `blocked_by`, `wiki: [[pitch]]`.
-     - Backlog line under **Draft**, sprint echoed `· <Sprint>`.
-   - `github`: `github-board create --title … --summary … --size … --sprint … --note …`, then `github-board depend <n> --on …`. No branch, no task file — grill makes them.
-   - **`note:` = what pitch already decided for this task**, 1–3 lines (screen, data, the cut). Seeds its grill: `/wa-task <id>` starts from there, stays short.
-   - Backlog not empty → pitch tasks land below existing drafts, say so; `/wa-task` (no arg) reorders.
-7. **Show board** in **wa-board list format**, progress line per sprint, then next step.
+`{conventions}/wording.md` absent → before drawing:
+- Copy `${CLAUDE_PLUGIN_ROOT}/conventions/wording.md` + `${CLAUDE_PLUGIN_ROOT}/conventions/wording/` into `{conventions}/`.
+- Ask **wa-setup → Questions** 11 (tone, person, audience), samples from the pitch's screens. Fill **Project voice** + **Voice**.
+- Add `wording.md` to config `review.modules`.
+- No `{conventions}/glossary.md` → copy `${CLAUDE_PLUGIN_ROOT}/templates/glossary.md`, add to `review.modules`.
+- Say what was added, one line. No extra yes.
 
 ## UI preview
 
-UI project = `project_kind: app`, or pitch describes screens (web app, site, dashboard). CLI, package, server → none.
+UI project = `project_kind: app`, or pitch has screens (web app, site, dashboard). After grill, before split.
 
-HTML mockup of v1, shown **after grill, before split** — user sees product, corrects it while still cheap. What they correct changes task list.
-
-- **One screen per v1 feature**, side by side in core-loop order, each labeled with feature name. Feature spanning states that matter (empty, filled) → both. Nothing from `Later`.
-- **Platform frame + native look**: iPhone frame and iOS components for `ios`, Android for `android`, browser window for web.
-  - Platform defaults, system font, neutral accent: preview of *features*, not brand design. Say so once on page.
-- **Real content.** Sample data that fits pitch (real-looking names, amounts, dates), UI strings in `ui_strings_language`, written per `{conventions}/wording.md` (ladder, project voice) with glossary terms. Never lorem ipsum, never `Title` / `Button`.
-- **Static.** No app logic. Navigation between screens shown by order + labels, not wired.
-- **Write** `{wiki}/pitch-preview.html` — one self-contained file, inline CSS, light + dark.
-- **Publish as artifact**:
-  - Artifact tool available → load `artifact-design` skill, then publish that file; give link.
-  - No Artifact tool → `open` file locally, say where it is.
-- **Ask once**: `Preview OK, or screens to change?` with own doubt as recommendation when you have one (`→ Recommended: drop the stats tab, core loop works without it`).
-  - Notes → edit same file, republish same artifact (same path → same URL), ask again.
-  - Yes → go on.
-- Screen added, dropped or reshaped here = scope change → pitch page and split follow preview, never other way.
+- **Wording module** first.
+- One labeled screen per v1 feature, side by side, core-loop order. Key states (empty, filled) → both. Nothing from `Later`.
+- Native frame + look per platform (iOS, Android, browser). System font, neutral accent. Say once: features, not brand.
+- Real sample data, strings in `ui_strings_language` per wording module + glossary. Never lorem ipsum, `Title`, `Button`.
+- Static: navigation by order + labels.
+- Write `{wiki}/pitch-preview.html`: one file, inline CSS, light + dark.
+- Artifact tool → load `artifact-design`, publish, give link. Else `open` it, say where.
+- Ask once `Preview OK, or screens to change?`, own doubt as recommendation.
+  - Notes → edit, republish same path, ask again.
+- Screen added, dropped, reshaped = scope change: page and split follow.
 
 ## Pitch page
 
-`{wiki}/pitch.md`, in `discussion_language`. Bullets, readable cold (**wa-board → Voice**). Short: one screen of text.
+`{wiki}/pitch.md`, `discussion_language`, readable cold, one screen. Never compressed, whatever `compress_wiki`.
 
 ```markdown
 # Pitch — <Project>
-
-<one sentence: what it is, for whom>
-
+<one sentence: what, for whom>
 ## Problem
 ## Core loop
 ## v1
 - <feature> — <one line>
-## Screens            ← UI project; `## Commands` / `## API` otherwise
+## Screens        ← `## Commands` / `## API` if not UI
 - <screen> — <what's on it>
 ## Data
 ## Stack
 ## Out of scope
 ## Later
-## Open guesses        ← only when grill was cut short
-## Preview             ← UI project: [pitch-preview.html](pitch-preview.html) + artifact link
+## Open guesses   ← grill cut short only
+## Preview        ← UI only: [pitch-preview.html](pitch-preview.html) + artifact link
 ```
 
 ## Split
 
-Sprint and task rules stay **wa-board → Sprints**, **Titles and summaries**, **Sprint names**, **Dependencies**. Here: how to cut a pitch.
+Naming → **voice → Titles**. Sprints, blockers → **tasks → Sprints**, **tasks → Blockers**.
 
-- **Sprint = one testable slice.** End of sprint, user launches app and something new works end to end. Named after body of work, ≤ 3 words (`Onboarding`, `Trip planner`).
-- **First sprint = walking skeleton**: project scaffold, navigation shell, core loop in thinnest form. Later sprints widen it. Never a "setup" sprint that shows nothing on screen.
-- **Sprint order = core loop first**, then what makes it usable, then comfort. Backlog order follows: sprint blocks contiguous, sprint 1 on top.
-- **Task = one coherent feature**, `quickwin` or `medium`. `large` → split now, pitch is the moment.
-  - Task title verb + thing ≤ 5 words, summary ≤ 8 words, never repeats sprint.
-- **UI project → task per screen or per behavior on a screen**, never per layer (`Build models`, `Build views` = wrong cut: nothing testable until last one lands).
-- **Dependencies set now**: task building on another → `blocked_by`. Inside sprint, blockers first.
-- **v1 only.** `Later` and `Out of scope` stay in pitch page — never tasks, never a "backlog" sprint.
-- **Sprint of one task → no sprint.** Standalone task, placed where priority says.
-- 3–6 tasks per sprint healthy. Sprint past 8 → two slices hiding in one, cut it.
+- Sprint = testable slice: something new works end to end.
+- Sprint 1 = walking skeleton: scaffold, nav shell, thinnest core loop. Never a setup sprint showing nothing.
+- Order: core loop, usable, comfort. Sprint blocks contiguous, sprint 1 on top.
+- Task = one feature, `quickwin` or `medium`. `large` → split now.
+- UI → task per screen or behavior, never per layer (`Build models`).
+- Builds on another → `blocked_by`, blocker first.
+- v1 only. `Later`, `Out of scope` → never tasks or a backlog sprint.
+- One-task sprint → no sprint. 3–6 tasks healthy, past 8 → cut in two.
 
 ## Never
 
-- Never create `todo`: pitch tasks are `draft`, grilled one by one with `/wa-task <id>`.
-- Never write `## Context / Decisions` or `## Acceptance criteria`, never take lock, never create branch.
-- Never create sprint file or sprint section — sprint exists because tasks name it.
-- Never code, scaffold or install anything: first sprint's first task does. Convention modules (wording, glossary) are not code — step 3 may add them.
-- Never commit. Pitch page, preview and task files left in tree for user (`github`: issues already created — say how many).
+- Never create `todo`, write `## Context / Decisions` or `## Acceptance criteria`, take a lock or create a branch.
+- Never create a sprint file or section.
+- Never touch a task past `draft`. Never duplicate one.
+- Never code, scaffold or install. Convention modules (wording, glossary) are fine.
+- Never commit. Files stay in the tree; `github` → say how many issues were created.
 
-## Stop and ask
+## Ask
 
-Pitch contradicts itself, or contradicts code already there → surface it, don't pick silently. Every question with recommendation, per **wa-task → Grill question format**.
+- Pitch contradicts itself or the code → surface it as a **Question**, never pick silently.
 
-## Next step
+## Next
 
-Board already on screen. Suggest **`/wa-task <id>`** on first task of first sprint to grill it, then `/wa-code <id>`. Whole sprint grilled → `/wa-autopilot <sprint>`.
+- `/wa-task <id>` on sprint 1's first task, then `/wa-code <id>`.
+- Whole sprint grilled → `/wa-autopilot <sprint>`.

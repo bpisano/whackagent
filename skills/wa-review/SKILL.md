@@ -5,57 +5,41 @@ description: Reviews any code, outside a task. --fix applies the fixes.
 
 # /wa-review
 
-Standalone review — audit existing code, diff, or whole project. Same engine as `/wa-code` verify phase, usable anywhere.
+Standalone review of any code, same engine as **wa-code → Verify**. Report only, unless `--fix`.
 
-Wording (whole conversation + reports + PRs): **wa-board → Voice** — telegraphic, grammar last, bullets over prose, tech terms stay English in every language (franglais, never literal translation).
+Read: voice, components, tasks, store
 
-## Scope (argument)
+## Steps
 
-- **`/wa-review`** → current working diff (git diff vs HEAD / staged).
-- **`/wa-review <path>`** → that file or directory.
-- **`/wa-review <branch>`** → diff of that branch vs base.
-- **`/wa-review --all`** → whole project source.
+1. **Resolve scope** from the arg, then target files:
+   - none → working diff vs HEAD (staged included)
+   - `<path>` → that file or directory
+   - `<branch>` → its diff vs base
+   - `--all` → whole project source
+2. **Load conventions.**
+   - Config exists → `review.modules` + `{conventions}/` (**tasks → Config and paths**). Project copies and toggles win.
+   - No config → run anyway, on plugin defaults: overrides **tasks → Config and paths** "missing → stop". Detect language + kind, use `${CLAUDE_PLUGIN_ROOT}/conventions/`:
+     - Swift → `swift/` style, elegance, matching `architecture-*`, `swiftui` if SwiftUI, testing.
+     - Else → single `<lang>.md`.
+     - Say it ran on defaults, suggest `/wa-setup`.
+3. **Verify** — only dispatch, payload and resume of **wa-code → Verify** apply. No BRIEF, no task ref. Never autofix from `review.autofix`.
+   - One **wa-verifier**, note `agentId`.
+   - Pass module paths, target files, toggles. Diff scope → diff hunks too.
+   - `LENSES:` needs `style`, `elegance`, `structure`, `correctness` ✓. Missing one → send it back for that lens alone.
+4. **Show** **Findings**, severity first, grouped by lens tag.
+5. **Fix** — only with `--fix`:
+   - Dispatch **wa-implementer** in fix mode: findings + conventions dir. Fix only what findings name, re-read style, no comments. Note `agentId`.
+   - Re-review, resume both agents by `agentId`.
+   - Loop until clean or no progress, cap 3 rounds.
+   - `BLOCKED:` → stop, ask.
+6. **Task files in scope** → write findings in that task's `## Review` (**store → write sections**).
 
-## Conventions
+## Never
 
-- `.whackagent/config.md` exists: use its `review.modules` + project `{conventions}/` — `paths.conventions`, default `.whackagent/conventions/` (project copies + toggles win).
-- No config (fresh existing project):
-  - Detect language + kind, fall back to plugin defaults in `${CLAUDE_PLUGIN_ROOT}/conventions/`.
-  - Load `swift/` modules (style, elegance, matching architecture-\*, swiftui if SwiftUI, testing) or single `<lang>.md`.
-  - Tell user it run on defaults; suggest `/wa-setup` to customize.
+- Never edit code without `--fix`.
+- Never a lens skipped: one agent sweeps all four.
 
-## Do
+## Next
 
-1. Resolve scope + changed/target files.
-2. **Dispatch one **wa-verifier**.**
-   - **Note `agentId`** — how later rounds resume it.
-   - Pass: module paths (`review.modules`), target files **plus diff hunks when scope is diff**, and toggles.
-3. **Check `LENSES:` line**
-   - `style`, `elegance`, `structure`, `correctness`: all four ✓.
-   - Missing one → goes back for that lens alone.
-   - Then show findings severity-ordered, grouped by lens tag.
-4. **Fix?**
-   - Default → **report only**. No mutate existing code unasked.
-   - `--fix` → dispatch **wa-implementer** in **fix mode** with aggregated findings + conventions dir. Tell it: fix only what findings name, re-read style, add no comments. Note `agentId`, then re-review.
-     - Loop fix + re-review until clean or no progress (cap 3 rounds).
-     - `BLOCKED:` → stop and ask.
-   - **Rounds 2+ resume same agent by id** instead of respawn — per **`/wa-code` → step 3** (delta only, anti-stale warning, respawn fresh past 3 rounds, fall back to fresh spawn if id lost).
-5. If invoked on whackagent task (path is task files), record findings in task `## Review`.
-
-## Lenses
-
-- **style** — how written.
-- **elegance** — idiomatic, not C-in-Swift.
-- **structure** — layers, boundaries, naming, file tree.
-- **correctness** — real bugs, and whether code does what it claims.
-
-One agent sweep all four. Why:
-
-- Isolated agent cost ~50k tokens context before it read a line.
-- Every lens judge same diff against same rulebook.
-
-Cost of one agent: forgetting lens now silent — that what `LENSES:` line is for.
-
-## Note
-
-For in-flow review of task you build, use **`/wa-code`** — its step 3 is same review with autofix on. `/wa-review` is standalone entry point.
+- Findings left → `→ next: /wa-review --fix`, else `/wa-board`.
+- Reviewing a task in flow → `/wa-code` (autofix on).

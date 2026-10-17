@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Checks skills, agents and reference/ against CLAUDE.md. Exit 1 on any failure.
+set -u
+cd "$(dirname "$0")/.."
+
+fail=0
+err() { echo "❌ $1"; fail=1; }
+
+# Headings outside fenced blocks.
+heads() { awk '/^```/{f=!f; next} !f && /^## /{print substr($0,4)}' "$1"; }
+
+words() { sed '/^---$/,/^---$/d' "$1" | wc -w | tr -d ' '; }
+
+budget() {
+  local f=$1 max=$2 n
+  n=$(words "$f")
+  [ "$n" -le "$max" ] || err "$f: $n words > $max"
+}
+
+# Order of the given headings in a file must match the expected list.
+order() {
+  local f=$1; shift
+  local got
+  got=$(heads "$f" | grep -xE "$(IFS='|'; echo "$*")" | tr '\n' ' ')
+  local want
+  want=$(heads "$f" | grep -xE "$(IFS='|'; echo "$*")" | awk -v list="$*" '
+    BEGIN { n = split(list, a, " "); for (i = 1; i <= n; i++) rank[a[i]] = i }
+    { print rank[$0] " " $0 }' | sort -n | cut -d' ' -f2- | tr '\n' ' ')
+  [ "$got" = "$want" ] || err "$f: sections out of order ($got), want ($want)"
+}
+
+for f in skills/*/SKILL.md; do
+  name=$(basename "$(dirname "$f")")
+  max=1200; [ "$name" = wa-setup ] && max=2000
+  budget "$f" "$max"
+  grep -q "^name: $name$" "$f" || err "$f: frontmatter name ≠ $name"
+  grep -q "^description: " "$f" || err "$f: no description"
+  grep -q "^# /$name$" "$f" || err "$f: no '# /$name' title"
+  grep -q "^Read: " "$f" || err "$f: no 'Read:' line"
+  for s in Steps Never; do heads "$f" | grep -qx "$s" || err "$f: no '## $s'"; done
+  [ "$name" = wa-wording ] || heads "$f" | grep -qx Next || err "$f: no '## Next'"
+  order "$f" Steps Never Ask Next
+  # Named blocks sit between Steps and Never.
+  heads "$f" | awk '{ h=$0; if (h=="Steps") s=1; else if (h=="Never"||h=="Ask"||h=="Next") s=2; else if (s!=1) print "'"$f"': block \"" h "\" outside Steps…Never" }' | while read -r l; do echo "❌ $l"; done | grep . && fail=1
+  grep -oE '^Read: .*' "$f" | sed 's/^Read: //; s/,/ /g' | tr ' ' '\n' | grep . | while read -r r; do
+    case $r in store) ;; *) [ -f "reference/$r.md" ] || echo "❌ $f: Read: $r has no reference/$r.md";; esac
+  done | grep . && fail=1
+done
+
+for f in agents/*.md; do
+  budget "$f" 800
+  for s in Inputs Steps Never Return; do heads "$f" | grep -qx "$s" || err "$f: no '## $s'"; done
+  order "$f" Inputs Steps Never Return
+done
+
+for f in reference/*.md; do
+  max=800; [ "$f" = reference/components.md ] && max=1000
+  budget "$f" "$max"
+done
+
+# Formats live in components.md only.
+hits=$(grep -nE '^[#0-9]+[0-9]* · (🟢|🟡|🔴) \*\*' skills/*/SKILL.md agents/*.md 2>/dev/null)
+[ -z "$hits" ] || err "inline Task line outside components.md:
+$hits"
+
+# Old shared library is gone.
+hits=$(grep -nE 'wa-board → ' skills/*/SKILL.md agents/*.md reference/*.md 2>/dev/null)
+[ -z "$hits" ] || err "stale 'wa-board →' reference:
+$hits"
+
+[ "$fail" = 0 ] && echo "✅ lint clean"
+exit "$fail"
