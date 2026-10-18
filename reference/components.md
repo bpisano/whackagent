@@ -1,14 +1,12 @@
 # Components
 
-Every shape shown to the user. Skills cite, never redefine. New need → new component here first. Labels follow **voice → Language**.
+Every shape shown to the user. Labels follow **voice → Language**.
 
 ## Task ref
 
 A task inside a sentence: `#42 Add Apple login` (`files`: `3 Add Apple login`).
 
 ## Task line
-
-One task, one line:
 
 ```
 #42 · 🟢 **Add Apple login** · Login refacto · ⛔ #12 · 🔒 alice@mbp 2h — to test
@@ -33,11 +31,6 @@ N tasks. Never a table.
 1 · 🟢 **Add Apple login** · Login refacto
     Sign in with Apple on login screen
 
-### Draft
-
-2 · 🔴 **Sync offline changes**
-    Offline queue + conflict handling
-
 🟢 quick win · 🟡 medium · 🔴 large
 🏁 Login refacto — 0/1 (1 todo)
 ```
@@ -55,16 +48,13 @@ N tasks. Never a table.
   Alt: memory only — safer, re-login every cold start.
 ```
 
-- One at a time. Recommendation always, one-line why, grounded (code, convention, criteria, YAGNI). Real alternative → `Alt:` line.
-- No basis → still pick the cheapest to undo, flag it as a guess, say what you'd need to know.
+- One at a time. Recommendation always, one-line why, grounded (code, convention, criteria, YAGNI). Real alternative → `Alt:`.
+- No basis → pick the cheapest to undo, flag it as a guess.
 - Choice between named options → numbered list, recommended first.
 
 ## Warning
 
-```
-⛔ blocked by #12 Add Apple login (todo) — code it first?
-ok?
-```
+`⛔ blocked by #12 Add Apple login (todo) — code it first?` + `ok?`
 
 - `⚠️` / `⛔` / `🔒` + what + consequence. `ok?` only when the user must decide.
 
@@ -79,9 +69,20 @@ ok? [y/n]
 - One `<label> : <value>` row per change. Yes → run all.
 - Batch waves: `wave 1 (∥): #42 · #43` / `wave 2: #44 ⇡ #42` / `skipped: #48 ⛔ #12`.
 
+## Glossary rows
+
+
+```
++ Screen · Login screen — email + password · `LoginView`
+~ Concept · Inbox → Boîte de réception (Never: Inbox)
+ok?
+```
+
+- `+` add, `~` change: `<section> · <term> — <means> · <code>`. One `ok?` a batch.
+
 ## Progress
 
-One line mid-run, no bullets: `⏳ #42 verify — round 2`.
+One line mid-run: `⏳ #42 verify — round 2`.
 
 ## Findings
 
@@ -104,13 +105,13 @@ Where the user stands now. Always in a **Report**.
 - Missing piece → `⚠️ #45 not in — conflicts with #42 (AuthStore.swift)`
 - Not built → `⚠️ test branch not built — dirty tree` (or `uncommitted`)
 - Couldn't switch → `⚠️ still on <branch> — dirty tree · git checkout <task branch>`
-- Batch report → the task's own branch (`github`: + draft PR link)
+- Batch report → task's own branch (`github`: + draft PR)
 
 ## Status line
 
 `build ✅ · tests ✅ · run ✅ · review → /wa-validate`
 
-- Each check `✅` / `❌` / `yours`; review `clean` / `→ /wa-validate`. Never claim a check nobody ran.
+- Check `✅` / `❌` / `yours`; review `clean` / `→ /wa-validate`. Never claim a check nobody ran.
 
 ## Next
 
@@ -139,9 +140,9 @@ build ✅ · tests ✅ · run ✅ · review → /wa-validate
 
 - Header = **Task line** + summary. Feedback round → `· round <n>` + **Asked** (user's notes) above Done.
 - **Done** — what changes for the app, ≤ 5 bullets, key file in backticks.
-- **To test** — criteria the agent didn't prove + regression zones. All proven → `nothing required` + one optional smoke test. Never empty.
+- **To test** — criteria not proven + regression zones. All proven → `nothing required` + one smoke test. Never empty.
 - **Review** — `/wa-validate` only, as **Findings**, above To test.
-- `✅ agent:` — what the runtime check proved + screenshot path, one line. Omit when nothing.
+- `✅ agent:` — what the runtime check proved + screenshot path. Omit when nothing.
 - Then **Branch line**, **Status line**, **Next**. Full file list → saved report only.
 
 ## Landing
@@ -153,7 +154,7 @@ build ✅ · tests ✅ · run ✅ · review → /wa-validate
 PR #57 · **Add Apple login**
 ```
 
-- PR line only with a PR; number once it exists. Failed step → one extra line.
+- PR line only with a PR. Failed step → one extra line.
 - Code changed since the user's test → + **Warning** `⚠️ code changed since your test: <what>`, `ok?`.
 
 ## Batch report
@@ -179,5 +180,5 @@ test branch: wa/autopilot-2026-09-18-test = #42 · #44 — you're on it
 → next: /wa-validate 42
 ```
 
-- Recap = **Task lines** + outcome: `to test`, `blocked` (open question), `skipped` (lock, blocker, state moved). Grouped by sprint when several.
+- Recap = **Task lines** + outcome: `to test`, `blocked` (question), `skipped` (lock, blocker, state moved). By sprint when several.
 - One **Report** per delivered task, one **Question** per blocked one.

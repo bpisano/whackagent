@@ -27,12 +27,12 @@ Read: voice, components, tasks, store
    - User cuts short → your picks, under `## Open guesses`.
 4. **Preview** → **UI preview**. UI project: never skipped. Else silently skipped.
 5. **Write the pitch page** → **Pitch page**. Link in `{wiki}/index.md`: `- [[pitch]] — what we build, for whom, v1 scope`.
-6. **Seed glossary** — grill's core concepts, one row each. Show, add to `{conventions}/glossary.md` on yes. Use only those terms after.
+6. **Seed glossary** — one **Glossary rows**: grill's core concepts → **Concepts**, `## Screens` → **Screens**, `## Core loop` → **Flows**. Add on yes. Use only those terms after.
 7. **Split** → **Split**. Show the plan as one **Task list**, sprint by sprint, no ids.
    - One yes for all. Edits → apply, show again.
 8. **Create tasks** — each `draft`, per **store → create**, plan order = priority.
-   - `files` → `created` today, `sprint`, `size`, `blocked_by`, `wiki: [[pitch]]`.
-   - `github` → `create --title … --summary … --size … --sprint … --note …`, then `depend <n> --on …`. No branch, no task file.
+   - `files` → `created` today, `sprint`, `size`, `type: feature`, `blocked_by`, `wiki: [[pitch]]`.
+   - `github` → `create --title … --summary … --size … --type feature --sprint … --note …`, then `depend <n> --on …`. No branch, no task file.
    - `note` = what the pitch decided for it, 1–3 lines (screen, data, cut). Seeds its grill.
    - Re-pitch → only tasks no live task covers (title + summary).
    - Backlog not empty → land below existing drafts, say `/wa-task` reorders.
@@ -52,12 +52,9 @@ Read: voice, components, tasks, store
 UI project = `project_kind: app`, or pitch has screens (web app, site, dashboard). After grill, before split.
 
 - **Wording module** first.
-- One labeled screen per v1 feature, side by side, core-loop order. Key states (empty, filled) → both. Nothing from `Later`.
-- Native frame + look per platform (iOS, Android, browser). System font, neutral accent. Say once: features, not brand.
-- Real sample data, strings in `ui_strings_language` per wording module + glossary. Never lorem ipsum, `Title`, `Button`.
-- Static: navigation by order + labels.
-- Write `{wiki}/pitch-preview.html`: one file, inline CSS, light + dark.
-- Artifact tool → load `artifact-design`, publish, give link. Else `open` it, say where.
+- Built per **wa-proto → Shell**, saved `{wiki}/protos/pitch.html`, published per **wa-proto** step 5.
+- One screen per v1 feature → `Screen` control, core-loop order. Key states (empty, filled) → `State` control. Nothing from `Later`.
+- Say once: features, not brand.
 - Ask once `Preview OK, or screens to change?`, own doubt as recommendation.
   - Notes → edit, republish same path, ask again.
 - Screen added, dropped, reshaped = scope change: page and split follow.
@@ -80,7 +77,7 @@ UI project = `project_kind: app`, or pitch has screens (web app, site, dashboard
 ## Out of scope
 ## Later
 ## Open guesses   ← grill cut short only
-## Preview        ← UI only: [pitch-preview.html](pitch-preview.html) + artifact link
+## Preview        ← UI only: [pitch.html](protos/pitch.html) + artifact link
 ```
 
 ## Split

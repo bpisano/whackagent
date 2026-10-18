@@ -5,7 +5,7 @@ description: Notes an idea as a task, without questions. /wa-task grills it late
 
 # /wa-draft
 
-Idea → `draft` task, nothing more. The grill comes later, in `/wa-task`.
+Idea → `draft` task, nothing more.
 
 Read: voice, components, tasks, store
 
@@ -19,6 +19,7 @@ Read: voice, components, tasks, store
    - Too vague to title (`perf`) → one **Question**, recommended title. Only question allowed.
 4. **Fields** — only what the user said:
    - `size` → rough guess, else `medium`.
+   - `type` → from the title verb (**tasks → Types**). Unclear → none.
    - `sprint` → named only, assigned per **tasks → Sprints**.
    - blockers → named only (`after Apple login`) → **tasks → Blockers**.
 5. **Create** per **store → create**:

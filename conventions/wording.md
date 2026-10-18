@@ -1,6 +1,6 @@
 # Wording — UI copy
 
-> whackagent convention module · UI projects only. `wa-implementer` writes every user-facing string against it, `wa-verifier` judges them. Edit **Project voice** per project. Reference pages sit in `wording/`, next to this file — plugin text, refreshed by `/wa-setup`, never edited by hand. Same rules as the `wa-wording` skill, which covers UI written outside a task.
+> whackagent convention module · UI projects only. `wa-implementer` writes every user-facing string against it, `wa-verifier` judges them. Edit **Project voice** per project. Reference pages sit in `wording/`, next to this file — plugin text, refreshed by `/wa-update`, never edited by hand. Same rules as the `wa-wording` skill, which covers UI written outside a task.
 
 Great interface copy is mostly **absent**. Every string earns its place. UI shows; text only says what UI cannot.
 
@@ -30,7 +30,9 @@ situations:              # override tones only; guardrails are fixed (wording/si
 
 <!-- to review -->
 
-**Validated examples** — added only when user asks.
+**Validated examples** — strings the user rewrote, `before → after · situation`. Max 12, 2 per situation. Read them before `wording/tones.md`: this project's voice beats the generic tone.
+
+<!-- - "Your trip has been saved!" → (removed, checkmark) · success -->
 
 ## The ladder — every string
 
@@ -55,7 +57,7 @@ Then reject anything in `wording/blacklist.md`. Worst offenders:
 
 ## Words
 
-- **Glossary wins.** `glossary.md` (same folder) names each product concept once. Use its term, never a synonym — in UI strings, in every language it lists.
+- **Glossary wins.** `glossary.md` (same folder): **Concepts** term in each UI language, never a `Never` word. **Screens**, **Parts**, **Flows** are team names, not UI copy.
 - New concept with no glossary entry → pick the word user says out loud, flag it in `NOTES:` so it gets added.
 - **Write native, never translate.** Write directly in target language. Words target user says out loud, platform vocabulary, common English loanwords over invented or stiff equivalents. Rules per language: `wording/native.md`.
 - French: before `? ! : ;` and inside `« »` the space is **non-breaking** — write it as escape (` ` in JSON/JS, `\u{202F}` in Swift), never a typed space.

@@ -2,7 +2,7 @@
 
 `tasks.backend: github`. Every task read or write goes through these operations.
 
-**Task file is still the truth**: `{tasks}/<n>-<slug>.md` on the task branch, from the end of the grill. The issue holds title, summary (first body line), size (Project field), sprint (milestone), blockers — never the file.
+**Task file is still the truth**: `{tasks}/<n>-<slug>.md` on the task branch, from the end of the grill. The issue holds title, summary (first body line), size (Project field), type (label), sprint (milestone), blockers — never the file.
 
 ## Helper
 
@@ -10,15 +10,15 @@
 
 | op | how |
 |---|---|
-| list | `list [--state s,…] [--sprint x] [--all] [--owners]` — priority order, done/canceled only with `--all` |
-| read | `get <n>` (state, size, sprint, claims, `branch`, `blocked_by`) + `git show origin/<branch>:{tasks}/<n>-<slug>.md`. No branch (`draft`) → issue body = idea note |
-| create | `create --title … --summary … [--size] [--sprint] [--note …]` → `draft`, bottom |
+| list | `list [--state s,…] [--sprint x] [--type t] [--all] [--owners]` — priority order, done/canceled only with `--all` |
+| read | `get <n>` (state, size, type, sprint, claims, `branch`, `blocked_by`) + `git show origin/<branch>:{tasks}/<n>-<slug>.md`. No branch (`draft`) → issue body = idea note |
+| create | `create --title … --summary … [--size] [--type] [--sprint] [--note …]` → `draft`, bottom |
 | write sections / status | edit the task file on the task branch; lands at next push |
 | lock | `claim <n> grilling\|coding` · review: `claim <n> coding --keep-state` |
 | release | `release <n> <phase> --reset-to <state>` |
 | cancel | `cancel <n> --reason …` → Canceled, issue closed not planned |
 | reorder | `move <n> --top\|--bottom\|--before m\|--after m` |
-| fields | `set-field <n> size <s>` · `set-field <n> sprint "<Sprint>"` (milestone created on first use, never deleted; `""` clears) |
+| fields | `set-field <n> size <s>` · `set-field <n> type <t>` (one type label, others dropped) · `set-field <n> sprint "<Sprint>"` (milestone created on first use, never deleted; `""` clears) |
 | blockers | `depend <n> --on <x>[,<y>]` |
 | PR link | `link-pr <n> <pr>` right after `gh pr create` |
 
@@ -42,7 +42,8 @@
 
 - Branch created at the grill: `gh issue develop <n> --name <prefix><n>-<slug> --base <base>`. Never `git checkout -b` + push.
 - **Every round ends with commit + push** on the task branch (grill, code, feedback, validate, autopilot). That push releases the lock. **No push mid-round.**
-- First coding round opens a draft PR: `gh pr create --draft --base <base> --head <branch>`, then `link-pr`. Title/body → **voice → PR**.
+- First coding round opens a draft PR: `gh pr create --draft --base <base> --head <branch> --label <type>`, then `link-pr`. Title + body → **pr**.
+- Every later round → body rewritten (**pr → Body**), `gh pr edit <pr> --body-file`.
 - PR ready + new round → `gh pr ready --undo` first.
 - After the push, `get <n>` (up to ~1 min):
   - card still `Coding` or lock held → hook never ran. Cause from `gh run list --branch <branch> --workflow whackagent-board.yml --limit 1`: no run = workflow missing on the branch, failed = secret. Repair: `release <n> coding --reset-to <file status>`.
@@ -70,4 +71,4 @@
 
 ## Legacy
 
-Content in the issue body (no task file on branch) or `size:*` labels → pre-0.13 layout. Say `/wa-setup` migrates it, stop.
+Content in the issue body (no task file on branch) or `size:*` labels → pre-0.13 layout. → `→ next: /wa-update`, stop.

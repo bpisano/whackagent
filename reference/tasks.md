@@ -1,6 +1,6 @@
 # Tasks
 
-The model every skill shares: config, paths, states, ids, sprints, blockers. Where tasks live → `store-<tasks.backend>.md`.
+The model every skill shares: config, paths, states, ids, sprints, types, blockers. Where tasks live → `store-<tasks.backend>.md`.
 
 ## Config and paths
 
@@ -56,8 +56,23 @@ Optional `sprint:` on a task. Groups one body of work. Naming → **voice → Ti
 - Resolve an arg: exact, then case-insensitive / kebab match. None → list known sprints (no live task = complete, not a typo). Ambiguous → list, stop.
 - Assign to a task: reuse a live name verbatim (`sprint:` values / open milestones). No match → new sprint.
 - **Complete** when no task left in `draft`…`to-close`. Never `done`. `/wa-close` then offers to land it.
-- Sprint args: `/wa-board`, `/wa-autopilot`, `/wa-task`. Other commands stay per task.
+- Sprint args: `/wa-board`, `/wa-autopilot`, `/wa-task`. Other commands stay per task. `/wa-board` also takes a type.
 - Branches → **git → Sprint branch**.
+
+## Types
+
+One per task. Test: user sees a difference? No → `refactor`. Yes: worked before? No → `bug`. Yes → `improvement`. Didn't exist → `feature`.
+
+| type | title verb | commit |
+|---|---|---|
+| `feature` | `Add` | `feat:` |
+| `improvement` | `Improve`, `Speed up`, `Change` | `feat:` (`perf:` if measured) |
+| `bug` | `Fix` | `fix:` |
+| `refactor` | `Split`, `Move`, `Upgrade`, `Remove` (no user change) | `refactor:` (`chore:` deps, CI) |
+
+- Set by `/wa-draft` from the title verb (unclear → none), required before `todo` (`/wa-task`). `/wa-pitch` split → `feature`.
+- Title verb contradicts type → fix the title, not the type.
+- `files` → `type:`. `github` → label (**store-github → Helper**).
 
 ## Blockers
 

@@ -7,7 +7,7 @@ description: Applies your notes on a coded task, then re-checks it. Use after /w
 
 Applies the user's notes on a coded task, without losing rules. Ends at `to-test`.
 
-Read: voice, components, tasks, git, store
+Read: voice, pr, components, tasks, git, store
 
 ## Steps
 
@@ -30,7 +30,7 @@ Read: voice, components, tasks, git, store
    - **rule** — durable preference ("always X", "never Y") → step 5, then adjustment.
    - Unclear → ask. Never widen scope.
 5. **Capture the rule** into `{conventions}/<module>.md`, module by what it governs (style, elegance, architecture-\*, testing, wording).
-   - Word choice → `glossary.md` row, rejected word in `Never`. Tone/copy → **Voice** in `wording.md`.
+   - Word choice, rewritten string, tone fix → **voice → Learning**.
    - Draft the line in the module's voice, show it, write only on yes.
    - Never touch unrelated parts. Fits nowhere → free-form notes in `.whackagent/config.md`.
    - Resumed agents hold the old module → tell them which module and the new rule, or respawn fresh.

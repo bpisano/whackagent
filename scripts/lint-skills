@@ -51,6 +51,19 @@ for f in agents/*.md; do
   budget "$f" 800
   for s in Inputs Steps Never Return; do heads "$f" | grep -qx "$s" || err "$f: no '## $s'"; done
   order "$f" Inputs Steps Never Return
+  # Named blocks sit between Steps and Never.
+  heads "$f" | awk '{ h=$0; if (h=="Steps") s=1; else if (h=="Inputs"||h=="Never"||h=="Return") s=(h=="Inputs"?0:2); else if (s!=1) print "'"$f"': block \"" h "\" outside Steps…Never" }' | while read -r l; do echo "❌ $l"; done | grep . && fail=1
+done
+
+for f in skills/wa-update/migrations/*.md; do
+  [ -e "$f" ] || continue
+  budget "$f" 400
+  basename "$f" | grep -qE '^[0-9]+\.[0-9]+-[a-z0-9-]+\.md$' || err "$f: name ≠ <version>-<name>.md"
+  head -1 "$f" | grep -qE '^# [0-9]+\.[0-9]+ · ' || err "$f: no '# <version> · <Name>' title"
+  for s in Detect Plan Apply; do heads "$f" | grep -qx "$s" || err "$f: no '## $s'"; done
+  order "$f" Detect Plan Apply
+  extra=$(heads "$f" | grep -vxE 'Detect|Plan|Apply')
+  [ -z "$extra" ] || err "$f: extra sections: $extra"
 done
 
 for f in reference/*.md; do

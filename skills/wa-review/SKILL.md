@@ -5,7 +5,7 @@ description: Reviews any code, outside a task. --fix applies the fixes.
 
 # /wa-review
 
-Standalone review of any code, same engine as **wa-code → Verify**. Report only, unless `--fix`.
+Standalone review of any code. Report only, unless `--fix`.
 
 Read: voice, components, tasks, store
 

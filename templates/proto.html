@@ -1,0 +1,297 @@
+<title>{{Proto name}}</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: full-bleed stage, prototype centered in its frame, optional 260px control panel on the right. */
+:root {
+  /* shell — stays in the background */
+  --shell-bg: #eceef1;
+  --shell-fg: #1d1f23;
+  --shell-muted: #8b9099;
+  --shell-line: #dcdfe4;
+  --shell-panel: #f6f7f9;
+  --shell-hover: #e3e6ea;
+  --shell-knob: #ffffff;
+  /* proto — every prototype colors itself from these only */
+  --bg: #ffffff;
+  --fg: #111113;
+  --muted: #8a8a8e;
+  --separator: rgba(60, 60, 67, 0.16);
+  --fill: #f2f2f7;
+  --accent: #007aff;
+  --danger: #ff3b30;
+  --frame-edge: #c9ccd2;
+  --shell-font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --proto-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --shell-bg: #121316; --shell-fg: #e7e9ec; --shell-muted: #7d828b; --shell-line: #26282d;
+    --shell-panel: #18191d; --shell-hover: #22242a; --shell-knob: #e7e9ec;
+    --bg: #000000; --fg: #f5f5f7; --muted: #8d8d93; --separator: rgba(84, 84, 88, 0.6);
+    --fill: #1c1c1e; --accent: #0a84ff; --danger: #ff453a; --frame-edge: #34373d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --shell-bg: #121316; --shell-fg: #e7e9ec; --shell-muted: #7d828b; --shell-line: #26282d;
+  --shell-panel: #18191d; --shell-hover: #22242a; --shell-knob: #e7e9ec;
+  --bg: #000000; --fg: #f5f5f7; --muted: #8d8d93; --separator: rgba(84, 84, 88, 0.6);
+  --fill: #1c1c1e; --accent: #0a84ff; --danger: #ff453a; --frame-edge: #34373d;
+  color-scheme: dark;
+}
+
+/* ---------- shell: never edited per proto ---------- */
+html, body { height: 100%; }
+body { background: var(--shell-bg); color: var(--shell-fg); font-family: var(--shell-font); overflow: hidden; }
+.shell { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 260px; transition: grid-template-columns .2s ease; }
+.shell[data-panel="closed"], .shell[data-panel="none"] { grid-template-columns: minmax(0, 1fr) 0; }
+.main { position: relative; min-width: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding-block: 12px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: 16px;
+}
+.name { font-size: 12px; color: var(--shell-muted); letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tools { display: flex; align-items: center; gap: 4px; }
+.tool {
+  width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 8px;
+  background: transparent; color: var(--shell-muted); cursor: pointer;
+}
+.tool:hover { background: var(--shell-hover); color: var(--shell-fg); }
+.tool:focus-visible, .panel :focus-visible { outline: 2px solid var(--shell-muted); outline-offset: 2px; }
+.tool svg { width: 16px; height: 16px; }
+.theme { display: flex; padding: 2px; border-radius: 8px; background: var(--shell-hover); margin-right: 4px; }
+.theme button {
+  width: 28px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 6px;
+  background: transparent; color: var(--shell-muted); cursor: pointer;
+}
+.theme button:hover { color: var(--shell-fg); }
+.theme button[aria-pressed="true"] { background: var(--shell-panel); color: var(--shell-fg); box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
+.theme button:focus-visible { outline: 2px solid var(--shell-muted); outline-offset: 2px; }
+.theme svg { width: 14px; height: 14px; }
+.stage { position: relative; min-height: 0; display: grid; place-items: center; padding: 8px 24px 32px; overflow: hidden; }
+.fit { position: relative; }
+.frame { position: absolute; top: 0; left: 0; transform-origin: top left; }
+.frame[data-frame="phone"] {
+  width: 390px; height: 844px; border-radius: 54px; overflow: hidden;
+  box-shadow: 0 0 0 1px var(--frame-edge), 0 24px 60px -24px rgba(0, 0, 0, .25);
+  background: var(--bg);
+}
+.frame[data-frame="window"] {
+  width: 960px; height: 620px; border-radius: 12px; overflow: hidden;
+  box-shadow: 0 0 0 1px var(--frame-edge), 0 24px 60px -24px rgba(0, 0, 0, .25);
+  background: var(--bg); display: grid; grid-template-rows: 36px minmax(0, 1fr);
+}
+.frame[data-frame="none"] { position: static; }
+.chrome { display: none; }
+.frame[data-frame="window"] .chrome {
+  display: flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--fill);
+  border-bottom: 1px solid var(--separator);
+}
+.chrome i { width: 12px; height: 12px; border-radius: 50%; background: var(--separator); }
+.status { display: none; }
+.frame[data-frame="phone"] .status {
+  display: flex; justify-content: space-between; align-items: center; height: 54px; padding: 18px 34px 0 42px;
+  font: 600 16px/1 var(--proto-font); color: var(--fg);
+}
+.status svg { height: 12px; fill: var(--fg); }
+#proto { font-family: var(--proto-font); color: var(--fg); background: var(--bg); }
+.frame[data-frame="phone"] #proto { height: calc(100% - 54px); overflow: hidden; }
+.frame[data-frame="window"] #proto { overflow: hidden; }
+
+.panel {
+  min-width: 0; overflow: hidden auto; background: var(--shell-panel); border-left: 1px solid var(--shell-line);
+  padding-block: 56px 24px; padding-left: 20px; padding-right: max(20px, env(safe-area-inset-right, 0px));
+}
+.shell[data-panel="closed"] .panel, .shell[data-panel="none"] .panel { visibility: hidden; }
+.control { display: grid; gap: 8px; margin-bottom: 24px; }
+.control > .label { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--shell-muted); }
+.seg { display: flex; padding: 2px; border-radius: 8px; background: var(--shell-hover); }
+.seg button {
+  flex: 1; min-width: 0; border: 0; border-radius: 6px; padding: 6px 4px; background: transparent;
+  color: var(--shell-muted); font: 500 12px var(--shell-font); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.seg button[aria-pressed="true"] { background: var(--shell-panel); color: var(--shell-fg); box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
+.radio { display: grid; gap: 2px; }
+.radio button {
+  display: flex; align-items: center; gap: 10px; border: 0; border-radius: 6px; padding: 6px 8px; margin-inline: -8px;
+  background: transparent; color: var(--shell-fg); font: 13px var(--shell-font); text-align: left; cursor: pointer;
+}
+.radio button:hover { background: var(--shell-hover); }
+.radio button::before { content: ""; width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--shell-muted); flex: none; }
+.radio button[aria-pressed="true"]::before { box-shadow: inset 0 0 0 4px var(--shell-fg); }
+.toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; cursor: pointer; }
+.toggle .label { font-size: 13px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--shell-fg); }
+.switch { position: relative; width: 32px; height: 18px; border-radius: 9px; background: var(--shell-line); border: 0; cursor: pointer; flex: none; transition: background .15s; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--shell-knob); box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform .15s; }
+.switch[aria-checked="true"] { background: var(--shell-fg); }
+.switch[aria-checked="true"]::after { transform: translateX(14px); background: var(--shell-panel); }
+.slider { display: flex; align-items: center; gap: 10px; }
+.slider input { flex: 1; min-width: 0; accent-color: var(--shell-fg); }
+.slider output { font-size: 12px; color: var(--shell-muted); font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; }
+
+@media (max-width: 720px) {
+  .shell, .shell[data-panel] { grid-template-columns: minmax(0, 1fr); }
+  .panel {
+    position: fixed; left: 0; right: 0; bottom: 0; max-height: 45%; border-left: 0; border-top: 1px solid var(--shell-line);
+    border-radius: 14px 14px 0 0; padding-top: 20px; padding-left: max(20px, env(safe-area-inset-left, 0px));
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 0px)); transition: transform .2s ease;
+  }
+  .shell[data-panel="closed"] .panel, .shell[data-panel="none"] .panel { transform: translateY(100%); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ========== PROTO CSS: edit only below ==========
+   Colors from tokens only: --bg --fg --muted --separator --fill --accent --danger.
+   React to controls with [data-<id>] on #proto, sliders also get --<id>. */
+#proto { display: flex; flex-direction: column; }
+/* ========== /PROTO CSS ========== */
+</style>
+
+<div class="shell" id="shell" data-panel="open">
+  <div class="main">
+    <header class="bar">
+      <span class="name" id="proto-name"></span>
+      <div class="tools">
+        <div class="theme" id="theme" role="group" aria-label="Theme"></div>
+        <button class="tool" id="panel-toggle" type="button" aria-label="Controls">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M10 2.5v11"/></svg>
+        </button>
+      </div>
+    </header>
+    <div class="stage" id="stage">
+      <div class="fit" id="fit">
+        <div class="frame" id="frame">
+          <div class="chrome" aria-hidden="true"><i></i><i></i><i></i></div>
+          <div class="status" aria-hidden="true">
+            <span>9:41</span>
+            <svg viewBox="0 0 64 12"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/><rect x="38" y="1" width="22" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="1" style="stroke: var(--fg)"/><rect x="40" y="3" width="16" height="6" rx="1.5"/><rect x="61" y="4" width="2" height="4" rx="1"/></svg>
+          </div>
+
+          <!-- ========== PROTO: edit only inside #proto ========== -->
+          <main id="proto">
+            <!-- prototype markup: real content, glossary terms, ui_strings_language -->
+          </main>
+          <!-- ========== /PROTO ========== -->
+        </div>
+      </div>
+    </div>
+  </div>
+  <aside class="panel" id="panel" aria-label="Controls"></aside>
+</div>
+
+<script>
+// ========== PROTO: edit only these three ==========
+const PROTO = { name: "{{Proto name}} · v1", frame: "phone", frames: ["phone"] };   // frame: phone | window | none
+const CONTROLS = [
+  // { id: "state", label: "State", type: "radio", value: "filled", options: [["filled", "Filled"], ["empty", "Empty"]] },
+  // { id: "variant", label: "Variant", type: "segmented", value: "a", options: [["a", "A"], ["b", "B"]] },
+  // { id: "unread", label: "Unread", type: "toggle", value: true },
+  // { id: "text", label: "Text size", type: "slider", min: 0.85, max: 1.3, step: 0.05, value: 1, format: v => Math.round(v * 100) + " %" },
+];
+function onControl(id, value) {}
+// ========== /PROTO ==========
+
+// ---------- shell: never edited per proto ----------
+(() => {
+  const root = document.documentElement, shell = document.getElementById("shell"), proto = document.getElementById("proto");
+  const frame = document.getElementById("frame"), fit = document.getElementById("fit"), stage = document.getElementById("stage");
+  const key = "wa-proto:" + PROTO.name;
+  const store = (() => { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch { return {}; } })();
+  const save = () => { try { localStorage.setItem(key, JSON.stringify(store)); } catch {} };
+  const hostTheme = root.getAttribute("data-theme");
+  const FRAME_LABELS = { phone: "Phone", window: "Window", none: "None" };
+  const controls = PROTO.frames && PROTO.frames.length > 1
+    ? [{ id: "frame", label: "Frame", type: "segmented", value: PROTO.frame, options: PROTO.frames.map(f => [f, FRAME_LABELS[f]]) }, ...CONTROLS]
+    : CONTROLS;
+
+  document.getElementById("proto-name").textContent = PROTO.name;
+
+  // theme: system · light · dark
+  const icons = {
+    auto: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 1.8a6.2 6.2 0 0 1 0 12.4Z" fill="currentColor"/></svg>',
+    light: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></svg>',
+    dark: '<svg viewBox="0 0 16 16"><path d="M13.6 10.2A6 6 0 0 1 5.8 2.4a6 6 0 1 0 7.8 7.8Z" fill="currentColor"/></svg>',
+  };
+  const THEME_LABELS = { auto: "System", light: "Light", dark: "Dark" };
+  const themeGroup = document.getElementById("theme");
+  const themeButtons = Object.keys(icons).map(t => {
+    const b = document.createElement("button");
+    b.type = "button"; b.innerHTML = icons[t]; b.dataset.theme = t;
+    b.setAttribute("aria-label", THEME_LABELS[t]); b.title = THEME_LABELS[t];
+    b.onclick = () => { store.theme = t; save(); applyTheme(t); };
+    return b;
+  });
+  themeGroup.append(...themeButtons);
+  const applyTheme = t => {
+    if (t === "auto") { hostTheme ? root.setAttribute("data-theme", hostTheme) : root.removeAttribute("data-theme"); }
+    else root.setAttribute("data-theme", t);
+    themeButtons.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.theme === t)));
+  };
+  applyTheme(store.theme || "auto");
+
+  // panel
+  const panelButton = document.getElementById("panel-toggle");
+  if (!controls.length) { shell.dataset.panel = "none"; panelButton.hidden = true; }
+  else shell.dataset.panel = store.panel || (matchMedia("(max-width: 720px)").matches ? "closed" : "open");
+  panelButton.onclick = () => { shell.dataset.panel = shell.dataset.panel === "open" ? "closed" : "open"; store.panel = shell.dataset.panel; save(); };
+
+  // fit the frame to the stage
+  const SIZES = { phone: [390, 844], window: [960, 620] };
+  const layout = () => {
+    const size = SIZES[frame.dataset.frame];
+    if (!size) { fit.style.width = fit.style.height = ""; frame.style.transform = ""; return; }
+    const cs = getComputedStyle(stage);
+    const w = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const h = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    const s = Math.min(1, w / size[0], h / size[1]);
+    fit.style.width = size[0] * s + "px"; fit.style.height = size[1] * s + "px";
+    frame.style.transform = `scale(${s})`;
+  };
+  new ResizeObserver(layout).observe(stage);
+
+  // controls
+  const values = Object.assign(Object.fromEntries(controls.map(c => [c.id, c.value])), store.values || {});
+  const set = (c, v, quiet) => {
+    values[c.id] = v; store.values = values; if (!quiet) save();
+    if (c.id === "frame") { frame.dataset.frame = v; layout(); }
+    else { proto.dataset[c.id] = String(v); if (c.type === "slider") proto.style.setProperty("--" + c.id, v); }
+    onControl(c.id, v);
+  };
+  const panel = document.getElementById("panel");
+  for (const c of controls) {
+    const box = document.createElement("div"); box.className = "control";
+    const label = document.createElement("span"); label.className = "label"; label.textContent = c.label;
+    if (c.type === "toggle") {
+      box.classList.add("toggle");
+      const sw = document.createElement("button"); sw.className = "switch"; sw.type = "button"; sw.id = "c-" + c.id;
+      sw.setAttribute("role", "switch"); sw.setAttribute("aria-label", c.label);
+      const draw = () => sw.setAttribute("aria-checked", String(values[c.id]));
+      sw.onclick = () => { set(c, !values[c.id]); draw(); };
+      box.onclick = e => { if (e.target === box || e.target === label) sw.click(); };
+      draw(); box.append(label, sw);
+    } else if (c.type === "slider") {
+      const row = document.createElement("div"); row.className = "slider";
+      const input = Object.assign(document.createElement("input"), { type: "range", id: "c-" + c.id, min: c.min, max: c.max, step: c.step, value: values[c.id] });
+      input.setAttribute("aria-label", c.label);
+      const out = document.createElement("output");
+      const draw = () => out.textContent = c.format ? c.format(+input.value) : input.value;
+      input.oninput = () => { set(c, +input.value); draw(); };
+      draw(); row.append(input, out); box.append(label, row);
+    } else {
+      const group = document.createElement("div"); group.className = c.type === "radio" ? "radio" : "seg";
+      group.setAttribute("role", "group"); group.setAttribute("aria-label", c.label);
+      const buttons = c.options.map(([v, text]) => {
+        const b = document.createElement("button"); b.type = "button"; b.textContent = text; b.id = `c-${c.id}-${v}`;
+        b.onclick = () => { set(c, v); buttons.forEach(x => x.setAttribute("aria-pressed", String(x === b))); };
+        b.setAttribute("aria-pressed", String(values[c.id] === v));
+        return b;
+      });
+      group.append(...buttons); box.append(label, group);
+    }
+    panel.append(box);
+    set(c, values[c.id], true);
+  }
+  if (!controls.some(c => c.id === "frame")) frame.dataset.frame = PROTO.frame;
+  layout();
+})();
+</script>

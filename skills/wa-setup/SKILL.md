@@ -1,20 +1,19 @@
 ---
 name: wa-setup
-description: Configures whackagent in a project, or changes its settings.
+description: Configures whackagent in a project, or re-asks its questions to change settings.
 ---
 
 # /wa-setup
 
-Sets up whackagent. Re-run = reconfigure, never reinstall.
+Sets up whackagent. Re-run = same questions, current answers as defaults. Plugin updates → `/wa-update`.
 
 Read: voice, components, tasks, git, store-files, store-github
 
 ## Steps
 
-1. **Pick the mode.** `.whackagent/config.md` exists → **Reconfigure**, else **First setup**.
-   - Arg (`tasks`, `paths`, `review`, `build`, `branch`, `commit`, `verify`, `languages`) narrows reconfigure. Fresh project + arg → say it's ignored.
-2. **Run the mode block.**
-3. **Report** (reconfigure): keys before → after, files moved, modules added. Nothing changed → say so.
+1. **Pick the run.** No `.whackagent/config.md` → **First setup**. Else **Re-run**.
+   - Arg (`tasks`, `paths`, `review`, `build`, `branch`, `commit`, `verify`, `languages`) → that section's **Questions** only. First setup + arg → say it's ignored.
+2. **Run the block.**
 
 ## First setup
 
@@ -28,7 +27,9 @@ Read: voice, components, tasks, git, store-files, store-github
      - catalogs (`.xcstrings`, `*.lproj`, `locales/`, `values-*/strings.xml`); source = dev region
      - 20–40 UI strings → person (tu/vous), tone; poor copy (verbose, literal) → not the reference, say so
      - context: README, `fastlane/metadata`, landing copy
-   - Recurring domain nouns in code, strings, README → glossary candidates.
+   - Glossary candidates (**voice → Learning**):
+     - recurring domain nouns in code, strings, README → **Concepts**
+     - UI: screen types (`*View`, `*Screen`, routes) → **Screens**; views on 2+ screens → **Parts**; navigation (`NavigationStack`, coordinators, router) → **Flows**
    - Build wrapper: `cli/`, `bin/`, `scripts/`, `Makefile` target. Project `CLAUDE.md` / README "ALWAYS use X to build" → strongest, binds the implementer.
 2. **Ask** **Questions**.
 3. **Scaffold** → **Scaffold**; `github` → **GitHub scaffold** too.
@@ -39,7 +40,7 @@ Read: voice, components, tasks, git, store-files, store-github
 
 One **Question** each, detected value as default. 7–12 total, rest = template default. Ask 8 before 7.
 
-1. **Discussion language** — detected from the user.
+1. **Languages** — discussion: detected from the user. `pr_language` (`github` or `close.strategy: pr`): language of the last 10 merged PRs (`gh pr list --state merged`), else discussion.
 2. **Language + kind** — confirm (`app` / `package` / `cli` / `server`); kind picks the architecture module.
 3. **Review timing** → `review.when`, recommend `on_validation`.
    - `each_round`: drift caught early, verifier round per note.
@@ -63,7 +64,7 @@ One **Question** each, detected value as default. 7–12 total, rest = template 
 9. **Paths** → `paths.*`, recommend `.whackagent/`. One question, per path only on "some of them". `github` → no backlog.
    - Shared wiki/backlog → committed folder (`docs/`). `paths.reports` stays local.
    - Absolute OK. `.whackagent/config.md` never moves.
-10. **Apple references** — detected only. Copy into `{conventions}/apple/`? Recommend yes (agents open one topic page). Say: Apple text lands in your repo (public: your call); `/wa-setup` refreshes.
+10. **Apple references** — detected only. Copy into `{conventions}/apple/`? Recommend yes (agents open one topic page). Say: Apple text lands in your repo (public: your call); `/wa-update` refreshes.
 11. **Wording** — UI only → **Project voice** in `{conventions}/wording.md`. Up to 3, `AskUserQuestion`, user's language:
     - **Base tone** — 4 likeliest of `neutral`, `sober`, `complice`, `premium`, `energetic` (`${CLAUDE_PLUGIN_ROOT}/conventions/wording/tones.md`). Other → `base: custom`, text in **Voice**.
     - **Person** — languages with it only (tu/vous/impersonal, du/Sie, tú/usted).
@@ -83,18 +84,20 @@ One **Question** each, detected value as default. 7–12 total, rest = template 
   - TypeScript / generic: `<lang>.md` alone.
   - Apple (Q10 yes): export's `swiftui-*` folders only → `{conventions}/apple/`, `apple.md` beside modules. Delete the export. Never export into `{conventions}/`. Commit `apple/`: worktrees see committed files only.
   - Wording (UI): `wording.md` + whole `wording/`. Fill **Project voice** (`languages` source first = `ui_strings_language`, `person`, `base`, `audience`). **Voice**: 2–3 sentences from scan, keep `<!-- to review -->`. **Validated examples** empty.
-  - Glossary (all): `${CLAUDE_PLUGIN_ROOT}/templates/glossary.md` → `{conventions}/glossary.md`. One column per UI language, source first; no UI → `en`. Show scan rows, ask once (recommend keep), write. Nothing found → table empty.
+  - Glossary (all): `${CLAUDE_PLUGIN_ROOT}/templates/glossary.md` → `{conventions}/glossary.md`. **Concepts**: one column per UI language, source first; no UI → `en`. No UI → drop **Screens**, **Parts**, **Flows**. Scan rows as one **Glossary rows** (recommend keep). Nothing found → tables empty.
+  - PR: `${CLAUDE_PLUGIN_ROOT}/templates/pr.md` → `{conventions}/pr.md`, unless `.github/pull_request_template.md` exists. Not in `review.modules`.
   - `review.modules` = exactly what was copied, `wording.md` + `glossary.md` included.
 - **Xcode** → `.xcodebuildmcp/config.yaml` at repo root, unless present: `schemaVersion: 1`, `incrementalBuildsEnabled: true`.
 - Templates below = `${CLAUDE_PLUGIN_ROOT}/templates/`. `files` → `{backlog}` from `BACKLOG.md`, empty `{tasks}/`.
-- `{wiki}/index.md` from `wiki-index.md`; empty `{reports}/`.
+- `{wiki}/index.md` from `wiki-index.md`, glossary link relative to `{wiki}`; empty `{reports}/`.
 
 ## GitHub scaffold
 
 Team-visible. One **Plan** (auth, project, status, size, variables, hook, secret, config, import). Helper → **store-github → Helper**.
 
 1. **Auth** — needs `project` scope. Missing → user runs `! gh auth refresh -h github.com -s project`, re-check.
-2. **Provision** — always `--tasks-path {tasks} --branch-prefix <prefix>`. Adds `Size`, links repo, sets `WA_*` variables.
+2. **Provision** — always `--tasks-path {tasks} --branch-prefix <prefix>`. Adds `Size`, type labels (**tasks → Types**), links repo, sets `WA_*` variables.
+   - Repo has `enhancement` (GitHub default) → offer `--type improvement=enhancement`, recommend yes.
    - New → `provision --title "<repo>"`, repo owner's. Columns = eight states in order (`In Progress` dropped).
    - Adopt → `--project <n>` (+ `--owner` if not repo owner). Columns kept, missing states added; `--state todo="Ready"` maps a team name.
    - `status_options_extra` → name, ask; recommend dropping GitHub defaults, keeping team ones. Yes → `--prune-status`. Cards on them → user moves them.
@@ -110,58 +113,25 @@ Team-visible. One **Plan** (auth, project, status, size, variables, hook, secret
 6. `.md` tasks exist → **Import to GitHub**, same **Plan**.
 7. **Offer smoke test** (recommend yes): `create` → `claim <n> grilling` → `release <n> grilling --reset-to draft` → `cancel <n> --reason "smoke test"`.
 
-## Reconfigure
+## Re-run
 
-1. **Take stock**:
-   - Re-run detection; one line per drift vs config. Never auto-apply.
-   - Keys in template, not config → new: list with default + gain, ask. Not in template → retired.
-   - `commit.author_*` → delete unasked, say so.
-   - `paths.*` key → nothing (moved by hand) → name key + target; offer re-point or move back. Never scaffold over it.
-   - Legacy tasks (**store → Legacy**; `files` also kebab sprints) → offer **Lifecycle migration** / **GitHub layout migration** first.
-   - Apple: re-export, `diff -rq --exclude=SKILL.md` on `swiftui-*`. Absent but available → 🆕 + Q10. Differ / folder added or gone → ⚠️ refresh. Same or no Xcode 27 → no row.
-   - No `glossary.md` → 🆕. UI, no `wording.md` → 🆕 + Q11. `wording/` ≠ plugin → ⚠️ refresh. Became UI → offer it.
-   - `github`: hook on default branch, `template version:` current (older → update PR, **GitHub scaffold** 3); secret in `gh secret list`; `github-board config --refresh` matches; `provision --project <n>` → all states, no extras (else `--prune-status`).
-2. **Show** one table: setting · current · 🆕 / ⚠️ + why. Arg → skip unrelated rows, go straight to its section's **Questions**.
-3. **Ask** what to change. Full **Questions** only for named items + new keys. Current = default, "leave it" valid.
-4. **Apply**:
-   - Edit config key by key, never re-copy the template. New key → default + its comment. Rest byte-for-byte.
-   - Path change → move files: list, ask, `git mv` (or move); dirty tree → say so first. Target not empty → stop: merge, other path, abort. Fix links (backlog → tasks relative to its folder, `[[page]]`, `wiki:`). Wiki left `.whackagent/` → recommend `compress_wiki: false`.
-   - Modules additive: add missing, update `review.modules`. Never overwrite one present, edited or not. Upstream change → diff, copy on yes.
-   - `apple/`, `wording/` replaced whole on refresh. `apple/`: delete `swiftui-*` first (read-only). Only `SKILL.md` differs → skip.
-   - `apple.md` / `wording.md` never without their folder. **Project voice**, **Voice**, glossary rows never overwritten.
-   - Content untouched except **Lifecycle migration**, **GitHub layout migration**, **Import to GitHub**, each behind its **Plan**. Folder deleted (key unchanged) → recreate empty, mention.
+1. **Detect** (**First setup** 1).
+2. **Ask** **Questions**: current value = default. Detected differs → `Alt:` line (`Alt: SwiftUI detected`).
+3. **Apply** what changed, each effect behind its **Plan**:
+   - Config key by key, never re-copy the template. Rest byte-for-byte.
+   - Path changed → move files: list, `git mv` (or move); dirty tree → say so first. Target not empty → stop: merge, other path, abort. Fix links (backlog → tasks relative to its folder, `[[page]]`, `wiki:`). Wiki left `.whackagent/` → recommend `compress_wiki: false`.
+   - `files` → `github` → **GitHub scaffold** + **Import to GitHub**.
+   - Module newly picked (Apple, wording, architecture swap) → copy per **Scaffold**. Never overwrite one present.
+   - Folder deleted (key unchanged) → recreate empty, mention.
    - No wiki seeding, no compression.
-
-## Lifecycle migration
-
-`files`. One **Plan** (states, headings, sprints, titles, backlog, counts), then rewrite every task + `{backlog}`. Dirty tree → say so.
-
-- States: `in-progress` → `coding` · `review` → `to-test` · `validated` → `to-close` · `todo` + `grilled: false` → `draft` · + `true` → `todo`. Drop `grilled:`.
-- Headings: `Contexte / Décisions`, `Critères d'acceptation`, `Implémentation`, `Vérification` → English (**voice → Language**).
-- Sprints: kebab → title (**voice → Titles**). Branches unchanged.
-- Bad titles (**voice → Titles**) → rewrite in plan. Slugs, file names never move.
-- Backlog: sections renamed + reordered, line order kept.
-
-## GitHub layout migration
-
-Pre-0.13 (**store-github → Legacy**) → task file = truth. One **Plan**. Dirty tree → say so; end on the starting branch.
-
-1. Hook + secret missing → **GitHub scaffold** 2–4.
-2. `size:<x>` label → `set-field <n> size <x>`, `gh issue edit --remove-label`. Label definitions stay: say so.
-3. Grilled (`Todo`+, body has `## Acceptance criteria`), board order:
-   - Branch: reuse `<prefix><n>-*`, else `gh issue develop` (**store-github → Rounds**; base = sprint branch if milestone).
-   - `{tasks}/<n>-<slug>.md`: `issue:`; `status:` = column (`Coding` → `to-test` if `## Implementation` filled, else `todo`, card moved); `wiki:` / `note:` from body; `created:` = `createdAt`. Body sections as-is; no title, summary, size, sprint.
-   - Commit (**git → Commits**), push.
-   - Re-read body, then `--body-file`: `<summary>`, blank, `https://github.com/<owner>/<repo>/blob/<branch>/{tasks}/<n>-<slug>.md`.
-4. Drafts untouched.
-5. Failure → stop, report per issue. Body rewritten only after its file is pushed.
+4. **Report**: keys before → after, files moved, modules added. Nothing changed → say so.
 
 ## Import to GitHub
 
-`files` → `github`. **Lifecycle migration** first if needed. **Plan** rows: milestones, issues, branches, drafts, archive, removed.
+`files` → `github`. Legacy tasks (**store-files → Legacy**) → `→ next: /wa-update`, stop. **Plan** rows: milestones, issues, branches, drafts, archive, removed.
 
 1. Open tasks only (`draft`…`to-close`); `done` / `canceled` stay as archive.
-2. Backlog order: `create --title --summary --size [--sprint]` (drafts `--note`), `move <n> --bottom`. Then `blocked_by:` → `depend`.
+2. Backlog order: `create --title --summary --size [--type] [--sprint]` (drafts `--note`), `move <n> --bottom`. Then `blocked_by:` → `depend`.
 3. Grilled (`todo` and later): `gh issue develop`. Old local `wa/<slug>` → rebase commits onto it, delete locally (pushed: remote stays, say so). File → `{tasks}/<n>-<slug>.md`, add `issue:`, drop `title`, `summary`, `size`, `sprint`, `blocked_by`. Commit, push.
 4. Remove imported files + `{backlog}` from base **after** all exist. Any failure → stop, remove nothing, report.
 
@@ -177,4 +147,4 @@ Pre-0.13 (**store-github → Legacy**) → task file = truth. One **Plan**. Dirt
 
 - Repo near-empty → `/wa-pitch <pitch>`.
 - First setup → `/wa-board`, or `/wa-task <idea>`.
-- Reconfigure → `/wa-board`, above all after a path move.
+- Re-run → `/wa-board`, above all after a path move.

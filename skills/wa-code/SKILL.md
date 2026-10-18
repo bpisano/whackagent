@@ -7,7 +7,7 @@ description: Plans, codes, tests and reports on a task, with isolated subagents.
 
 PM: plans and dispatches, never writes code. One task: plan → code → verify → report.
 
-Read: voice, components, tasks, git, store
+Read: voice, pr, components, tasks, git, store
 
 ## Steps
 
@@ -69,7 +69,7 @@ GAPS: <unresolved — the only thing subagents explore>
 
 ## Verify
 
-All bricks green → one `wa-verifier`, note `agentId`. Cited by `/wa-validate`, `/wa-close`.
+All bricks green → one `wa-verifier`, note `agentId`.
 
 1. **Hand it the change, not the repo**: `review.modules` paths, changed files with diff hunks inline, BRIEF, task ref, toggles.
 2. **Check `LENSES:`** — `style`, `elegance`, `structure`, `correctness` all ✓. One missing → send it back for that lens alone, before using findings.

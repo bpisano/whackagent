@@ -52,7 +52,8 @@ Each command ends with the next one to run.
 | Command | What it does |
 | --- | --- |
 | `/wa-setup` | Configures the project. Run again to change settings. |
-| `/wa-board [sprint]` | Shows the backlog and the next step. |
+| `/wa-update` | After a plugin update: migrates old formats, syncs config, conventions and board. |
+| `/wa-board [sprint\|type]` | Shows the backlog and the next step. |
 | `/wa-pitch <pitch>` | Starts a project: grills the pitch, previews the UI, creates sprints and tasks. |
 | `/wa-draft <idea>` | Notes an idea as a task, without questions. |
 | `/wa-task <idea\|task>` | Clarifies a task with you, then reorders the backlog. |
@@ -63,6 +64,7 @@ Each command ends with the next one to run.
 | `/wa-close [task]` | Reviews if needed, updates the wiki, commits, lands the branch. |
 | `/wa-autopilot [tasks\|sprint]` | Codes several tasks unattended, in parallel when possible. |
 | `/wa-review [scope] [--fix]` | Reviews any code, outside a task. |
+| `/wa-proto [idea\|task]` | Prototypes a UI idea as an HTML page: light/dark, controls on the right. No argument: what you're talking about. |
 | `/wa-wiki [question]` | Answers from the wiki. No argument: syncs it. |
 
 A task is its backlog number (`/wa-code 3`) or its issue number with GitHub (`/wa-code 42`). Lists and ranges work: `2,4,5`, `2-5`.
@@ -93,17 +95,31 @@ One `.md` per task in `.whackagent/tasks/`, ordered in `BACKLOG.md`. Nothing to 
 
 The task file stays the source of truth. A GitHub Project shows it to the team.
 
-- **One issue per task.** The issue holds the title, summary, size, sprint (milestone) and blockers.
+- **One issue per task.** The issue holds the title, summary, size, type (label), sprint (milestone) and blockers.
 - **The spec lives on the task branch.** `/wa-task 42` creates `wa/42-add-apple-login` and commits `.whackagent/tasks/42-add-apple-login.md` there.
 - **The board follows the files.** A GitHub Action reads the task file on every push and moves the card. A merged PR moves it to Done and closes the issue.
 - **One person per task.** Grilling and coding take a lock. Someone else trying gets `🔒 #42 grilling — alice@mbp since 2h`. A review locks the task too, but the card stays in To test.
-- **One draft PR per task.** Every round pushes to it. `/wa-close` marks it ready. You merge.
+- **One draft PR per task.** Every round pushes to it and rewrites its body. `/wa-close` marks it ready. You merge.
+- **Same PR shape every time**: one sentence, `Changes` (`Add …`, `Change …`, `Fix …`, `Remove …`, `Improve …`), `To test`, optional `Notes`, `Closes #n` last. Template in `conventions/pr.md`, yours to edit; the repo's `.github/pull_request_template.md` wins if present. Language: `pr_language`. Never signed by Claude.
 
 Setup needs `gh` with the `project` scope and a token for the Action (`WA_PROJECT_TOKEN`). `/wa-setup` walks you through both.
 
 ## Dependencies
 
 A task can be blocked by others. The board shows `⛔ #12`, `/wa-code` warns before starting. `/wa-autopilot` runs independent tasks in parallel and stacks a blocked task on its blocker's branch, without asking. Close the blocker first. With GitHub, they're the issue's native *blocked by* links.
+
+## Types
+
+Every task has one type, set from its title and confirmed by the grill:
+
+| type | when | title |
+|---|---|---|
+| `feature` | didn't exist | `Add Apple login` |
+| `improvement` | works, made better | `Speed up Inbox scroll` |
+| `bug` | should work, doesn't | `Fix crash on map zoom` |
+| `refactor` | nothing changes for the user | `Split AuthStore` |
+
+With GitHub it's a label on the issue and its PR. Commits take the matching prefix (`feat:`, `fix:`, `refactor:`). `/wa-board bug` shows only bugs.
 
 ## Sprints
 
@@ -148,11 +164,11 @@ In `.whackagent/config.md`:
 
 One file per rule set, copied into your project and yours to edit. `/wa-setup` copies only what fits: Swift (style, elegance, architecture, SwiftUI, testing), TypeScript, or generic. The reviewer reads exactly those.
 
-**Wording** (UI projects): `/wa-setup` asks how your app talks (tone, tu/vous, audience) and copies the UI copy rules into `conventions/wording.md`. Every string the agent writes follows them: remove it, show it, shorten it, then tune it. The reviewer checks them too. The same rules load by themselves when you write UI with Claude outside a task. No command.
+**Wording** (UI projects): `/wa-setup` asks how your app talks (tone, tu/vous, audience) and copies the UI copy rules into `conventions/wording.md`. Every string the agent writes follows them: remove it, show it, shorten it, then tune it. Strings you rewrite become examples the agent copies. The reviewer checks them too. The same rules load by themselves when you write UI with Claude outside a task. No command.
 
-**Glossary** (every project): `conventions/glossary.md` holds one word per product concept. The same word is used in the UI, in tasks, in PRs and in what Claude tells you. `/wa-pitch` seeds it, `/wa-task` and `/wa-feedback` grow it.
+**Glossary** (every project): `conventions/glossary.md` holds one word per thing, so you and Claude mean the same: **Concepts** (Inbox, Account, Sync, with their states), and for apps **Screens** (Login screen), **Parts** (Composer) and **Flows** (Login flow = Welcome → Login screen → 2FA). Each term has its code name, the words to avoid, and a one-line definition linked to the wiki. The same word is used in the UI, the code, tasks, PRs, the wiki and what Claude tells you. `/wa-setup` and `/wa-pitch` seed it, `/wa-task`, `/wa-feedback` and `/wa-wiki` propose new rows. Use another word twice and Claude offers to rename the term.
 
-With Xcode 27+, `/wa-setup` can also export Apple's own SwiftUI guidance from your Xcode into `conventions/apple/`. Agents open only the page for the API they touch. Run `/wa-setup` again after an Xcode update to refresh it.
+With Xcode 27+, `/wa-setup` can also export Apple's own SwiftUI guidance from your Xcode into `conventions/apple/`. Agents open only the page for the API they touch. Run `/wa-update` after an Xcode update to refresh it.
 
 ## Requires
 

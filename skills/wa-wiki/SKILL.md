@@ -7,7 +7,7 @@ description: Answers from the project wiki. No argument: syncs the wiki with rec
 
 No arg → **update**: sync `{wiki}` with changes. Arg → **query**: answer from the wiki.
 
-Read: voice, tasks, git
+Read: voice, components, tasks, git
 
 ## Steps
 
@@ -26,11 +26,15 @@ Read: voice, tasks, git
    - Cross-link wiki↔wiki, link the task where useful.
    - Create every page a task's `wiki:` flagged missing.
    - Narrative (why + shape), never a code dump.
-3. **Compress** — only if `compress_wiki: true`:
+   - Glossary terms only (**voice → Glossary**). `Never` word in a page → replace.
+3. **Glossary** — one **Glossary rows** batch (**voice → Learning**):
+   - Term recurring in pages, not in glossary → `+` row.
+   - Page that details a glossary entry → `~` its `Means` + `→ [[page]]`.
+4. **Compress** — only if `compress_wiki: true`:
    - Run **caveman-compress** on each page written, delete its `*.original.md`.
    - Never `pitch.md`.
    - `{wiki}` outside `.whackagent/` → say it once, recommend `compress_wiki: false`.
-4. **Commit.**
+5. **Commit.**
    - Called by `/wa-close` → never: it commits pages with the code.
    - Manual → only if `commit.auto_commit_after_validation: true` and task is `to-close` or `done`. Author → **git → Commits**.
    - Else leave it uncommitted.
@@ -39,7 +43,7 @@ Read: voice, tasks, git
 
 Read-only.
 
-1. Search `{wiki}/` pages, follow `[[links]]`.
+1. Search `{conventions}/glossary.md` and `{wiki}/` pages, follow `[[links]]`. Answer in glossary terms.
 2. Wiki thin → targeted Grep/Glob in source, scoped to the ask. Never a full-tree scan.
 3. Answer short, synthesized. Cite `[[page]]` and task ids used. Never dump files.
 

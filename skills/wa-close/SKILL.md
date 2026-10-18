@@ -7,7 +7,7 @@ description: Finishes a task: reviews it if needed, updates the wiki, commits, l
 
 Lands a tested task: review if missing, wiki, commit, branch.
 
-Read: voice, components, tasks, git, store
+Read: voice, pr, components, tasks, git, store
 
 ## Steps
 
@@ -28,7 +28,7 @@ Read: voice, components, tasks, git, store
 5. **Print** a **Landing** before touching git, then go on: no yes needed.
    - Code changed since the user's test → **Warning** + `ok?`, wait.
      - No → stop. Task stays `to-close`, review recorded, wiki pages left in tree, say so. `github` → `release <n> coding`.
-   - PR line: number once it exists, `PR · **Add Apple login**` when about to be created. Title → **voice → PR**. Body never shown.
+   - PR line: number once it exists, `PR · **Add Apple login**` when about to be created. Title → **pr**. Body never shown.
 6. **Commit** — `files`: when `commit.auto_commit_after_validation`; `github`: always. Author → **git → Commits**.
    - Clean tree → skip.
    - Nothing committed + dirty tree → stop before any branch move.
@@ -74,7 +74,7 @@ Branch + draft PR exist since `/wa-code`. `close.strategy`, `close.delete_branch
    - Conflict → stop, leave rebase in progress, name files, task stays `to-close`.
 3. **Push** — `--force-with-lease` only after a rebase, own branch only. Push releases the lock.
    - Autopilot worktree → remove after push. Dirty → stop, ask.
-4. **PR ready** — refresh title + body (**voice → PR**), `gh pr edit`, `gh pr ready`.
+4. **PR ready** — refresh title + body (**pr**), `gh pr edit`, `gh pr ready`.
    - No PR (pre-0.13) → `gh pr create --base <base>` non-draft + `link-pr <n> <pr>`.
 5. **Stop.** User merges on GitHub; the hook does the rest.
 
@@ -89,7 +89,7 @@ Failure before the push → lock still held: say so. User leaves it → `release
   - Conflict → stop, leave merge in progress, name files, task stays `to-close`.
 - **Standalone** → `close.strategy`:
   - `nothing` (default) → stop after commit. **Landing** extra line: branch kept, PR is yours.
-  - `pr` → push, `gh pr create --base <close.target>`, title + body per **voice → PR** (To test from `## Acceptance criteria`). Print URL.
+  - `pr` → push, `gh pr create --base <close.target>`, title + body per **pr** (To test from `## Acceptance criteria`). Print URL.
     - `gh` missing or unauthenticated → say so, fall back to `nothing`, branch stays pushed.
   - `merge` → merge into `close.target` locally, no push.
     - Target checked out elsewhere or dirty → say so, stop.
@@ -115,7 +115,7 @@ Then:
 1. Show its 🏁 line (**components → Task list**).
 2. **Question**: apply `close.strategy` to the sprint branch onto `close.target`; alt = keep the branch, user ships it.
    - `github` → always a PR onto `branch.base`, `--milestone "<Sprint>"`.
-   - Sprint PR title + body → **voice → PR** (sums up the sprint).
+   - Sprint PR title + body → **pr** (sums up the sprint).
 3. **Only on yes.** No → branch stays, nothing lost.
 4. Sprint branch merged or PR'd → `close.delete_branch` applies as for a task branch.
 5. Delete the sprint test branch, whatever the answer. Checked out → switch to sprint branch first.

@@ -2,12 +2,13 @@
 title:                  # verb + thing, ≤ 5 words ("Fix flaky CLI tests", not "Tests turn red at random")
 summary:                # ≤ 8 words, the goal plain — never the mechanism, never repeat the title
 size: medium            # quickwin | medium | large  → 🟢 | 🟡 | 🔴 in backlog list
+type:                   # feature | improvement | bug | refactor — one, set by the grill
 sprint:                 # OPTIONAL human title grouping big work ("Login refacto").
                         # Empty = standalone task. Sprint exist because task name it —
-                        # no sprint file, no create command. See wa-board → Sprints.
-blocked_by: []          # slugs of tasks that must land first. See wa-board → Dependencies.
+                        # no sprint file, no create command.
+blocked_by: []          # slugs of tasks that must land first.
                         # github backend: title, summary, size, sprint, blocked_by live on the
-                        #   issue — drop these five lines, write `issue: <n>` instead.
+                        #   issue — drop these six lines (type too), write `issue: <n>` instead.
 status: draft           # draft | grilling | todo | coding | to-test | to-close | done | canceled
                         #   draft    = idea, not grilled yet → /wa-task
                         #   grilling = grill running (lock)

@@ -13,9 +13,10 @@ Read: voice, components, tasks, store
 
 1. **Read the arg.**
    - None → whole backlog.
+   - Type (`bug`, `feature`, `improvement`, `refactor`) → only that type. Beats a sprint of the same name.
    - Sprint name → only its tasks, 🏁 line on top (**tasks → Sprints** to resolve).
-2. **List** every task per **store**: title, summary, size, sprint, status, blockers, locks.
-   - Legacy task → say `/wa-setup` migrates it, stop.
+2. **List** every task per **store**: title, summary, size, type, sprint, status, blockers, locks.
+   - Legacy task → `→ next: /wa-update`, stop.
 3. **Show** a **Task list**.
    - `github` → one line after it for open issues not on the board.
 4. **Pick one next**, first match wins (sprint view → inside that sprint):

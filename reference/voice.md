@@ -1,6 +1,6 @@
 # Voice
 
-How whackagent writes. Applies to every message while a skill runs, reports, task files, PRs, wiki — and to the skill files themselves.
+How whackagent writes. Applies to every message while a skill runs, reports, task files, PRs, wiki. PRs → **pr**.
 
 ## Output
 
@@ -17,12 +17,25 @@ How whackagent writes. Applies to every message while a skill runs, reports, tas
 - **Grammar last.** Fragments OK. Simple + short beats correct.
 - **Meaning never.** Fragment readable two ways → add the word.
 - **No filler**: no pleasantries, hedging, articles for show.
+- **Facts, not judgments.** No `finally`, `now properly`, `seamless`, `much better`, `robust` (`enfin`, `désormais`, `correctement`, `parfaitement`, `nettement`). `Correction de l'ordre des mails`, never "les mails arrivent enfin dans l'ordre".
 - **Tech terms stay English, any language.** French → franglais on purpose: `bouton Apple pas disabled pendant le loading`. Never a calque (`fil principal`, `branche fusionnée`).
-- **Glossary.** Read `{conventions}/glossary.md` with config (cited as **voice → Glossary**).
-  - Listed term → always it, never a synonym.
-  - User says another word → keep the term, say which you mean once.
-  - New concept, or two words for one thing → propose the row in one line, add on yes.
+- **Glossary.** Read `{conventions}/glossary.md` with config. Its rules apply to every word you write.
+  - Screens, parts, flows → by their glossary name: `Login screen → Cancel`, not "the sign-in page".
+  - User says an `Also` word, or a vague one ("the top page") → keep the term, say which you mean once.
   - File absent → no rule; `/wa-setup` adds it.
+
+## Learning
+
+Glossary and wording grow from the user. Always proposed (**components → Glossary rows**), written on yes only.
+
+- **New thing** named (concept, screen, part, flow) → `+` row.
+- **Other word, 2nd time** this session for a listed term → one **Question**: rename (recommended: their word; old term → `Never`) or add to `Also`.
+  - Rename → UI strings and code untouched; offer `/wa-draft` to align them.
+- **Term used for something else** → `~` its `Means`.
+- **String rewritten** by the user → `wording.md` **Validated examples**: `before → after · <situation>`. Max 12, 2 per situation: full → replace the oldest.
+- **Same tone fix, 2nd time**, or 3 examples one way → one rule line in **Voice**.
+- Refused → never asked again this session for that word.
+- No `{conventions}` → apply for this session, write nothing.
 
 ## Layout
 
@@ -34,7 +47,6 @@ How whackagent writes. Applies to every message while a skill runs, reports, tas
 
 ## Language
 
-- Skill text and examples: English.
 - Output: `discussion_language`. Translate headings and labels (`Done` → `Fait`), keep tech terms.
 - Task file headings stay English, fixed: `## Context / Decisions`, `## Acceptance criteria`, `## Implementation`, `## Review`, `## Verification`, `## Feedback`.
 
@@ -53,30 +65,3 @@ Read cold — issue list, branch, PR.
 | After a purge, jobs don't replay | `Replay jobs after purge` | purge doesn't reset watermarks |
 | CLI tests turn red at random | `Fix flaky CLI tests` | 4 TUI tests fail in suite, pass alone |
 | crash when i zoom | `Fix crash on map zoom` | zoom past 18 no longer crashes |
-
-## PR
-
-Read by teammates who never saw the task.
-
-- **Task PR title** = task title as-is.
-- **Sprint PR title** = area, 1–3 words (`Login`, `Map performance`). No verb, number, em-dash, colon or list. Wider change → more generic word.
-- **Sprint PR body** sums up the sprint for someone who never saw its tasks: never one bullet per task.
-- **Body**, ≤ 20 lines:
-
-```
-<one sentence: what changes for the app>
-
-## Changes
-- <3–6 bullets, one change each, subject named>
-
-## To test
-- [ ] <one manual check per line>
-
-Closes #42        ← github: one per delivered task
-```
-
-- Bullets: behavior → plain sentence (`The list keeps its scroll`). Else action first (`Add`, `Fix`, `Remove`). No `Fix:` prefix.
-- Words the user sees, not `debounce` / `backoff`. Why, not how.
-- No task slugs, sprint jargon, verifier rounds, finding counts, process section, follow-up list.
-- Type or file names in backticks only when they help a reviewer.
-- Numbers only when the PR is about them: one line or table ≤ 3 rows.

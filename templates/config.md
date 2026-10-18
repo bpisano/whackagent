@@ -3,6 +3,9 @@
 discussion_language: fr        # language Claude talk to you in
 code_language: en              # identifiers, comments, log messages, commits
 ui_strings_language: en        # user-facing strings
+pr_language: ""                # PR titles + bodies. Empty → discussion_language
+pr_title_prefix: false         # true → PR title starts with the commit prefix (`fix: …`): squash
+                               # merges then keep conventional commits on main. Not asked at setup.
 primary_language: swift        # swift | typescript | generic | ...
 project_kind: app              # app | package | cli | server  (pick architecture module)
 
@@ -68,8 +71,6 @@ review:
                                # against same rulebook — splitting pay twice, leave duplicate
                                # findings to dedupe. It sweep style, elegance, structure and
                                # correctness in one pass and report which ran.
-                               # Legacy `categories: {conventions: [...], correctness: []}` read as
-                               # union of its lists.
 
 build:                         # how THIS project build — project win over plugin default
   command: ""                  # e.g. "ign app", "make build", "./scripts/build.sh". Empty → XcodeBuildMCP
@@ -87,7 +88,6 @@ verify:                        # runtime check — implementer drive app it just
                                # it can't write feature without seeing it run (reproduce bug, judge
                                # layout, follow nav flow). That implementation, not proof: it drive
                                # minimum it need and say so in NOTES.
-                               # Legacy `enabled: true` / `false` read as `always` / `off`.
   platform: ios                # ios | android | both  (ios drive via XcodeBuildMCP, else mobile-mcp)
   target: simulator            # simulator | emulator | device
 

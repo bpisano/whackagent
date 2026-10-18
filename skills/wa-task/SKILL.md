@@ -36,7 +36,7 @@ Read: voice, components, tasks, store, git
    - Read the architecture module in `{conventions}/` first. Settle where it lives: feature/folder, new files/folders, fit (by feature, nested, never flat), layer boundaries touched.
    - Builds on an unlanded task → ask or confirm from code, record (**tasks → Blockers**).
    - Quick win too: 1–2 questions.
-   - New or settled product term → **voice → Glossary**.
+   - Concept, screen, part or flow named → collect rows, one **Glossary rows** at grill end (**voice → Learning**).
    - UI project → settle meaning-carrying copy (destructive confirms, errors, empty states) against `{conventions}/wording.md`. Never the full string list.
    - **Park** — user says "note it, grill later" or stop:
      - `github` → `release <n> grilling --reset-to draft`. `files` → `status: draft`.
@@ -44,11 +44,12 @@ Read: voice, components, tasks, store, git
    - Left silently → lock stays. `/wa-task <id>` resumes, `/wa-task release <id>` frees.
 6. **Write the task** from `${CLAUDE_PLUGIN_ROOT}/templates/task.md`:
    - `files` → `{tasks}/<slug>.md`: `title`, `status: todo`, `created` today, `blocked_by:` slugs.
-   - `github` → `{tasks}/<n>-<slug>.md` on the task branch (**GitHub landing**). Frontmatter `issue`, `status: todo`, `wiki`, `note`, `created` only. Issue gets title, summary (`gh issue edit <n> --title … --body …`), `set-field`, `depend`.
-   - `summary` → **voice → Titles**: the result, not the mechanism.
+   - `github` → `{tasks}/<n>-<slug>.md` on the task branch (**GitHub landing**). Frontmatter `issue`, `status: todo`, `wiki`, `note`, `created` only. Issue gets title, summary (`gh issue edit <n> --title … --body …`), `set-field` (size, type), `depend`.
+   - `summary` → **voice → Titles**.
    - `size` from the grill: `quickwin` ≤ 1h · `medium` · `large` multi-session, likely split.
+   - `type` → **tasks → Types**, required. In the recap; ambiguous → **Question**.
    - `sprint` → **Sprints**. Default empty.
-   - `wiki:` → `[[page]]` links to existing pages; note pages to create.
+   - `wiki:` → `[[page]]` links to existing pages; note missing ones.
    - `## Context / Decisions` → decisions from the grill.
    - `## Acceptance criteria` → observable checks (on screen, input → output), concrete, YAGNI: they drive `wa-verifier`. None only with no runnable surface.
 7. **Place it** — under Todo, next to its sprint siblings, else bottom. Always below its blockers.

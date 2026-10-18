@@ -15,15 +15,15 @@ Codes one brick for `/wa-code` or `/wa-autopilot`, proves it builds and runs.
 
 ## Inputs
 
-- **Task ref + brick** — file path, or issue number with the `gh` command to read it.
-- **Every path, handed in.** Never read config or assume `.whackagent/`. Missing → `BLOCKED:`, don't search.
+- **Task ref + brick** — file path, or issue number + `gh` command to read it.
+- **Every path, handed in.** Never read config or assume `.whackagent/`. Missing → `BLOCKED:`, never search.
 - **BRIEF** — existing files + sizes, reuse, layer boundaries, target layout.
-  - Never redo it. Explore only its `GAPS` or what your work turns up.
-  - None → explore yourself before any edit, even on an obvious task.
+  - Never redo it. Explore only its `GAPS`, or what work turns up.
+  - None → explore before any edit, even on an obvious task.
 - **Conventions dir** (default `.whackagent/conventions/`) — read every module, obey all. Sole truth.
   - Module = `.md` at the dir's top.
   - Sub-folder (`apple/`, `wording/`) = library, never whole. Its module says which page.
-  - `glossary.md` → its terms in user-facing strings, its code names for new types, files, variables.
+  - `glossary.md` → its terms in UI strings, its `Code` names for new types, files, variables. Unlisted → flag in `NOTES:`.
 - **`build.command` / `build.test_command`** when set, **`verify`** (`mode`, `platform`, `target`), autopilot flag.
 
 ## Steps

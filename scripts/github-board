@@ -19,6 +19,7 @@ import os
 import socket
 import subprocess
 import sys
+import urllib.parse
 from pathlib import Path
 
 STATES = ["draft", "grilling", "todo", "coding", "to-test", "to-close", "done", "canceled"]
@@ -55,6 +56,15 @@ STATE_DESCRIPTIONS = {
 HIDDEN = {"done", "canceled"}
 SIZES = ["quickwin", "medium", "large"]
 SIZE_COLORS = {"quickwin": "GREEN", "medium": "YELLOW", "large": "RED"}
+# One type per ticket, as a repo label. WA_TYPE_LABELS maps a type onto an existing label name.
+TYPES = ["feature", "improvement", "bug", "refactor"]
+TYPE_LABEL_COLORS = {"feature": "0e8a16", "improvement": "1d76db", "bug": "d73a4a", "refactor": "c5def5"}
+TYPE_DESCRIPTIONS = {
+    "feature": "Something that did not exist",
+    "improvement": "Works, made better",
+    "bug": "Should work, doesn't",
+    "refactor": "Nothing changes for the user",
+}
 # Phase claimed → states the ticket may be in when the claim is taken.
 CLAIM_FROM = {"grilling": {"draft"}, "coding": {"todo", "to-test", "to-close"}}
 # A review round locks a coded ticket without moving its card: Coding means code is being written.
@@ -182,6 +192,7 @@ def load(refresh=False):
     status_name = variables.get("WA_STATUS_FIELD", "Status")
     size_name = variables.get("WA_SIZE_FIELD", "Size")
     custom = json.loads(variables.get("WA_STATES", "{}"))
+    custom_types = json.loads(variables.get("WA_TYPE_LABELS", "{}"))
     # Unknown keys ignored: a transitional WA_STATES may still carry an old state id for older hooks.
     state_names = {s: custom.get(s, DEFAULT_STATE_NAMES[s]) for s in STATES}
     status = fields.get(status_name)
@@ -209,6 +220,7 @@ def load(refresh=False):
         "tasks_path": variables.get("WA_TASKS_PATH", ".whackagent/tasks"),
         "branch_prefix": variables.get("WA_BRANCH_PREFIX", "wa/"),
         "stale_after_hours": int(variables.get("WA_STALE_AFTER_HOURS", "24")),
+        "type_labels": {t: custom_types.get(t, t) for t in TYPES},
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(config, indent=2))
@@ -278,6 +290,8 @@ def to_ticket(config, node, claim_map, with_owners=False, keep_sha=False):
     }
     by_option = {o: s for s, o in config["state_options"].items()}
     by_size = {o: s for s, o in config["size_options"].items()}
+    by_label = {n: t for t, n in config.get("type_labels", {t: t for t in TYPES}).items()}
+    labels = [l["name"] for l in content["labels"]["nodes"]]
     number = content["number"]
     status_option = values.get(config["status_field"])
     if status_option and status_option not in config["status_option_names"]:
@@ -294,7 +308,8 @@ def to_ticket(config, node, claim_map, with_owners=False, keep_sha=False):
         "size": by_size.get(values.get(config["size_field"])),
         "sprint": (content["milestone"] or {}).get("title"),
         "closed": content["state"] == "CLOSED",
-        "ignored": IGNORE_LABEL in [l["name"] for l in content["labels"]["nodes"]],
+        "type": next((by_label[l] for l in labels if l in by_label), None),
+        "ignored": IGNORE_LABEL in labels,
         "claims": [dict(c) if keep_sha else {k: v for k, v in c.items() if k != "sha"} for c in held],
         "url": content["url"],
         "item_id": node["id"],
@@ -405,7 +420,7 @@ def op_list(args):
     for node in items(config):
         ticket = to_ticket(config, node, claim_map, keep_sha=args.owners)
         if ticket.get("draft"):
-            if not wanted and not args.sprint:  # drafts have no state or sprint: only in unfiltered lists
+            if not wanted and not args.sprint and not args.type:  # drafts have no state or sprint: only in unfiltered lists
                 rows.append(ticket)
             continue
         if ticket["ignored"]:
@@ -415,6 +430,8 @@ def op_list(args):
         if not wanted and not args.all and (ticket["closed"] or ticket["state"] in HIDDEN):
             continue
         if args.sprint and ticket["sprint"] != args.sprint:
+            continue
+        if args.type and ticket["type"] != args.type:
             continue
         rows.append(ticket)
     if args.owners:
@@ -448,6 +465,8 @@ def op_create(args):
         set_size(config, ticket, args.size)
     if args.sprint:
         set_sprint(config, number, args.sprint)
+    if args.type:
+        set_type(config, number, args.type)
     emit({"number": number, "url": issue["html_url"], "state": "draft"})
 
 
@@ -561,6 +580,17 @@ def set_size(config, ticket, size):
     set_option(config, ticket["item_id"], config["size_field"], config["size_options"][size])
 
 
+def set_type(config, number, kind):
+    """Exactly one type label: drop the others, add this one."""
+    names = config.get("type_labels") or {t: t for t in TYPES}  # cache from before types
+    issue_path = f"repos/{config['repo']}/issues/{number}/labels"
+    current = {l["name"] for l in rest("GET", issue_path)}
+    for other in current & (set(names.values()) - {names[kind]}):
+        rest("DELETE", f"{issue_path}/{urllib.parse.quote(other, safe='')}")
+    if names[kind] not in current:
+        rest("POST", issue_path, {"labels": [names[kind]]})
+
+
 def milestone_number(config, title, create):
     for state in ("open", "closed"):
         for m in rest("GET", f"repos/{config['repo']}/milestones?state={state}&per_page=100"):
@@ -584,6 +614,10 @@ def op_set_field(args):
         if args.value not in SIZES:
             raise Failure(f"size must be one of {SIZES}", EXIT_USAGE)
         set_size(config, find(config, args.number, with_owners=False), args.value)
+    elif args.field == "type":
+        if args.value not in TYPES:
+            raise Failure(f"type must be one of {TYPES}", EXIT_USAGE)
+        set_type(config, args.number, args.value)
     else:
         set_sprint(config, args.number, args.value)
     emit({"number": args.number, args.field: args.value or None})
@@ -780,6 +814,22 @@ def op_provision(args):
             o=[{"name": s, "color": SIZE_COLORS[s], "description": ""} for s in SIZES],
         )
         size_created = True
+    type_labels = {t: t for t in TYPES}
+    for pair in args.type or []:
+        kind, _, name = pair.partition("=")
+        if kind not in TYPES:
+            raise Failure(f"unknown type {kind!r}, expected one of {TYPES}", EXIT_USAGE)
+        type_labels[kind] = name
+    existing = {l["name"] for l in rest("GET", f"repos/{repo}/labels?per_page=100")}
+    labels_created = []
+    for kind, name in type_labels.items():
+        if name not in existing:
+            rest(
+                "POST",
+                f"repos/{repo}/labels",
+                {"name": name, "color": TYPE_LABEL_COLORS[kind], "description": TYPE_DESCRIPTIONS[kind]},
+            )
+            labels_created.append(name)
     variables = {
         "WA_PROJECT_OWNER": owner,
         "WA_PROJECT_NUMBER": str(number),
@@ -789,6 +839,7 @@ def op_provision(args):
         "WA_TASKS_PATH": args.tasks_path,
         "WA_BRANCH_PREFIX": args.branch_prefix,
         "WA_STALE_AFTER_HOURS": str(args.stale_after_hours),
+        "WA_TYPE_LABELS": json.dumps(type_labels),
     }
     for name, value in variables.items():
         gh(["variable", "set", name, "--repo", repo, "--body", value])
@@ -803,6 +854,8 @@ def op_provision(args):
             "status_options_removed": removed,
             "status_options_extra": extra,
             "size_field_created": size_created,
+            "type_labels": type_labels,
+            "type_labels_created": labels_created,
             "variables": variables,
             "secret_WA_PROJECT_TOKEN": "WA_PROJECT_TOKEN" in secret,
             "state_options": config["state_options"],
@@ -825,6 +878,7 @@ def parser():
     s.add_argument("--state", help="comma-separated states")
     s.add_argument("--sprint")
     s.add_argument("--all", action="store_true", help="include done, canceled and closed")
+    s.add_argument("--type", choices=TYPES)
     s.add_argument("--owners", action="store_true", help="resolve claim owners (one call per claim)")
     s.set_defaults(func=op_list)
 
@@ -836,6 +890,7 @@ def parser():
     s.add_argument("--title", required=True)
     s.add_argument("--summary", required=True)
     s.add_argument("--size", choices=SIZES)
+    s.add_argument("--type", choices=TYPES)
     s.add_argument("--sprint")
     s.add_argument("--note")
     s.set_defaults(func=op_create)
@@ -875,8 +930,8 @@ def parser():
 
     s = sub.add_parser("set-field")
     s.add_argument("number", type=int)
-    s.add_argument("field", choices=["size", "sprint"])
-    s.add_argument("value", help='size value, or sprint name ("" clears)')
+    s.add_argument("field", choices=["size", "sprint", "type"])
+    s.add_argument("value", help='size or type value, or sprint name ("" clears)')
     s.set_defaults(func=op_set_field)
 
     s = sub.add_parser("comment")
@@ -913,6 +968,7 @@ def parser():
     s.add_argument("--status-field", default="Status")
     s.add_argument("--size-field", default="Size")
     s.add_argument("--state", action="append", metavar="STATE=OPTION", help="map a state onto an existing option")
+    s.add_argument("--type", action="append", metavar="TYPE=LABEL", help="map a type onto an existing label")
     s.add_argument(
         "--prune-status",
         action="store_true",

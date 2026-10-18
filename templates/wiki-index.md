@@ -5,6 +5,8 @@ with `[[wikilink]]` syntax (Obsidian-compatible). Keep it current via `/wa-wiki`
 
 ## Pages
 
+- [glossary](<{conventions}/glossary.md, relative to this file>) — one word per thing: concepts, screens, parts, flows
+
 <!-- - [[architecture]] — overall structure -->
 <!-- - [[auth]] — authentication & accounts -->
 

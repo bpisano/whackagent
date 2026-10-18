@@ -8,7 +8,7 @@ user-invocable: false
 
 Auto-loads on UI copy outside the task flow. Best copy is absent: text says only what UI cannot show.
 
-Read: tasks
+Read: voice, components, tasks
 
 - Inside the flow, `wa-implementer` and `wa-verifier` get these rules from the `wording.md` module.
 - `wording/` = `${CLAUDE_PLUGIN_ROOT}/conventions/wording/`.
@@ -17,8 +17,8 @@ Read: tasks
 
 1. **Load context.**
    - Config exists → `{conventions}` per **tasks → Config and paths**. Read:
-     - `{conventions}/wording.md` → **Project voice** (`languages`, `person`, `base`, `audience`, `situations`), **Voice**, validated examples.
-     - `{conventions}/glossary.md` → one term per concept. Glossary always wins.
+     - `{conventions}/wording.md` → **Project voice** (`languages`, `person`, `base`, `audience`, `situations`), **Voice**, **Validated examples** (before `wording/tones.md`).
+     - `{conventions}/glossary.md` → **Concepts** terms per UI language. Glossary always wins.
    - Neither file → never stop, never ask:
      - infer tone, person, language from existing strings
      - defaults: `base: neutral`, platform vocabulary
@@ -39,11 +39,8 @@ Read: tasks
    - Localization → `wording/i18n.md`.
    - Text → icon → keep text as accessibility label (`accessibilityLabel`, `aria-label`, `contentDescription`).
    - Structural change on existing UI (remove string, text → icon, add element, remove localization key) → propose first, one line each.
-5. **Learn** — offer in one line, write only on yes:
-   - User rejects a string with own wording → glossary row: term + rejected word in `Never`.
-   - Term used consistently in code, missing from glossary → add it.
-   - Tone or copy preference → **Voice** in `{conventions}/wording.md`.
-   - No whackagent setup → write nothing, apply for this session.
+5. **Learn** → **voice → Learning**: rewritten strings, tone fixes, other words for listed terms.
+   - Term used consistently in code, missing from glossary → `+` row.
 
 ## Never
 

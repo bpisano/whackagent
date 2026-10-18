@@ -7,7 +7,7 @@ description: Codes several tasks unattended, in parallel when they don't overlap
 
 `/wa-code` unattended, over a batch. Independent tasks run in parallel, one git worktree each. Ends on a test branch with every feature.
 
-Read: voice, components, tasks, git, store
+Read: voice, pr, components, tasks, git, store
 
 ## Steps
 
@@ -16,7 +16,6 @@ Read: voice, components, tasks, git, store
    - No arg → every `todo` task. User present → confirm the list first.
    - Sprint → its `todo` tasks, backlog order. Echo what's left out and why (`Login refacto → #42 · #43 (2 todo, 2 already to test)`). No `todo` → say so, stop.
    - `draft` → drop, point to `/wa-task`. Other states → drop, say so.
-   - Task looks large → say so.
 2. **Place blockers** — stack, per **git → Stacking**:
    - Blocker in batch → it runs first; dependent in a later wave, stacked on it.
    - Blocker outside batch, `to-test` / `to-close` → stack on its branch, any wave.
@@ -44,7 +43,7 @@ Read: voice, components, tasks, git, store
    - Stacked → **git → Stacking**. Blocker coded this run → its round-end commit, worktree already gone.
 5. **Spawn the wave** — one `wa-implementer` per task, **in a single message**.
    - Payload = `/wa-code` step 5 payload with `autopilot: true`, + worktree path.
-   - Plus: *work only under `<worktree>`, absolute paths, never the main checkout or another worktree.*
+   - Plus: _work only under `<worktree>`, absolute paths, never the main checkout or another worktree._
    - Stacked → say the blocker's code is there to reuse.
 6. **Check.**
    - `review.when: on_validation` → no verifier. `/wa-validate` runs it later.
@@ -84,6 +83,7 @@ Mandatory. User launches once, every feature coded this run is there. After the 
   git checkout -B <run test branch> <branch.base>   # github: origin/<branch.base>, fetched
   git merge --no-ff --no-edit <task branch>         # github: origin/<task branch>
   ```
+
   - Every task delivered this run, board order, blocker before stacked.
   - Sprint task branch brings its sprint branch along: expected.
   - Same rules as **git → Sprint test branch**: local, throwaway, conflicts skipped.
