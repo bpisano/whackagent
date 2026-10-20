@@ -114,7 +114,7 @@ flowchart LR
 | `/wa-grill <n>` | `grilling` | spec → task file on ticket branch (`task: grill #<n>`) | — |
 | `/wa-code <n>` | `coding` | commit + push, end of round | **draft**, self-assigned |
 | `/wa-feedback <n> <notes>` | `coding` | ready PR → back to draft first, commit + push | draft |
-| `/wa-validate <n>` | `coding` | verifier + autofix. Clean → wiki sync, rebase if base moved, commit + push | **ready**, reviewers requested. Findings open → stays draft |
+| `/wa-validate <n>` | `coding` | verifier + autofix. Clean → wiki sync, rebase if base moved, UI screenshots (`pr.screenshots: validation`, before/after), commit + push | **ready**, reviewers requested. Findings open → stays draft |
 | `/wa-autopilot` | `coding` per ticket | same as code + validate, unattended | ready (clean) · draft (findings) |
 | `/wa-close <n>` | `coding` (while merging) | checks → plan → your yes → `wa-backlog merge` (squash, async API: works for stacked PRs) | merged → `done` |
 | `/wa-close <sprint>` | — | sprint PR, then merge (merge commit) on second yes | merged → sprint parent closed |

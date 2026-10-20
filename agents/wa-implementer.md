@@ -93,6 +93,25 @@ Orchestrator come back to you instead of spawning fresh implementer — you alre
 5. **Fix round:** fix mode above, in full.
 6. Prove every round — build, tests, handed tools, and, when mode make it yours, runtime checklist re-run **from launch** (old state gone; old binary still installed or running, so reinstall/restart).
 
+## Shoot mode — PR screenshots, not a brick
+
+Dispatched once review clean, to shoot screens diff touched. You hold build + drive tooling, so shots yours. **No code edit**: never touch tracked file, fixture, setting to reach a state. Write only images into out dir handed.
+
+Inputs: diff file list, base sha (before side), `## Acceptance criteria`, `verify.platform` / `verify.target`, build command, out dir, optional `only` (screens to re-shoot).
+
+1. **Pick screens** from diff: screen file added → `new`. Screen file changed, or component, theme, resource it shows → `before/after`. Nothing a screen shows → `SCREENSHOTS: none`, stop. `only` handed → those screens alone.
+2. **Pick states**, ≤ 6 total: default state of each screen, then one per visible criterion. Over 6 → criteria first.
+3. **One device, fixed look** — same simulator / emulator / viewport every shot, both sides. Light appearance; dark only when criterion or theme change say so. Never mix device or appearance inside pair. Freeze status bar where platform has one:
+   - **ios** → `xcrun simctl status_bar <udid> override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3`, `clear` after.
+   - **android** → System UI demo mode (`settings put global sysui_demo_allowed 1`, `am broadcast -a com.android.systemui.demo -e command enter`, clock `-e hhmm 0941`), `exit` after.
+   - **web**, **desktop** → fixed window size, nothing to freeze.
+4. **Before** (`before/after` screens only) — `git worktree add --detach <tmp> <base sha>` (`<tmp>` = `mktemp -d`, outside repo), build there, install, shoot same states. State absent before → skip that side. Base build red twice → no before side, say so in `NOTES:`. `git worktree remove --force <tmp>` after, whatever happened.
+5. **After** — build head (your checkout), install, shoot.
+6. **Drive** per *Runtime check* launch list + step 3: UI tree first, stable ids, wait for screen to settle (no spinner, no transition). Same launch, taps, data both sides. Unreachable state (real login, server data, system permission) → skip, never fake data.
+7. **Files** — downscaled ~900 px, kebab-case stem = caption: `<screen>-<state>.png` new, `<screen>-<state>.before.png` + `<screen>-<state>.after.png` changed.
+
+Return receipt with `BUILD:`, `SCREENSHOTS:`, `SHOT_SHA:`, `NOTES:` (skipped states + why). Never commit, push, run `gh`.
+
 ## Blockers — stop, do not guess
 
 Anything ambiguous, contradictory, missing beyond task spec → return `BLOCKED: <the precise question>` and stop. No guess. Same in autopilot: skill freeze task and move on. Never invent scope at night.
@@ -109,8 +128,10 @@ CHECKS:                          ← only when you owed a runtime proof and ran 
   ✅ <criterion> — <what you saw>
   ❌ <criterion> — expected <x>, saw <y>
 EVIDENCE: <screenshot paths or command + trimmed output, mapped to the check they prove>
-SCREENSHOTS: <only when the diff changes UI: final-state screenshots for the PR, one per platform proved
-             (+ light/dark when theme involved), downscaled ~900 px, file stem = caption, e.g. android-dark.png>
+SCREENSHOTS: <only when dispatch asks: final-state shots for the PR, one per platform proved
+             (+ light/dark when theme involved), downscaled ~900 px, file stem = caption, e.g. android-dark.png.
+             Shoot mode: paths per its step 7, or "none">
+SHOT_SHA: <shoot mode only: head sha shot>
 NOTES: <decisions, anything the verifier should know>
 BLOCKED: <question, only if RESULT=blocked>
 ```

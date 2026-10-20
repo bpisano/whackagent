@@ -4,6 +4,11 @@ All notable changes to whackagent are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- GitHub provider: new `pr.screenshots` setting. `validation` (the new default written by `/wa-setup`) shoots the screens a ticket touched once, at a clean `/wa-validate`, before the PR goes ready: a new screen as is, a changed screen as a Before | After pair built from the ticket's fork point. A later validation re-shoots only the screens whose code moved. `each_round` keeps the old behavior (final-state shots after every coding round), and is what a config without the key gets; `off` takes none.
+- GitHub provider: `wa-backlog screenshots` uploads with `gh pr edit --attach` when `gh` is 2.102 or later, so the `gh image` extension is no longer needed there. It still falls back to `gh image`, then to the browser. It lays out `<caption>.before` / `<caption>.after` pairs as a table, records the shot commit with `--sha`, keeps images not re-shot with `--keep`, and prints the current section when given no file.
+
 ### Changed
 
 - Each command now loads only the shared rules it needs instead of the whole rule set: the rules moved from `/wa-board` into one file per topic under `reference/`, and the GitHub provider rules load only in GitHub projects. Runs read less, rules unchanged. Commit rules (author, message, trailers) are gathered in one place: whackagent adds no trailer of its own and stops when no git identity is set rather than inventing one.
