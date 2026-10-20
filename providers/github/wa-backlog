@@ -820,20 +820,31 @@ def op_depend(args):
 SHOTS_START, SHOTS_END = "<!-- wa-screenshots -->", "<!-- /wa-screenshots -->"
 SHOTS_SECTION = re.compile(r"<!-- wa-screenshots(?: sha=(\w+))? -->.*?" + re.escape(SHOTS_END), re.S)
 SHOT_IMG = re.compile(r'<img src="(https://[^"]+)"[^>]*? alt="([^"]+)"')
+OLD_SHOT_IMG = re.compile(r'<img src="(https://[^"]+)"[^>]*><br><sub>([^<]+)</sub>')  # before alt captions
 MD_IMG = re.compile(r"!\[[^\]]*\]\((https://[^)]+)\)")
 
 
 def with_section(body, section):
+    """Body with its screenshots section replaced by `section` (appended when absent; "" removes it)."""
     if SHOTS_SECTION.search(body):
-        return SHOTS_SECTION.sub(lambda _: section, body, count=1)
-    return body.rstrip() + "\n\n" + section + "\n"
+        return SHOTS_SECTION.sub(lambda _: section, body, count=1) if section else SHOTS_SECTION.sub("", body).rstrip() + "\n"
+    return body.rstrip() + "\n\n" + section + "\n" if section else body
+
+
+def section_images(section):
+    """{caption: url} of a screenshots section; sections written before alt captions name them in <sub>."""
+    return {alt: url for url, alt in SHOT_IMG.findall(section) or OLD_SHOT_IMG.findall(section)}
+
+
+def pr_body(repo, pr):
+    return rest("GET", f"repos/{repo}/pulls/{pr}")["body"] or ""
 
 
 def upload_attach(repo, pr, body, files):
     """`gh pr edit --attach` (gh >= 2.102): the body's `![..](./file)` refs become user-attachments URLs.
-    Returns the URLs in file order, or None when gh lacks --attach or any upload failed."""
+    Returns (URLs in file order or None when any upload failed, whether the body was edited)."""
     if "--attach" not in gh(["pr", "edit", "--help"], check=False).stdout:
-        return None
+        return None, False
     with tempfile.TemporaryDirectory() as tmp:
         names = []
         for index, path in enumerate(files):
@@ -848,9 +859,9 @@ def upload_attach(repo, pr, body, files):
             capture_output=True,
             text=True,
         )
-    now = SHOTS_SECTION.search(rest("GET", f"repos/{repo}/pulls/{pr}")["body"] or "")
+    now = SHOTS_SECTION.search(pr_body(repo, pr))
     urls = MD_IMG.findall(now.group(0)) if now else []
-    return urls if proc.returncode == 0 and len(urls) == len(files) else None
+    return (urls if proc.returncode == 0 and len(urls) == len(files) else None), True
 
 
 def upload_gh_image(repo, files):
@@ -886,13 +897,21 @@ def op_screenshots(args):
     Upload: `gh pr edit --attach` (gh >= 2.102), else the `gh image` extension. An image given as
     `<caption>=<https url>` is already uploaded (browser fallback when neither gets an upload token)
     and kept as is. File stem = caption; `<caption>.before` / `<caption>.after` = a changed screen.
-    Rerun replaces the section only, rest of the body untouched; --keep merges the current images.
+    Rerun replaces the section only, rest of the body untouched; --keep merges the current images;
+    --clear removes the section. Body re-read before each write: edits made meanwhile survive.
     """
     config = load()
     repo = config["repo"]
-    body = rest("GET", f"repos/{repo}/pulls/{args.pr}")["body"] or ""
+    body = pr_body(repo, args.pr)
     current = SHOTS_SECTION.search(body)
-    kept = {alt: url for url, alt in SHOT_IMG.findall(current.group(0))} if current else {}
+    kept = section_images(current.group(0)) if current else {}
+    if args.clear:
+        if args.images:
+            raise Failure("--clear takes no image", EXIT_USAGE)
+        if current:
+            rest("PATCH", f"repos/{repo}/pulls/{args.pr}", {"body": with_section(pr_body(repo, args.pr), "")})
+        emit({"pr": args.pr, "cleared": bool(current)})
+        return
     if not args.images:
         emit({"pr": args.pr, "sha": current.group(1) if current else None, "images": kept})
         return
@@ -900,15 +919,18 @@ def op_screenshots(args):
     files = [path for _, path in shots if not path.startswith("https://")]
     uploaded = []
     if files:
-        uploaded = upload_attach(repo, args.pr, body, files) or upload_gh_image(repo, files)
+        uploaded, edited = upload_attach(repo, args.pr, body, files)
+        uploaded = uploaded or upload_gh_image(repo, files)
         if not uploaded:
-            rest("PATCH", f"repos/{repo}/pulls/{args.pr}", {"body": body})
+            if edited:  # --attach wrote its refs into the body: put the previous section back
+                restored = with_section(pr_body(repo, args.pr), current.group(0) if current else "")
+                rest("PATCH", f"repos/{repo}/pulls/{args.pr}", {"body": restored})
             raise Failure("upload failed: gh pr edit --attach (gh >= 2.102) and gh image (drogers0/gh-image) both failed")
     uploaded = iter(uploaded)
     urls = {caption: path if path.startswith("https://") else next(uploaded) for caption, path in shots}
     images = {**kept, **urls} if args.keep else urls
     section = shots_section(images, args.sha, args.width)
-    rest("PATCH", f"repos/{repo}/pulls/{args.pr}", {"body": with_section(body, section)})
+    rest("PATCH", f"repos/{repo}/pulls/{args.pr}", {"body": with_section(pr_body(repo, args.pr), section)})
     emit({"pr": args.pr, "sha": args.sha, "images": images})
 
 
@@ -1087,9 +1109,9 @@ def cards_on_options(project_id, field_id):
 def ensure_status_options(field, state_names, project_id, prune):
     """Make the Status field carry every state. Existing options keep their ids, so no card loses its Status.
 
-    `prune` also drops options no state maps to (GitHub's default "In Progress") and puts the states in
-    lifecycle order; an extra option still holding a card stays, after the states.
-    Returns (changed, removed names, extra names left, {held name: cards}).
+    `prune` also drops options no state maps to: True = every one (GitHub's default "In Progress"), else only
+    the names it lists. Pruning puts the states in lifecycle order, extra options after them; an option to
+    drop that still holds a card stays. Returns (changed, removed names, extra names left, {held name: cards}).
     """
     existing = {o["name"]: o for o in field["options"]}
     wanted = [state_names[s] for s in STATES]
@@ -1109,10 +1131,11 @@ def ensure_status_options(field, state_names, project_id, prune):
 
     held = {}
     if prune:
-        cards = cards_on_options(project_id, field["id"]) if extra else {}
-        held = {o["name"]: cards[o["id"]] for o in extra if o["id"] in cards}
-        left = [o for o in extra if o["name"] in held]
-        removed = [o["name"] for o in extra if o["name"] not in held]
+        targets = [o for o in extra if prune is True or o["name"] in prune]
+        cards = cards_on_options(project_id, field["id"]) if targets else {}
+        held = {o["name"]: cards[o["id"]] for o in targets if o["id"] in cards}
+        removed = [o["name"] for o in targets if o["name"] not in held]
+        left = [o for o in extra if o["name"] not in removed]
         options = [keep(existing[n]) if n in existing else fresh(s) for s, n in zip(STATES, wanted)]
         options += [keep(o) for o in left]
         if [o["name"] for o in options] == [o["name"] for o in field["options"]]:
@@ -1182,8 +1205,11 @@ def op_provision(args):
     if not status:
         raise Failure(f"project has no single-select field {args.status_field!r}")
     # A board created here (no template) holds no card and no human column: GitHub's default options go.
-    # A template copy or an adopted board keeps its extra columns unless asked (--prune-status).
-    pruned = (created and not args.template) or args.prune_status
+    # A template copy or an adopted board keeps its extra columns unless named (--prune-status <name>).
+    named = set(args.prune_status or [])
+    if named & set(state_names.values()):
+        raise Failure(f"--prune-status names a state column: {sorted(named & set(state_names.values()))}", EXIT_USAGE)
+    pruned = True if created and not args.template else named
     changed_status, removed, extra, held = ensure_status_options(status, state_names, project_id, pruned)
     size_created = False
     if args.size_field not in fields:
@@ -1225,6 +1251,7 @@ def op_provision(args):
             "project_created": created,
             "project_template": args.template,
             "status_options_changed": changed_status,
+            "status_options_added": changed_status,  # old name, kept for callers that read it
             "status_options_removed": removed,
             "status_options_extra": extra,
             "status_options_held": held,
@@ -1362,6 +1389,7 @@ def parser():
     )
     s.add_argument("--sha", help="head commit the shots show, recorded in the section marker")
     s.add_argument("--keep", action="store_true", help="keep current images whose caption isn't given again")
+    s.add_argument("--clear", action="store_true", help="remove the screenshots section (no image given)")
     s.add_argument("--width", type=int, default=260, help="display width in px")
     s.set_defaults(func=op_screenshots)
 
@@ -1389,8 +1417,10 @@ def parser():
     s.add_argument("--state", action="append", metavar="STATE=OPTION", help="map a state onto an existing option")
     s.add_argument(
         "--prune-status",
-        action="store_true",
-        help="drop Status options no state maps to and hold no card, lifecycle order (new non-template boards always do)",
+        action="append",
+        metavar="OPTION",
+        help="drop this Status option (no state maps to it, no card on it), repeatable; reorders states into "
+        "lifecycle order, extras after (new non-template boards drop every extra)",
     )
     s.add_argument("--tasks-path", default=".whackagent/tasks")
     s.add_argument("--branch-prefix", default="wa/")
