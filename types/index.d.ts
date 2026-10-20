@@ -9,6 +9,10 @@ export type BoardTask = {
   milestone: string
   status: TaskStatus
   isGrilled: boolean
+  /** frontmatter `type:` (feature | improvement | bug | refactor), '' when unset */
+  type: string
+  /** frontmatter `blocked_by:` slugs, [] when unset */
+  blockedBy: string[]
 }
 
 export type GithubState = 'todo' | 'grilling' | 'grilled' | 'coding' | 'review' | 'done' | 'canceled'
@@ -31,6 +35,8 @@ export type GithubTicket = {
 
 export type TaskFile = {
   phase: string
+  /** frontmatter `type:`, '' when unset */
+  type: string
   criteria: string[]
   bricks: string[]
   review: { heading: string; lines: string[] }

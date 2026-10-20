@@ -112,7 +112,40 @@ body`)
     milestone: '',
     status: 'in-progress',
     isGrilled: true,
+    type: '',
+    blockedBy: [],
   })
+})
+
+test('task type and blocked_by parse from frontmatter, template comments stripped', async () => {
+  const fields = parseFields(`---
+type: bug                 # feature | improvement | bug | refactor
+blocked_by: [login-apple, "export-csv"]   # slugs
+---
+`)
+  const parsed = toTask({ title: 'Sync', path: 'tasks/sync.md', status: 'todo' }, fields)
+  expect([parsed.type, parsed.blockedBy]).toEqual(['bug', ['login-apple', 'export-csv']])
+  const empty = toTask({ title: 'Sync', path: 'tasks/sync.md', status: 'todo' }, parseFields('---\ntype:       # comment\nblocked_by:   # comment\n---\n'))
+  expect([empty.type, empty.blockedBy]).toEqual(['', []])
+})
+
+test('open blockers tag the row and the legend; done, canceled and unknown blockers do not', async () => {
+  const tasks = [
+    task({ slug: 'base', grilled: 'true' }, 'review'),
+    task({ slug: 'old' }, 'done'),
+    task({ slug: 'dropped' }, 'canceled'),
+    task({ slug: 'sync', size: 'medium', grilled: 'true', blocked_by: '[base, old, dropped, ghost]' }),
+    task({ slug: 'free', grilled: 'true', blocked_by: '[old, dropped, ghost]' }),
+    task({ slug: 'shipped', blocked_by: '[base]' }, 'done'),
+  ]
+  const view = localView(tasks, [], [])
+  const tagsOf = (slug: string) =>
+    view.sections.flatMap(section => section.rows).find(one => one.key === slug)?.tags.map(tag => tag.text)
+  expect(tagsOf('sync')).toEqual(['⛔ base'])
+  expect(tagsOf('free')).toEqual([])
+  expect(tagsOf('shipped')).toEqual([])
+  expect(view.legend).toBe('🟡 medium · ⛔ blocked')
+  expect(localView([task({ slug: 'free', grilled: 'true' })], [], []).legend).toBe('')
 })
 
 test('paths resolve relative to the backlog folder', async () => {
@@ -319,6 +352,7 @@ test('branch maps to a task id per provider', async () => {
 test('task file sections parse into criteria, bricks, last review round, checks and feedback', async () => {
   expect(parseTaskFile(TASK_FILE)).toEqual({
     phase: 'validated',
+    type: '',
     criteria: ['A long press opens a menu.', 'Delete all entries asks for confirmation.', 'Labels read in English and French.'],
     bricks: ['Storage and sync. `AiEntry.unlinked`', 'Group menu. `DropdownMenu`'],
     review: { heading: 'validation (autopilot) — 2026-10-03', lines: ['Round 1, 9 minor findings, all fixed.', 'Round 2: clean.'] },
@@ -382,6 +416,22 @@ test('local focus without a task file section still shows the task', async () =>
   expect(view.facts).toEqual(['🔨 in-progress · grilled', '📍 checked out here'])
   expect(view.blocks.map(block => block.title)).toEqual(['🏁 s — 0/1'])
   expect(localFocusView([], { id: 'gone', worktree: '', file: null, blockedBy: [], prUrl: '' }).facts).toEqual(['not in the backlog'])
+})
+
+test('focus shows task type and open local blockers', async () => {
+  const tasks = [task({ slug: 'base' }, 'review'), task({ slug: 'a', grilled: 'true', type: 'bug', blocked_by: '[base]' }, 'in-progress')]
+  const local = localFocusView(tasks, { id: 'a', worktree: '', file: null, blockedBy: [], prUrl: '' })
+  expect(local.facts).toEqual(['🔨 in-progress · grilled · type: bug', '⛔ blocked by base'])
+  const file = parseTaskFile('---\nissue: 12\nphase: review\ntype: refactor   # comment\n---\n')
+  expect(file.type).toBe('refactor')
+  const github = githubFocusView(toTickets([row({ number: 12, state: 'review' })], [], 'wa/').tickets, {
+    id: '#12',
+    worktree: '',
+    file,
+    blockedBy: [],
+    prUrl: '',
+  })
+  expect(github.facts).toEqual(['👀 review · phase: review · type: refactor'])
 })
 
 test('worktree list parses into path and branch, detached heads skipped', async () => {

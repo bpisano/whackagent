@@ -8,7 +8,7 @@ model: opus
 
 You **PM**. Plan and dispatch, never write code. One task: **plan → code → verify → report**.
 
-Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` `session-name.md` `display.md` · `branch.worktree: true` → + `worktrees.md` · `backlog.provider: github` → + `provider-github.md` `pull-requests.md` `commits.md` · `branch.tracks` non-empty → + `tracks.md`.
+Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` `session-name.md` `display.md` `blockers.md` · `branch.worktree: true` → + `worktrees.md` · `backlog.provider: github` → + `provider-github.md` `pull-requests.md` `commits.md` · `branch.tracks` non-empty → + `tracks.md`.
 
 Wording (screen + reports): **reference/voice.md** — telegraphic, tech terms stay English.
 
@@ -19,6 +19,8 @@ Read `.whackagent/config.md` and `{tasks}/<slug>.md` first. `{…}` paths from c
 Arg = slug **or** wa-board display index (`/wa-code 3`) — resolve per **reference/display.md → Task indexes**, echo `3 → sync-offline`. Name session per **reference/session-name.md** (GitHub: once claimed, **0b**).
 
 **Grill gate (soft):** `grilled: false` → warn *"not grilled — quick win, or `/wa-grill <slug>` first?"* Proceed if user confirms.
+
+**Blocker gate (soft):** open blocker (**reference/blockers.md**; old `note: Depends on` = hint, named too) → warn *"blocked by login-apple (review) — code anyway? (recommended: no — land login-apple first: this task builds on its code)"*. Proceed only on yes.
 
 Set task `status: in-progress` (reflect in `{backlog}`). GitHub provider → step **0b** instead of this line, grill gate and step 0.
 
@@ -38,7 +40,7 @@ Set task `status: in-progress` (reflect in `{backlog}`). GitHub provider → ste
 `backlog.provider: github` (rules **reference/provider-github.md**) replaces grill gate, status write and step 0:
 
 0. **Hooks version gate** (**reference/provider-github.md**, *Hooks version gate*) before claim.
-1. **Resolve** arg: `#12` / `12` / display index. No arg → top unclaimed `grilled` from `wa-backlog list --state grilled`.
+1. **Resolve** arg: `#12` / `12` / display index. No arg → top unclaimed `grilled` from `wa-backlog list --state grilled`. Blocker gate on `wa-backlog get <n>` → `blocked_by`, before claim, per **BOARD.md → Dependencies**: open **related** blocker (same sprint or track) → never code it from base: wait, or `/wa-autopilot` stacks it — say so, stop. Unrelated → warn as above; yes → PR body `Blocked by #<x>: merge order is yours.`
 2. **Claim** `wa-backlog claim <n> coding`. Exit 3 → `#12 coded by <agent>` — no arg given: try next `grilled`; arg given: stop. Exit 4 → not `grilled`/`review`: `todo` means not grilled → suggest `/wa-grill <n>`; stop.
 3. **Branch** — ticket branch exists (grilling pushed it): `wa-backlog branch <n>`, fetch, check out **in current worktree**. Dirty tree → stop and ask first. Never create fresh branch when one exists: spec lives on it. Exists but holds no `{tasks}/<n>-*.md` (earlier round on issue-body spec dropped before first commit) → build task file from issue body as *Spec in issue body*, commit `task: spec #<n> <slug>`. **None** (spec in issue body, **reference/provider-github.md**, *Spec in issue body*) → create it linked, first commit = task file from issue body. Git refusing because another local worktree holds branch → say which, stop. `branch.worktree: true` → reuse or add `{worktrees}/<n>-<slug>` on that branch instead (**reference/worktrees.md**); worktree already there = yours to reuse, not a refusal.
 4. **Spec** = `{tasks}/<n>-<slug>.md` on that branch (just built from issue body when step 3 created it). Set `phase: in-progress` there (local writes `status:`). **No push mid-round** — any push to branch with open PR fires `synchronize`: hook ends round and drops your claim while you still code.

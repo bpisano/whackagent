@@ -4,10 +4,18 @@ All notable changes to whackagent are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- Optional task `type:` (`feature`, `improvement`, `bug`, `refactor`), set by `/wa-task` and refined by `/wa-grill`. It picks the Conventional Commits prefix when your repo uses them, the kind label for the PR among your repo's labels, and the title verb (`Fix …` for a bug). Tasks without it behave as before. Under the GitHub provider it lives in the task file on the ticket branch; nothing new on the issue or board.
+- `/wa-setup` on a project already set up now runs migrations: it detects older task formats, shows a plan and applies each one on your yes (`/wa-setup migrate` for migrations alone). First two: `note: Depends on …` becomes `blocked_by:`, and an optional `type:` backfill for open tasks. Migrations never touch the GitHub board, `BOARD.md` or the hooks, and never commit.
+- The pane's task tab shows the task type and, for local tasks too, open blockers.
+
 ### Changed
 
 - Each command now loads only the shared rules it needs instead of the whole rule set: the rules moved from `/wa-board` into one file per topic under `reference/`, and the GitHub provider rules load only in GitHub projects. Runs read less, rules unchanged. Commit rules (author, message, trailers) are gathered in one place: whackagent adds no trailer of its own and stops when no git identity is set rather than inventing one.
 - Shorter command descriptions in the `/` menu.
+- `/wa-code` warns before coding a task whose blocker hasn't landed and recommends the blocker first. Under the GitHub provider it no longer codes a ticket from the base while a blocker in its sprint or track is open, as `BOARD.md` asks.
+- Local provider: dependencies are now structured. `/wa-task` and `/wa-grill` record them as `blocked_by: [<slug>, …]` in the task file instead of a free-text `Depends on …` note. A blocked task shows `⛔ <blocker>` on the board and in the pane, is never suggested next, stays below its blocker when prioritized, and `/wa-autopilot` leaves it out until the blocker is done.
 
 ## [1.4.0] - 2026-10-15
 

@@ -26,14 +26,14 @@ Canonical way tasks shown anywhere in flow (here, `/wa-task` prioritization pass
 Rules:
 
 - **Section heading** = state emoji + name: 📥 Todo · 🔨 In progress · 👀 Review · 👍 Validated · 🎉 Done · 🚫 Canceled. Same emoji wherever state named (pane, recaps).
-- **Line 1** = `<#> · <size> **<title>**`, then `` · `<sprint>` `` when task has one, then ` ⚠` when `grilled: false`.
+- **Line 1** = `<#> · <size> **<title>**`, then `` · `<sprint>` `` when task has one, then ` ⚠` when `grilled: false`, then ` ⛔ <blocker>` per open blocker, comma-separated (**reference/blockers.md**).
 - **Line 2** = task `summary`, indented 4 spaces. Never dump task body.
 - **#** = display index, written `2 ·` — never `2.`: markdown list syntax gets renumbered by renderer. Number **continuously across sections**, top to bottom in render order (Todo → In progress → Review → Validated → Done → Canceled — lifecycle order). **Review** = coded, wait your test. **Validated** = you said it match spec, verifier passed, wait your retest to close. Never restart per section — index must be unique in render so user cite it without ambiguity.
 - **Size** maps `size`: 🟢 `quickwin` · 🟡 `medium` · 🔴 `large`.
 - **⚠** only on non-grilled tasks. Grilled = nothing — no ✅ on every line.
 - **Sprint tag** only on tasks that have one. Filtered run (`/wa-board <sprint>`) drops it — every task is that sprint.
 - Skip empty sections. Show only few recent under **Done**.
-- Legend once below list; `⚠ not grilled` only when a ⚠ is on screen.
+- Legend once below list; `⚠ not grilled` only when a ⚠ is on screen, `⛔ blocked` only when a ⛔ is.
 - At least one sprint in play → one **progress line per sprint** under legend, done+canceled excluded from numerator only:
   `🏁 login-refacto — 2/5 (1 in review, 2 todo)`. Filtered run → that single line, above list.
 - One **milestone line** per milestone from `milestones` holding live tasks, highest first, same counting, below sprint lines. Highest open one marked `← new tasks`:

@@ -31,7 +31,7 @@ Add the marketplace, then install the plugin:
 
 | Command | Description |
 | --- | --- |
-| `/wa-setup` | Config + scaffolding (`.whackagent/`) |
+| `/wa-setup` | Config + scaffolding (`.whackagent/`). On a project already set up: reconfigure, plus migrations of older task files (`/wa-setup migrate` for those alone) |
 | `/wa-board` | Dashboard: backlog list, suggests the next action (runs on Haiku) |
 | `/wa-board <sprint\|milestone>` | Same, filtered to one sprint or milestone, with its progress |
 | `/wa-pane` | Opens the live backlog pane (see below) |
@@ -57,7 +57,7 @@ In a project with `.whackagent/config.md`, a live pane beside the conversation s
 
 🎉 Done and 🚫 Canceled show their three most recent tasks; `+N more` lists them all and `show less` folds them back. **🏁 Sprints**, at the top of the board, lists each sprint (GitHub: every open `wa-sprint` parent, with its `#n` and milestone) with its progress; `▸ N tickets` unfolds its tickets under it, and once all of them are closed it shows `· complete` with a `close` button that fills `/wa-close <sprint>`. On a milestone tab it keeps the sprints of that milestone. A milestone still open whose tasks are all landed (at least one done, none left) shows `🎯 0.4.0 — 5/5 · ready to ship` with a `release` button that fills `/wa-release 0.4.0`; tracks never get one. Under the GitHub provider, an issue closed as not planned shows under 🚫 Canceled, never under 🎉 Done. The pane lists canceled tasks only on a milestone tab, not on **All**. Each state has its emoji on the board's sections, the task tabs and the task details: 📥 todo · 🔥 grilling · 📐 grilled · 🔨 in progress / coding · 👀 review · 👍 validated · 🎉 done · 🚫 canceled.
 
-`[ hide board ]`, first in the pane header (hotkey `b` while the pane has the keyboard), folds the board away down to an open-task count, and `[ show board ]` brings it back, for the session; tasks in flight stay. Below the board, **Tasks in flight** has one tab per task being worked on right now, wherever your terminal is (main checkout on `main`, or a worktree): local tasks in progress; under the GitHub provider, your tickets (assigned to you) in `grilling` or `coding`. The one checked out where the session runs comes first, marked 📍. A tab shows its state and phase, PR (in the terminal a button that opens it in your browser with `gh pr view --web`, so it works in any terminal; a link in the desktop app and VS Code) and open blockers (GitHub), worktree, sprint with each sibling's state, acceptance criteria marked ✅ / ❌ from `## Verification`, bricks, the last review round, verification notes and feedback rounds, with the task's action buttons. Task files are read from the worktree when there is one, else from the ticket branch (`git show`, no fetch).
+`[ hide board ]`, first in the pane header (hotkey `b` while the pane has the keyboard), folds the board away down to an open-task count, and `[ show board ]` brings it back, for the session; tasks in flight stay. Below the board, **Tasks in flight** has one tab per task being worked on right now, wherever your terminal is (main checkout on `main`, or a worktree): local tasks in progress; under the GitHub provider, your tickets (assigned to you) in `grilling` or `coding`. The one checked out where the session runs comes first, marked 📍. A tab shows its state and phase, PR (in the terminal a button that opens it in your browser with `gh pr view --web`, so it works in any terminal; a link in the desktop app and VS Code), task type and open blockers, worktree, sprint with each sibling's state, acceptance criteria marked ✅ / ❌ from `## Verification`, bricks, the last review round, verification notes and feedback rounds, with the task's action buttons. Task files are read from the worktree when there is one, else from the ticket branch (`git show`, no fetch).
 
 When a command ends on its `→ next:` line, the command it recommends (`/wa-validate 216`) is offered as the prompt's suggestion: press Tab to take it, edit, Enter. This works with the pane closed. `/wa-pane` opens it. To open it on its own at session start (when the terminal is at least 144 columns wide), turn on **Open backlog pane at start** (`auto_open`) in the plugin's settings in `/config`. The pane is built on Claude Code's function hooks, an early-access API: on a Claude Code build that can't load it, the skills keep working without it.
 
@@ -170,7 +170,7 @@ pr:
   doc: CONTRIBUTING.md#Pull requests   # rules the keys can't express (changelog line, size limit)
 ```
 
-- **Every PR gets at least one label from your repo's own labels**, on top of `pr.labels`: the best fit for the change (bug, feature, docs, then an area label if you have them), named in the report. Labels are never created; a repo with no labels at all gets PRs without one.
+- **Every PR gets at least one label from your repo's own labels**, on top of `pr.labels`: the best fit for the change (bug, feature, docs, then an area label if you have them; the task's `type` decides the kind when set), named in the report. Labels are never created; a repo with no labels at all gets PRs without one.
 - **The template is filled, not replaced.** Its headings stay, each section is written from the task file, and its checkboxes are ticked only when a round proved them (build, tests, tools, runtime check) or the diff shows them.
 - **whackagent's part sits in its own marked block**: `Closes #n`, the acceptance criteria checklist, numbered manual test steps (setup, navigation path from launch to the feature, then each action with its expected result), the status line. A template with its own testing section gets the steps there instead. Each round rewrites that block only, so whatever a human added to the body stays.
 - **Reviewers aren't pinged on drafts.** A draft is your turn to test; reviewers are requested when the PR goes ready.
@@ -388,6 +388,7 @@ Relative resolves from the repo root (`{worktrees}` from the main checkout root,
 title: Login Apple          # short, explicit — the feature at a glance
 summary: Sign in with Apple on the login screen   # one line, for the board
 size: quickwin             # quickwin 🟢 | medium 🟡 | large 🔴
+type: feature              # optional — feature | improvement | bug | refactor
 sprint: login-refacto       # optional — groups the tasks of one bigger piece of work
 milestone: 0.3.0            # release scope — set on creation to the highest open milestone
 status: todo                # todo | in-progress | review | validated | done | canceled
@@ -396,6 +397,7 @@ status: todo                # todo | in-progress | review | validated | done | c
 grilled: false             # true once it went through /wa-grill (grill-me)
 wiki: [[auth]], [[onboarding]]
 note:                       # trigger / free context (optional)
+blocked_by: [sync-offline]  # optional — tasks whose code must land first
 ---
 
 ## Context / Decisions
@@ -405,6 +407,13 @@ note:                       # trigger / free context (optional)
 ## Verification
 ## Feedback
 ```
+
+Two fields are optional, and a task file without them works exactly as before:
+
+- **`type`** (`feature`, `improvement`, `bug`, `refactor`) is set by `/wa-task` from your request (it echoes `→ type bug`, correct it in one word) and refined by `/wa-grill`. It gives the commit prefix when your repo uses Conventional Commits (`feat:`, `fix:`, `refactor:`), the kind label picked among your repo's labels for the PR, and the title verb (a bug reads `Fix …`). Without it, all three are inferred from the change, as before. Under the GitHub provider it lives in the task file on the ticket branch, like `phase:`, and is set at the first grill; nothing changes on the issue or the board.
+- **`blocked_by`** lists the tasks whose code must land first, written when `/wa-task` or `/wa-grill` records a dependency. A task with an open blocker (not done; a canceled blocker no longer counts) shows `⛔ <blocker>` on the board and in the pane, is never suggested as the next action, stays below its blocker when the backlog is prioritized, makes `/wa-code` warn before starting, and is left out of a `/wa-autopilot` batch until its blocker is done. Under the GitHub provider dependencies stay issue relationships, as before.
+
+Older projects pick these up through `/wa-setup`: on a project already set up it detects formats the plugin changed since and offers a migration for each, applied only on your yes. Today: old `note: Depends on …` lines become `blocked_by:`, and open tasks can get a `type:` backfilled from their titles. Migrations only edit task files; they never touch the GitHub board, `BOARD.md` or the hooks, and they don't commit.
 
 ## Conventions
 

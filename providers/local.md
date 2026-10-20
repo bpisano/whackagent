@@ -35,7 +35,7 @@ Same split as GitHub: `coding` = agent works now, `review` = human on turn. Loca
 | `milestones` | config `backlog.milestones` (open) highest first, then `milestone:` values not in that list whose tasks aren't all `done`/`canceled` (closed); counts from task files, `done` = `status: done`/`canceled` |
 | `split` | no root entity: parent `status: canceled` (line under **Canceled**), `sprint: <kebab title>`, `note: split → sprint <name>`. Already has `sprint:` → exit 4 |
 | `comment` | no-op |
-| `depend` | task `note:` `Depends on …` line (graph lives in text) |
+| `depend` | add slugs to task frontmatter `blocked_by: [<slug>, …]` (inline list, no duplicate). `get` reads it back as blockers, open = blocker not `done`/`canceled` (**reference/blockers.md**). Old `note:` `Depends on …` text = hint only |
 | `claims` | always empty |
 | `branch` | `<branch.prefix><slug>` when `branch.per_task`, else current branch |
 

@@ -17,7 +17,7 @@ Runs on fresh project **and** on one already set up. Second time = **reconfigure
 
 `.whackagent/config.md` exists → **reconfigure** (jump to *Reconfigure mode*). Absent → **first setup**, steps 1–4.
 
-Optional arg narrow scope: `/wa-setup paths`, `/wa-setup review`, `/wa-setup build` (+ `tools`), `/wa-setup branch` (+ `close`, `pr`), `/wa-setup commit`, `/wa-setup verify`, `/wa-setup languages`, `/wa-setup backlog`. Reconfigure only — on fresh project arg meaningless, say so and run full setup.
+Optional arg narrow scope: `/wa-setup paths`, `/wa-setup review`, `/wa-setup build` (+ `tools`), `/wa-setup branch` (+ `close`, `pr`), `/wa-setup commit`, `/wa-setup verify`, `/wa-setup languages`, `/wa-setup backlog`, `/wa-setup migrate` (migrations only, *Migrations*). Reconfigure only — on fresh project arg meaningless, say so and run full setup.
 
 ## 1. Interactive config (ask one at a time, propose a default)
 
@@ -142,6 +142,7 @@ The project already works. You're here to **change settings and pick up what the
 5. **Check reports stay local.** `git check-ignore -q {reports}/x.md` fails → offer the gitignore lines from scaffold step (recommended: yes — nothing reads reports beyond the run that wrote them). Reports already tracked (`git ls-files {reports}` beyond `.gitkeep`) → also offer `git rm --cached` on them: files stay on disk, leave the index. Never without yes. `paths.reports` moved → move its gitignore lines with it.
 6. **Check config holds nothing user-specific.** Path under a home dir (`/Users/`, `/home/`, `~`) → ⚠️, offer relative form (`paths.worktrees` → `../<repo>-worktrees`). Personal `commit.author_name` / `author_email` → ⚠️, offer empty (each committer's git identity). Recommended: yes both — config versioned, shared.
 7. **Check board files current** (`backlog.provider: github`). Fetch, then on `origin/<branch.base>`: `.github/workflows/whackagent-board.yml` first line `template version: <v>` vs plugin's `providers/github/whackagent-board.yml`, and `BOARD.md` first line `board-contract: <x>` vs `${CLAUDE_PLUGIN_ROOT}/templates/BOARD.md`. Behind, or file missing → ⚠️ row, offer `/wa-setup backlog` board PR (*GitHub backlog* step 5, *Reconfigure*) (recommended: yes — caller below v16 stops every agent round at **reference/provider-github.md**, *Hooks version gate*; contract mismatch makes CLI warn).
+8. **Detect migrations** — *Migrations* below. Each match → 🆕 row.
 
 ### 2. Show the state, then ask what changes
 
@@ -174,13 +175,22 @@ With an arg (`/wa-setup paths`), skip the table's unrelated rows and go straight
 
 **Conventions dir — additive only.** Copy in modules that are missing (a module the plugin added, or `swiftui.md`/`compose.md` because the project uses that toolkit now) and update `review.modules` to match. **Never overwrite a module that's already there**: those copies hold the rules `/wa-feedback` captured from the user. A plugin-side module changed upstream → say so, show the diff, copy only on their yes.
 
-**Never re-scaffold what exists.** Backlog, task files, reports and wiki pages are content — this command doesn't touch their contents, ever. Missing entirely (a `{tasks}` folder someone deleted) → recreate the empty folder, mention it.
+**Never re-scaffold what exists.** Backlog, task files, reports and wiki pages are content — this command doesn't touch their contents, ever. One exception: a migration the user said yes to, and only what its `## Detect` matched (*Migrations*). Missing entirely (a `{tasks}` folder someone deleted) → recreate the empty folder, mention it.
 
 **Don't re-run the wiki seeding or the compression pass** over pages that already exist. Compression is for pages written this run; there are none.
 
 ### 4. Report
 
-What changed, one line each: config keys (before → after), files moved, modules added. Nothing changed → say that plainly rather than inventing a diff.
+What changed, one line each: config keys (before → after), files moved, modules added, migrations applied (✅ / ❌ / skipped). Nothing changed → say that plainly rather than inventing a diff.
+
+### Migrations
+
+Format change old projects must follow (task frontmatter, backlog shape) = one file in `migrations/` beside this file, `NNNN-<name>.md`: `## Detect` (condition on project files), `## Plan` (row shown, recommended answer), `## Apply` (edits).
+
+1. **Detect** — every file, number order (`0001` < `0002`). Its `## Detect` matches → one row from its `## Plan`. **No ledger**: Detect alone decides. Applied migration no longer matches, so re-running is safe.
+2. **Show** — rows under stock-taking table, one answer each (`yes` / `skip`, or what its Plan lists). Dirty tree → say so first.
+3. **Apply** on yes, number order, before config edits: its `## Apply`, only on what Detect matched. Case its file doesn't cover → stop that row, ask. Failure → stop, rows after untouched.
+4. **Never** touch GitHub board data (issues, Project, labels), `BOARD.md`, hooks workflow or board CLI: those keep own version gates (*Take stock* step 7). Never commit: user reviews diff.
 
 ## Next step
 

@@ -1,12 +1,14 @@
 ---
 # GitHub provider (backlog.provider: github): file named {tasks}/<issue#>-<slug>.md, lives on ticket
-# branch, frontmatter keeps ONLY issue / phase / wiki / note / created (+ ported-from / lands when set). title, summary, size, sprint,
+# branch, frontmatter keeps ONLY issue / phase / wiki / note / created (+ type, ported-from / lands when set). title, summary, size, sprint,
 # milestone, status live on GitHub (issue + Project) — never here. phase: in-progress | review | validated.
 # issue: 12
 # phase:
 title:                  # label ≤ 5 words, not a sentence ("Fix flaky CLI tests", not "Tests turn red at random")
 summary:                # ≤ 8 words, the goal plainly — never the mechanism, never repeat the title
 size: medium            # quickwin | medium | large  → 🟢 | 🟡 | 🔴 in backlog list
+type:                   # OPTIONAL feature | improvement | bug | refactor — commit prefix, PR label, title verb.
+                        # Empty = inferred as before. See reference/task-types.md. GitHub: kept here too.
 sprint:                 # OPTIONAL kebab-case label group big work ("login-refacto").
                         # Empty = standalone task. Sprint exist because task name it —
                         # no sprint file, no create command. See /wa-task → Sprints.
@@ -19,6 +21,8 @@ status: todo            # todo | in-progress | review | validated | done | cance
 grilled: false          # true once clarified via /wa-grill (grill-me)
 wiki:                   # [[page]] refs, comma-separated
 note:                   # free-form trigger / context (optional, not auto-evaluated)
+blocked_by:             # OPTIONAL [slug, …] — tasks whose code must land first. Written by `depend`.
+                        # Empty = not blocked. Local only (GitHub: issue relationships). reference/blockers.md
 # ported-from: #530     # TRACKS only (reference/tracks.md): back-port of track PR onto base. Sync reads it.
 # lands: server         # TRACKS only: this task merges track into base. Uncomment when set.
 created:                # YYYY-MM-DD

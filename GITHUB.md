@@ -43,7 +43,7 @@ The board is constrained; the way each developer works behind it is not. One dev
 | Lock | a git ref `refs/wa-claims/<n>/<phase>` |
 | Reservation | issue **assignees**: assigned to another account = no agent of yours may claim it |
 
-There is no local mirror and no `BACKLOG.md`. The task file carries only whackagent's own data (`issue:`, `phase:`, `wiki:`, `note:`, `created:`, plus `ported-from:` / `lands:` for tracks) plus the spec sections; title, state, size, sprint and milestone live on GitHub only.
+There is no local mirror and no `BACKLOG.md`. The task file carries only whackagent's own data (`issue:`, `phase:`, `wiki:`, `note:`, `created:`, plus the optional `type:` and `ported-from:` / `lands:` for tracks) plus the spec sections; title, state, size, sprint and milestone live on GitHub only.
 
 The machinery is three pieces:
 
@@ -163,7 +163,7 @@ Abort → `release --reset-to todo`, and the empty remote branch is deleted. **R
 
 ### `/wa-code #12`
 
-Without an argument, it picks the top unclaimed `grilled` ticket. It claims `coding`, checks out the existing ticket branch (never creates a new one: the spec lives there), and runs the normal pipeline. Once the task is broken into bricks, they're posted as one issue comment, one line per brick (a later round that re-plans posts a new comment; the issue body is never edited). The round ends with commit, push and a draft PR; the hook moves the ticket to `review`. The first push of a ticket asks for a one-line confirmation; later rounds push without asking.
+Without an argument, it picks the top unclaimed `grilled` ticket. A ticket with an open blocker in its sprint or track is never coded from the base (wait, or let `/wa-autopilot` stack it); an unrelated open blocker gets a warning, and on your yes the PR says `Blocked by #<x>: merge order is yours`. It claims `coding`, checks out the existing ticket branch (never creates a new one: the spec lives there), and runs the normal pipeline. Once the task is broken into bricks, they're posted as one issue comment, one line per brick (a later round that re-plans posts a new comment; the issue body is never edited). The round ends with commit, push and a draft PR; the hook moves the ticket to `review`. The first push of a ticket asks for a one-line confirmation; later rounds push without asking.
 
 ### `/wa-feedback #12 <notes>`
 
