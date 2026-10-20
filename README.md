@@ -172,7 +172,7 @@ pr:
 
 - **Every PR gets at least one label from your repo's own labels**, on top of `pr.labels`: the best fit for the change (bug, feature, docs, then an area label if you have them), named in the report. Labels are never created; a repo with no labels at all gets PRs without one.
 - **The template is filled, not replaced.** Its headings stay, each section is written from the task file, and its checkboxes are ticked only when a round proved them (build, tests, tools, runtime check) or the diff shows them.
-- **whackagent's part sits in its own marked block**: `Closes #n`, the acceptance criteria checklist, numbered manual test steps (setup, navigation path from launch to the feature, then each action with its expected result), the status line. A template with its own testing section gets the steps there instead. Each round rewrites that block only, so whatever a human added to the body stays.
+- **whackagent's part sits in its own marked block**: `Closes #n`, a `Changes` list (one user-visible change per line: Add, Change, Fix, Remove, Improve), the acceptance criteria checklist, numbered manual test steps (setup, navigation path from launch to the feature, then each action with its expected result), the status line. A template with its own testing or changes section gets the steps or the list there instead. Each round rewrites that block only, so whatever a human added to the body stays.
 - **Reviewers aren't pinged on drafts.** A draft is your turn to test; reviewers are requested when the PR goes ready.
 - No `pr:` block keeps the previous behavior: no template, title = task title, assigned to you.
 
