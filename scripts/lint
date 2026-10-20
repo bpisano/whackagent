@@ -1,0 +1,318 @@
+#!/usr/bin/env python3
+"""Repo checks for whackagent's own editing rules (see CLAUDE.md).
+
+Run from anywhere: `scripts/lint`. Prints `file:line: message` per hit, exits 1 on any.
+Python 3 stdlib only.
+"""
+import json
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+errors = []
+
+
+def err(path, line, msg):
+    errors.append(f"{path.relative_to(ROOT) if isinstance(path, Path) else path}:{line}: {msg}")
+
+
+def md_files(*globs):
+    return sorted({p for g in globs for p in ROOT.glob(g) if p.is_file()})
+
+
+PROMPTS = md_files("skills/**/*.md", "agents/*.md", "reference/*.md")
+DOCS = PROMPTS + md_files("templates/*.md", "conventions/**/*.md", "providers/**/*.md",
+                          "CLAUDE.md", "README.md", "WORKFLOW.md", "GITHUB.md")
+
+
+def lines_outside_code(path):
+    """(line number, text) for every line outside fenced code blocks."""
+    fenced = False
+    for n, line in enumerate(path.read_text().splitlines(), 1):
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+            continue
+        if not fenced:
+            yield n, line
+
+
+# ---------------------------------------------------------------- 1. cross-references
+
+def ref_file(name):
+    """Map a ref's left side to the file it names, or None."""
+    if re.fullmatch(r"wa-[a-z-]+", name):
+        for cand in (ROOT / "skills" / name / "SKILL.md", ROOT / "agents" / f"{name}.md"):
+            if cand.exists():
+                return cand
+        return None
+    for cand in (ROOT / name, ROOT / "templates" / name, ROOT / "providers" / name):
+        if cand.is_file():
+            return cand
+    return None
+
+
+def headings(path):
+    return [re.sub(r"^#+\s*", "", t).strip() for _, t in lines_outside_code(path) if re.match(r"#{1,6} ", t)]
+
+
+def matches(label, text):
+    """Lenient: exact, or label is a prefix of text (`3a` vs `3a. Spec`), numbers optional."""
+    label, text = label.strip().lower(), text.strip().lower()
+    for t in (text, re.sub(r"^\d+[a-z]?\.\s*", "", text)):
+        if t == label or (t.startswith(label) and t[len(label)] in " .:—(,"):
+            return True
+    return False
+
+
+def has_heading(path, section):
+    return any(matches(section, h) for h in headings(path))
+
+
+def has_name(path, name):
+    """Italic sub-ref: a heading, or a bold name (`**Agent round**`, `- **`x: y`** …`) in the file."""
+    if has_heading(path, name):
+        return True
+    return any(matches(name, b) for b in re.findall(r"\*\*([^*\n]+)\*\*", path.read_text()))
+
+
+TARGET = r"(wa-[a-z-]+|[\w./-]*\.md)"
+REF_ARROW = re.compile(rf"\*\*{TARGET} → ([^*\n]+?)\*\*(?:,? \*([^*\n]+)\*)?")
+REF_FILE = re.compile(rf"\*\*{TARGET}\*\*(?:,? (?:→ )?\*([^*\n]+)\*)?")
+REF_PATH = re.compile(r"`\$\{CLAUDE_PLUGIN_ROOT\}/([\w./-]+\.md)` → \*\*([^*\n]+)\*\*")
+# Unbolded prose ref (`See /wa-task → Sprints.`): no end marker, so some heading must start the text.
+REF_PLAIN = re.compile(r"(?<![`*\w/.-])/?(wa-[a-z-]+|[\w/.-]+\.md) → \*?([A-Z][^\n]{0,60})")
+
+
+def check_refs():
+    for path in DOCS:
+        for n, line in lines_outside_code(path):
+            for m in REF_ARROW.finditer(line):
+                target, section, sub = m.groups()
+                f = ref_file(target)
+                if f is None:
+                    if target.startswith("wa-") or "/" in target or target in ("BOARD.md", "CONTRACT.md"):
+                        err(path, n, f"ref **{target} → …**: no such skill, agent or file")
+                    continue
+                if not has_heading(f, section):
+                    err(path, n, f"ref **{target} → {section}**: no such heading in {f.relative_to(ROOT)}")
+                elif sub and not has_name(f, sub):
+                    err(path, n, f"ref *{sub}* under **{target} → {section}**: not found in {f.relative_to(ROOT)}")
+            for m in REF_FILE.finditer(line):
+                target, sub = m.groups()
+                if not ("/" in target or target in ("BOARD.md", "CONTRACT.md")):
+                    continue  # bold file names like **SKILL.md** are prose, not refs
+                f = ref_file(target)
+                if f is None:
+                    err(path, n, f"ref **{target}**: no such file")
+                elif sub and not has_name(f, sub):
+                    err(path, n, f"ref **{target}**, *{sub}*: not found in {f.relative_to(ROOT)}")
+            for m in REF_PATH.finditer(line):
+                f = ROOT / m.group(1)
+                if not f.is_file():
+                    err(path, n, f"`{m.group(1)}`: no such file")
+                elif not has_heading(f, m.group(2)):
+                    err(path, n, f"`{m.group(1)}` → **{m.group(2)}**: no such heading")
+            for m in REF_PLAIN.finditer(line):
+                f, text = ref_file(m.group(1)), m.group(2)
+                if f and not any(matches(h, text[:len(h)]) or matches(re.sub(r"^\d+[a-z]?\.\s*", "", h), text[:len(h)])
+                                 for h in headings(f)):
+                    err(path, n, f"ref {m.group(1)} → {text[:30]}…: no heading of {f.relative_to(ROOT)} starts it")
+
+
+# ---------------------------------------------------------------- 2. Read line covers cited reference files
+
+READ_LINE = "Read `${CLAUDE_PLUGIN_ROOT}/reference/`:"
+
+
+def check_read_lines():
+    for skill in md_files("skills/*/SKILL.md"):
+        text = skill.read_text().splitlines()
+        read = [(n, l) for n, l in enumerate(text, 1) if l.startswith(READ_LINE)]
+        if len(read) != 1:
+            err(skill, 1, f"expected one `{READ_LINE}` line, found {len(read)}")
+            continue
+        read_n, read_l = read[0]
+        listed = set(re.findall(r"`([a-z-]+\.md)`", read_l))
+        for name in sorted(listed):
+            if not (ROOT / "reference" / name).exists():
+                err(skill, read_n, f"Read line lists reference/{name}: no such file")
+        if "cited below" in read_l:  # wa-setup: every file read when its step runs
+            continue
+        files = [skill] + md_files(f"{skill.parent.relative_to(ROOT)}/**/*.md")
+        for f in dict.fromkeys(files):
+            for n, line in enumerate(f.read_text().splitlines(), 1):
+                if f == skill and n == read_n:
+                    continue
+                for name in re.findall(r"reference/([a-z-]+\.md)", line):
+                    if name not in listed:
+                        err(f, n, f"cites reference/{name}, missing from {skill.parent.name} Read line")
+    for agent in md_files("agents/*.md"):
+        for n, line in enumerate(agent.read_text().splitlines(), 1):
+            if "reference/" in line:
+                err(agent, n, "agents read no reference file: the orchestrating skill passes what they need")
+
+
+# ---------------------------------------------------------------- 3. task file section headings
+
+# Sections the pane (parseTaskFile) does not show, on purpose.
+PANE_SKIPS = {"Context / Decisions"}  # free-form spec notes: Task tab shows criteria, bricks, review, verification, feedback
+
+
+def check_task_headings():
+    template = set(re.findall(r"^## (.+?)\s*$", (ROOT / "templates/task.md").read_text(), re.M))
+    src = (ROOT / "hooks/board.ts").read_text()
+    body = re.search(r"export function parseTaskFile.*?\n}\n", src, re.S)
+    pane = set(re.findall(r"body(?:\['([^']+)'\]|\.(\w+))", body.group(0) if body else ""))
+    pane = {a or b for a, b in pane}
+    claude = (ROOT / "CLAUDE.md").read_text()
+    api = re.search(r"\*\*Task file section headings are an API\.\*\*[^\n]*", claude)
+    listed = set(re.findall(r"`## ([^`]+)`", api.group(0) if api else ""))
+    if template != listed:
+        err("CLAUDE.md", 1, f"task headings differ from templates/task.md: CLAUDE.md {sorted(listed)} vs template {sorted(template)}")
+    for name in sorted(pane - template):
+        err("hooks/board.ts", 1, f"parseTaskFile reads ## {name}, absent from templates/task.md")
+    for name in sorted(template - pane - PANE_SKIPS):
+        err("hooks/board.ts", 1, f"parseTaskFile ignores ## {name} (add it, or to PANE_SKIPS in scripts/lint)")
+    readme = (ROOT / "README.md").read_text()
+    for name in sorted(template):
+        if f"## {name}" not in readme:
+            err("README.md", 1, f"task example lacks ## {name}")
+
+
+# ---------------------------------------------------------------- 4. hardcoded .whackagent/ paths
+
+# A literal path right after "default `" or "recommended: `" documents the key's default: allowed.
+HARDCODED = re.compile(r"(?<!default `)(?<!recommended: `)\.whackagent/(BACKLOG\.md|tasks|wiki|reports|conventions)\b")
+# (file, substring on the line) where the literal default is the point.
+PATH_ALLOW = [
+    ("reference/paths.md", "Key missing → the default"),  # canonical list of defaults
+    ("templates/config.md", ""),                          # the defaults themselves
+    ("skills/wa-setup/SKILL.md", "| paths.wiki"),         # sample reconfigure table row
+]
+
+
+def check_paths():
+    for path in md_files("skills/**/*.md", "agents/*.md", "reference/*.md", "conventions/**/*.md", "templates/*.md"):
+        rel = str(path.relative_to(ROOT))
+        for n, line in enumerate(path.read_text().splitlines(), 1):
+            if HARDCODED.search(line) and not any(rel.startswith(f) and s in line for f, s in PATH_ALLOW):
+                err(path, n, "hardcoded .whackagent/ path: use {backlog} {tasks} {wiki} {reports} {conventions}")
+
+
+# ---------------------------------------------------------------- 5. manifest
+
+def frontmatter(path):
+    m = re.match(r"---\n(.*?)\n---\n", path.read_text(), re.S)
+    return dict(re.findall(r"^(\w+):\s*(.*)$", m.group(1), re.M)) if m else {}
+
+
+def check_manifest():
+    plugin = json.loads((ROOT / ".claude-plugin/plugin.json").read_text())
+    market = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text())
+    declared = {s.removeprefix("./skills/") for s in plugin.get("skills", [])}
+    on_disk = {p.parent.name for p in ROOT.glob("skills/*/SKILL.md")}
+    for name in sorted(on_disk - declared):
+        err(".claude-plugin/plugin.json", 1, f"skills/{name} not registered in skills[]")
+    for name in sorted(declared - on_disk):
+        err(".claude-plugin/plugin.json", 1, f"skills[] lists {name}: no skills/{name}/SKILL.md")
+    for name in sorted(on_disk):
+        fm = frontmatter(ROOT / "skills" / name / "SKILL.md")
+        if fm.get("name") != name:
+            err(f"skills/{name}/SKILL.md", 2, f"frontmatter name {fm.get('name')!r} != folder {name!r}")
+        if not fm.get("description"):
+            err(f"skills/{name}/SKILL.md", 3, "frontmatter description missing")
+    claude, readme = (ROOT / "CLAUDE.md").read_text(), (ROOT / "README.md").read_text()
+    layout = re.search(r"^- `skills/wa-\*/SKILL\.md`:[^\n]*", claude, re.M)
+    for name in sorted(on_disk):
+        if not layout or f"`/{name}`" not in layout.group(0):
+            err("CLAUDE.md", 1, f"Layout skills line lacks `/{name}`")
+        if f"/{name}" not in readme:
+            err("README.md", 1, f"command table lacks /{name}")
+    ref_line = re.search(r"^- `reference/`:[^\n]*", claude, re.M)
+    for f in sorted(ROOT.glob("reference/*.md")):
+        if not ref_line or f"`{f.name}`" not in ref_line.group(0):
+            err("CLAUDE.md", 1, f"Layout reference/ line lacks `{f.name}`")
+    versions = {"plugin.json version": plugin.get("version"),
+                "marketplace.json metadata.version": market.get("metadata", {}).get("version"),
+                "marketplace.json plugins[0].version": (market.get("plugins") or [{}])[0].get("version")}
+    if len(set(versions.values())) != 1:
+        err(".claude-plugin/marketplace.json", 1, f"versions differ: {versions}")
+
+
+# ---------------------------------------------------------------- 6. numbered lists and headings
+
+def step(path, n, kind, m, prev):
+    """Next number of a sequence: +1, same number with a later letter (`2` → `2b`), or a restart at 0/1."""
+    cur, label = (int(m.group(1)), m.group(2)), m.group(1) + m.group(2)
+    restart = cur[0] <= 1 and not cur[1]
+    if prev and not restart and not (prev[0] < cur and cur[0] <= prev[0][0] + 1):
+        err(path, n, f"numbered {kind} goes {prev[1]} → {label}")
+    return cur, label
+
+
+def check_heading(path, n, line, steps):
+    """Numbered headings (`## 3. Verify`, `### 3a. Spec`) of one level under one parent: no repeat, no skip."""
+    level = len(line) - len(line.lstrip("#"))
+    for deeper in [lv for lv in steps if lv > level]:
+        del steps[deeper]
+    m = re.match(r"#+ (\d+)([a-z]?)\. ", line)
+    if m:
+        steps[level] = step(path, n, "heading", m, steps.get(level))
+    else:
+        steps.pop(level, None)
+
+
+def check_numbering():
+    for path in DOCS:
+        last, steps = {}, {}  # list: indent -> last number, reset at every heading; headings: level -> (num, label)
+        for n, line in lines_outside_code(path):
+            if re.match(r"#{1,6} ", line):
+                last = {}
+                check_heading(path, n, line, steps)
+                continue
+            m = re.match(r" *(\d+)([a-z]?)\. ", line)
+            if not m:
+                continue
+            indent = len(line) - len(line.lstrip())
+            last = {i: v for i, v in last.items() if i <= indent}
+            last[indent] = step(path, n, "list", m, last.get(indent))
+
+
+# ---------------------------------------------------------------- 7. config keys
+
+# Backticked `section.key` that are not config keys.
+KEY_ALLOW = {
+    "build.gradle",  # Gradle build file name, not a key
+}
+
+
+def config_keys():
+    keys, section = set(), None
+    for line in (ROOT / "templates/config.md").read_text().splitlines():
+        top = re.match(r"([a-z_]+):", line)
+        sub = re.match(r"  ([a-z_]+):", line)
+        if top:
+            section = top.group(1)
+            keys.add(section)
+        elif sub and section:
+            keys.add(f"{section}.{sub.group(1)}")
+    return keys
+
+
+def check_config_keys():
+    keys = config_keys()
+    sections = {k for k in keys if "." not in k}
+    for path in md_files("skills/**/*.md", "agents/*.md", "reference/*.md", "templates/*.md"):
+        for n, line in enumerate(path.read_text().splitlines(), 1):
+            for sec, key in re.findall(r"`([a-z_]+)\.([a-z_]+)\b", line):
+                full = f"{sec}.{key}"
+                if sec in sections and full not in keys and full not in KEY_ALLOW and key not in ("md", "yml", "json"):
+                    err(path, n, f"`{full}` not a key in templates/config.md")
+
+
+for check in (check_refs, check_read_lines, check_task_headings, check_paths, check_manifest,
+              check_numbering, check_config_keys):
+    check()
+print("\n".join(errors) if errors else "lint: ok")
+sys.exit(1 if errors else 0)
