@@ -84,7 +84,7 @@ Local provider → `comment` is no-op, nothing to do. Later round re-plans brick
 - **Bricks 2..n** — `SendMessage` that id next brick **alone**. No conventions dir, no BRIEF, no task path: it holds them. It built brick 1 too, so know what to reuse — DRY stop being rule it must rediscover.
 
 Receipts:
-- `RESULT: done` → record files + build/test/tools/run proof in `## Implementation`, continue.
+- `RESULT: done` → record files + build/test/tools/run proof + `NOTES:` worth keeping in `## Implementation`, continue.
 - `RESULT: blocked` → **stop and ask** the `BLOCKED:` question. Dispatch nothing further until resolved.
 
 **Runtime proof — `verify.mode` decides, and here you attended:**
