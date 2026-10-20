@@ -4,6 +4,8 @@ All notable changes to whackagent are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-20
+
 ### Added
 
 - Test branch: with branches per task, two or more coded tasks waiting for your test on the same sprint branch or trunk are merged into a local, throwaway `wa-test/<base>` branch (its own worktree in worktree mode), rebuilt after each round, so you test them in one launch. Outside worktree mode it is checked out only at the end of an attended `/wa-code`, `/wa-feedback` or `/wa-validate` on a clean tree; `/wa-autopilot` and `/wa-close` never move your checkout. Never pushed or landed; a conflicting task is left out and named. New config key `branch.test_branch`, on in new setups with branches per task, off when missing.

@@ -1,7 +1,7 @@
 {
   "name": "whackagent",
   "description": "Orchestrated dev workflow: backlog + wiki + a task lifecycle (setup → task → grill → code → your test → validate → close) driven by isolated implementer + verifier subagents, plus an autopilot that parallelizes independent tasks across git worktrees. Backlog stays prioritized on its own. Works on any stack (iOS, Android, web, desktop, server, CLI), language-template driven.",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "author": {
     "name": "Rémi Latapy"
   },
