@@ -9,6 +9,7 @@ All notable changes to whackagent are listed here, newest first. The format foll
 - Each command now loads only the shared rules it needs instead of the whole rule set: the rules moved from `/wa-board` into one file per topic under `reference/`, and the GitHub provider rules load only in GitHub projects. Runs read less, rules unchanged. Commit rules (author, message, trailers) are gathered in one place: whackagent adds no trailer of its own and stops when no git identity is set rather than inventing one.
 - Shorter command descriptions in the `/` menu.
 - GitHub provider: a new board (created without a template) gets exactly the six state columns in lifecycle order, without GitHub's default `In Progress`. On a template copy or an adopted board, `/wa-setup` names the columns no state maps to and offers `wa-backlog provision --prune-status`, which drops only the empty ones and keeps every card's Status.
+- GitHub provider: after each push, the agent checks that the hooks moved the card out of `coding`. When they didn't, it tells you whether the board workflow run failed, is still queued or never started, with the run link, and leaves the state to the hooks.
 
 ## [1.4.0] - 2026-10-15
 
