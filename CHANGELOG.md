@@ -18,6 +18,8 @@ All notable changes to whackagent are listed here, newest first. The format foll
 
 ### Changed
 
+- The wiki only records what outlives a task and the code doesn't tell: subsystems, boundaries, cross-cutting decisions and constraints. Local changes (a color, spacing, wording, a one-spot bug fix) no longer add a wiki line, and `/wa-grill` no longer plans one for them.
+
 - Each command now loads only the shared rules it needs instead of the whole rule set: the rules moved from `/wa-board` into one file per topic under `reference/`, and the GitHub provider rules load only in GitHub projects. Runs read less, rules unchanged. Commit rules (author, message, trailers) are gathered in one place: whackagent adds no trailer of its own and stops when no git identity is set rather than inventing one.
 - Shorter command descriptions in the `/` menu.
 - GitHub provider: a new board (created without a template) gets exactly the six state columns in lifecycle order, without GitHub's default `In Progress`. On a template copy or an adopted board, `/wa-setup` asks about each column no state maps to (recommending to drop GitHub's defaults and keep your team's) and runs `wa-backlog provision --prune-status <column>` for the ones you drop. Only named, empty columns go; dropping one puts the state columns back in lifecycle order. Every card keeps its Status. The `provision` output now reports `status_options_changed`; `status_options_added` stays as an alias.

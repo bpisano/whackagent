@@ -27,7 +27,7 @@ Wording (screen + reports): **reference/voice.md** — telegraphic, tech terms s
 3. **Write** into task file:
    - `## Context / Decisions` — resolved decisions. Replaces idea / excerpt; keep excerpt's source ref line.
    - `## Acceptance criteria` — observable checks meaning "done" (what appears on screen, what input must produce). These drive the implementer's runtime checks and the verifier's correctness lens; keep concrete, YAGNI. Skip only for tasks with no runnable surface (pure lib/logic).
-   - `size` re-estimated from what grill surfaced: `quickwin` (🟢, hour or less), `medium` (🟡), `large` (🔴, multi-session / probably split). `wiki:` pages it touches, pages to create. `grilled: true`.
+   - `size` re-estimated from what grill surfaced: `quickwin` (🟢, hour or less), `medium` (🟡), `large` (🔴, multi-session / probably split). `wiki:` pages it touches, pages to create — only for wiki-worthy change (**wa-wiki → Update mode**), else empty; never plan wiki line for local fix. `grilled: true`.
    - `title` / `summary` wrong now → fix per **reference/voice.md → Titles and summaries** (slug stays).
    - `type` — set or refined by test in **reference/task-types.md** on what grill surfaced (GitHub: written here first). Changed → echo `→ type bug (was improvement)`.
    - Dependencies settled → `depend <id> --on <x>` (local: `blocked_by:`, **reference/blockers.md**).

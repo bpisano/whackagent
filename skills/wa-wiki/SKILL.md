@@ -22,6 +22,7 @@ Task status + report handled by `/wa-code`. This step keep shared knowledge true
 
 1. **Figure out what changed** — recent `done` tasks, latest `{reports}/*.md`, and/or git diff since last sync.
 2. **Wiki.** Update or create affected pages, under `{wiki}/`:
+   - **Wiki-worthy only.** Line earns place when it outlive task and code alone don't tell it: new subsystem, layer or process boundary, cross-cutting decision, constraint future work must respect. Local change — color, spacing, wording, layout tweak, one-spot bug fix, test tweak — → nothing, say `wiki: nothing to sync`. Task `wiki:` flag = candidate page, not obligation. Doubt → nothing.
    - Reflect new/changed behavior in relevant `[[page]]`(s).
    - Cross-link: wiki↔wiki, link task where useful.
    - Create any page a task's `wiki:` flagged missing.
