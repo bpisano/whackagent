@@ -363,6 +363,7 @@ A closed-unmerged PR sends the ticket back to `grilled`.
   BACKLOG.md           # task index (order = priority)
   tasks/<slug>.md      # one task = one file (frontmatter + body)
   wiki/index.md        # wiki summary
+  wiki/glossary.md     # one word per thing (concepts, screens), used in UI, code, tasks and PRs
   wiki/<page>.md       # domain pages, [[wikilink]] links (Obsidian-compatible)
   reports/<slug>.md    # run reports, local only: /wa-setup gitignores them
 ```
@@ -426,6 +427,12 @@ Single-file packs: `typescript.md` (front end and back end) and `generic.md` —
 `/wa-setup` detects the language, the **kind** (`app` · `web` · `server` · `cli` · `package`) and the UI toolkit, then copies **only the useful modules** into `.whackagent/conventions/` (no `swiftui.md` in a package without SwiftUI, no `compose.md` in a Ktor server). You edit these copies to adapt per project (e.g. drop public doc). A polyglot repo (KMP shared code + iOS app) can load two packs.
 
 The copied list lands in `review.modules` — the verifier reads exactly that, and nothing else in the tree.
+
+With Xcode 27 or later, `/wa-setup` can also export Apple's own SwiftUI guidance from your Xcode (`xcrun agent skills export`) into `conventions/apple/`, indexed by the `swift/apple.md` module. The pages are a reference library, not rules: agents open only the page for the API they touch. Setup asks whether to commit the folder (about 170 KB, so teammates without Xcode 27 get it too) or gitignore it (better on a public repo, since it is Apple's text). Run `/wa-setup` again after an Xcode update to refresh it.
+
+## Glossary
+
+`/wa-setup` creates `glossary.md` in your wiki (`{wiki}/glossary.md`): one term per thing, with a `Never` column for the synonyms to avoid and a `Code` column for its name in source. Two tables, **Concepts** and **Screens** (dropped for projects with no UI). It is plain Markdown for the whole team. `/wa-task` and `/wa-grill` name things with its terms and propose a row when you name something new (added on your yes, written by `/wa-wiki`), the implementer uses its names in UI strings and new code, the verifier flags a `Never` word in new UI copy or identifiers, and PR test steps name screens from it. No glossary file means everything works as before.
 
 ## Skill dependencies
 

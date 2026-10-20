@@ -24,6 +24,7 @@ Owns three things: **creating** task, **cutting** spec too large for one task (*
    - **No arg → prioritization only.** Skip to step 5, whole backlog in scope, full pass (see *Explicit run* there).
 1. **Context.** Read `.whackagent/config.md`, `{wiki}/index.md`, backlog (`{backlog}`, or `wa-backlog list` under GitHub — **reference/provider-github.md**). `{…}` paths per **reference/paths.md**. Idea or spec block already covered by task → say so, reuse, never duplicate. Note live sprints.
 2. **Title first.** Distill request into SHORT explicit title — feature clear one glance ("Login Apple", not "improve auth"). Rules: **reference/voice.md → Titles and summaries** — label ≤ 5 words, never a narrative sentence, never a metaphor, tech terms untranslated. Slug = kebab-case title (`login-apple`).
+   - **Glossary** — `{wiki}/glossary.md` exists → title, summary, context use its terms, never a `Never` word. User names thing it lacks → propose row (`+ Term — means`), on yes add `Glossary: + <row>` line to `## Context / Decisions` (`/wa-wiki` writes it). Absent → skip.
 3. **Write task file** at `{tasks}/<slug>.md` from `${CLAUDE_PLUGIN_ROOT}/templates/task.md`:
    - `title`, `status: todo`, `grilled: false`, `created` = today.
    - `summary` — **≤ 8 words**, the goal plainly (line 2 of wa-board list). Adds what title doesn't say — never repeats it. Result once done, not mechanism or story. Rules: **reference/voice.md → Titles and summaries**.

@@ -4,6 +4,11 @@ All notable changes to whackagent are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- Project glossary: `/wa-setup` creates `glossary.md` in your wiki (Concepts and Screens, with the words to avoid). Tasks, grills, code, review and PR test steps use its terms, and new terms are proposed for your yes. Existing projects get it offered on the next `/wa-setup`; without the file nothing changes.
+- Swift: with Xcode 27+, `/wa-setup` can export Apple's SwiftUI guidance from your Xcode into `conventions/apple/` (new `swift/apple.md` module). Agents open only the page for the API they touch. You choose to commit or gitignore the folder; `/wa-setup` refreshes it after an Xcode update.
+
 ### Changed
 
 - Each command now loads only the shared rules it needs instead of the whole rule set: the rules moved from `/wa-board` into one file per topic under `reference/`, and the GitHub provider rules load only in GitHub projects. Runs read less, rules unchanged. Commit rules (author, message, trailers) are gathered in one place: whackagent adds no trailer of its own and stops when no git identity is set rather than inventing one.

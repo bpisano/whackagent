@@ -7,6 +7,7 @@ with `[[wikilink]]` syntax (Obsidian-compatible). Keep it current via `/wa-wiki`
 
 <!-- - [[architecture]] — overall structure -->
 <!-- - [[auth]] — authentication & accounts -->
+- [[glossary]] — one word per thing, same in UI, code, tasks, PRs
 
 ## How to read
 
