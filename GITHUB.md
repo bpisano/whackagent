@@ -139,7 +139,7 @@ Rules that come with it:
 
 Asked early: files or GitHub Project. Choosing GitHub:
 
-- creates a Project, copies your organization's Project template when it has one (keeping its views and workflows), or adopts an existing one (`wa-backlog provision`, with `--template` for the copy). Existing columns are never rewritten: missing state options are added, or states are mapped onto your existing column names. A `Size` field is added if missing, and the repo variables are written.
+- creates a Project, copies your organization's Project template when it has one (keeping its views and workflows), or adopts an existing one (`wa-backlog provision`, with `--template` for the copy). A new board (no template) gets exactly the six state columns in lifecycle order, without GitHub's default `In Progress`. Existing columns are never rewritten unless you agree: missing state options are added, or states are mapped onto your existing column names, and `--prune-status` drops the extra columns no card sits on. A `Size` field is added if missing, and the repo variables are written.
 - installs `whackagent-board.yml` **through a PR** (never a direct push to the default branch). The hooks are live once it's merged.
 - walks you through the `WA_PROJECT_TOKEN` secret: a token link, then `! pbpaste | gh secret set WA_PROJECT_TOKEN -R <repo>` so the token never appears in the chat.
 - forces `branch.per_task: true` and `close.strategy: pr`, and drops the `{backlog}` file.
