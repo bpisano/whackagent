@@ -8,15 +8,15 @@ model: haiku
 
 Dashboard. Lift lid on backlog, point next move.
 
-Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `display.md` · arg given → + `sprints.md` `milestones.md` · `backlog.provider: github` → + `provider-github.md` · `branch.tracks` non-empty → + `tracks.md`.
+Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `display.md` `blockers.md` · arg given → + `sprints.md` `milestones.md` · `backlog.provider: github` → + `provider-github.md` · `branch.tracks` non-empty → + `tracks.md`.
 
 ## Do
 
 0. **Read arg.** None → whole backlog. Sprint name (`/wa-board login-refacto`) or milestone title (`/wa-board 0.3.0`) → **filtered view**: only its tasks, plus its progress line. Resolve per **reference/sprints.md** / **reference/milestones.md**; unknown name → say so, list known sprints and milestones, stop.
 1. Read `.whackagent/config.md` (respect discussion language). Missing → tell user run `/wa-setup`, stop.
-2. Read `{backlog}` + referenced task files (need each task `summary`, `size`, `grilled`, `sprint`, `milestone`) + provider `milestones` verb. **GitHub provider** → `wa-backlog list` (+ `--sprint` / `--milestone` when filtered), `wa-backlog milestones` and `wa-backlog claims` instead; see *GitHub board* below.
+2. Read `{backlog}` + referenced task files (need each task `summary`, `size`, `grilled`, `sprint`, `milestone`, `blocked_by`) + provider `milestones` verb. **GitHub provider** → `wa-backlog list` (+ `--sprint` / `--milestone` when filtered), `wa-backlog milestones` and `wa-backlog claims` instead; see *GitHub board* below.
 3. Render backlog as **list**, one section per status (see **reference/display.md → Display format**), priority order within each.
-4. Suggest exactly **one** next action, by state (filtered run → scope suggestion to sprint or milestone):
+4. Suggest exactly **one** next action, by state (filtered run → scope suggestion to sprint or milestone). Task with ⛔ never suggested: take next one down (**reference/blockers.md**):
    - something in `validated` → reviewed, wait user retest: `/wa-close <slug>` to finish (or `/wa-feedback` if retest found something). Highest precedence — one step from done.
    - something in `review` → coded, wait user test: `/wa-feedback <slug> <notes>` if notes, else `/wa-validate <slug>` to fire verifier. Beats starting new work.
    - something `in-progress` → resume it (`/wa-code <slug>`)

@@ -62,6 +62,7 @@ Keep each step's ownership intact when editing. For example, only `/wa-close` co
 - **New skill**: create `skills/<name>/SKILL.md` with `name` and `description` frontmatter, register it in `plugin.json` `skills[]`, add it to the README command table.
 - **New config key**: add it with its default and a comment to `templates/config.md`, add the question to `/wa-setup`, document it in the README. The `/wa-setup` reconfigure mode diffs the project config against the template, so existing projects get offered the new key automatically. Omitting a key must keep the old behavior.
 - **New convention module**: add the file under `conventions/<language>/`, teach `/wa-setup` when to copy it, list it in the README.
+- **Format change** old projects must follow (task frontmatter, backlog shape): add a migration `skills/wa-setup/migrations/NNNN-<name>.md` with `## Detect`, `## Plan`, `## Apply`, idempotent (Detect alone decides, no ledger). `/wa-setup` reconfigure runs it. Never for GitHub board data, `BOARD.md` or hooks: those keep their own version gates.
 
 ## Changelog
 

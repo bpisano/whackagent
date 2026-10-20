@@ -12,6 +12,9 @@ All notable changes to whackagent are listed here, newest first. The format foll
 - GitHub provider: `wa-backlog screenshots` uploads with `gh pr edit --attach` when `gh` is 2.102 or later, so the `gh image` extension is no longer needed there. It still falls back to `gh image`, then to the browser. It lays out `<caption>.before` / `<caption>.after` pairs as a table, records the shot commit with `--sha`, keeps images not re-shot with `--keep`, and prints the current section when given no file.
 - Project glossary: `/wa-setup` creates `glossary.md` in your wiki (Concepts and Screens, with the words to avoid). Tasks, grills, code, review and PR test steps use its terms, and new terms are proposed for your yes. Existing projects get it offered on the next `/wa-setup`; without the file nothing changes.
 - Swift: with Xcode 27+, `/wa-setup` can export Apple's SwiftUI guidance from your Xcode into `conventions/apple/` (new `swift/apple.md` module). Agents open only the page for the API they touch. You choose to commit or gitignore the folder; `/wa-setup` refreshes it after an Xcode update.
+- Optional task `type:` (`feature`, `improvement`, `bug`, `refactor`), set by `/wa-task` and refined by `/wa-grill`. It picks the Conventional Commits prefix when your repo uses them, the kind label for the PR among your repo's labels, and the title verb (`Fix …` for a bug). Tasks without it behave as before. Under the GitHub provider it lives in the task file on the ticket branch; nothing new on the issue or board.
+- `/wa-setup` on a project already set up now runs migrations: it detects older task formats, shows a plan and applies each one on your yes (`/wa-setup migrate` for migrations alone). First two: `note: Depends on …` becomes `blocked_by:`, and an optional `type:` backfill for open tasks. Migrations never touch the GitHub board, `BOARD.md` or the hooks, and never commit.
+- The pane's task tab shows the task type and, for local tasks too, open blockers.
 
 ### Changed
 
@@ -20,6 +23,8 @@ All notable changes to whackagent are listed here, newest first. The format foll
 - GitHub provider: a new board (created without a template) gets exactly the six state columns in lifecycle order, without GitHub's default `In Progress`. On a template copy or an adopted board, `/wa-setup` names the columns no state maps to and offers `wa-backlog provision --prune-status`, which drops only the empty ones and keeps every card's Status.
 - GitHub provider: after each push, the agent checks that the hooks moved the card out of `coding`. When they didn't, it tells you whether the board workflow run failed, is still queued or never started, with the run link, and leaves the state to the hooks.
 - PR bodies now carry a `Changes` list: one user-visible change per line, starting with Add, Change (before → after), Fix, Remove or Improve, rewritten on every refresh. It goes into the template's own changes section when it has one. Sprint and track landing PRs list one line per landed ticket.
+- `/wa-code` warns before coding a task whose blocker hasn't landed and recommends the blocker first. Under the GitHub provider it no longer codes a ticket from the base while a blocker in its sprint or track is open, as `BOARD.md` asks.
+- Local provider: dependencies are now structured. `/wa-task` and `/wa-grill` record them as `blocked_by: [<slug>, …]` in the task file instead of a free-text `Depends on …` note. A blocked task shows `⛔ <blocker>` on the board and in the pane, is never suggested next, stays below its blocker when prioritized, and `/wa-autopilot` leaves it out until the blocker is done.
 
 ## [1.4.0] - 2026-10-15
 

@@ -7,7 +7,7 @@ description: Create tasks from idea or spec, cutting large specs, then re-priori
 
 Idea or spec → task(s) in backlog, ordered. **Creates, cuts, places — never grills, never starts `/wa-grill`**: run ends on suggestion, user launches `/wa-grill` — it clarifies one task at a time.
 
-Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `display.md` `paths.md` `milestones.md` · task gets `sprint:` (split, user names one) → + `sprints.md` · `backlog.provider: github` → + `provider-github.md` · `branch.tracks` non-empty → + `tracks.md`.
+Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `display.md` `paths.md` `milestones.md` `task-types.md` `blockers.md` · task gets `sprint:` (split, user names one) → + `sprints.md` · `backlog.provider: github` → + `provider-github.md` · `branch.tracks` non-empty → + `tracks.md`.
 
 Wording (screen + reports): **reference/voice.md** — telegraphic, tech terms stay English.
 
@@ -29,10 +29,11 @@ Owns three things: **creating** task, **cutting** spec too large for one task (*
    - `title`, `status: todo`, `grilled: false`, `created` = today.
    - `summary` — **≤ 8 words**, the goal plainly (line 2 of wa-board list). Adds what title doesn't say — never repeats it. Result once done, not mechanism or story. Rules: **reference/voice.md → Titles and summaries**.
    - `size` — first estimate: `quickwin` (🟢, hour or less), `medium` (🟡), `large` (🔴, multi-session / probably split). `/wa-grill` re-estimates.
+   - `type` — `feature` | `improvement` | `bug` | `refactor`, inferred from request (**reference/task-types.md**), echoed `→ type bug` — user corrects in one word. Unclear → empty, grill settles it.
    - `sprint` — kebab-case label, or **empty**. Rules in *Sprints* below. Default empty: most tasks stand alone.
    - `milestone` — highest entry of `backlog.milestones` that isn't track (version order, **reference/milestones.md**), empty when none; user named one → that. Rules **reference/milestones.md**. Echo `→ milestone <m>`.
    - **Track** — only when `branch.tracks` non-empty (**reference/tracks.md**). Never default. Idea clearly belongs to track (paths, modules, APIs only track has) → **suggest** it with reason, user decides: `→ milestone server? (touches oneSafe6_server/, sync API)`. User names track → that, no question. User asks to port track work to base → plain task on base, `ported-from: #<pr>`. To land track → `lands: <track>`, on milestone it ships in. User asks to move existing task onto or off track → **reference/tracks.md**, *Moving*.
-   - `note:` — `Depends on <slug>` when it builds on another task.
+   - `blocked_by:` — builds on another task → `depend <slug> --on <other>` (local: `blocked_by: [<other>]`, **reference/blockers.md**).
    - `## Context / Decisions` — user idea in their words, tightened; or **spec excerpt** (*Spec*). `## Acceptance criteria` left empty — `/wa-grill` writes them.
 4. **Add to backlog.** Append task under **Todo** in `{backlog}`, link file (relative to backlog's own folder, so link works when backlog and tasks sit in different trees). Sprint set → echo as `· <sprint>` after link, slot line **next to its sprint siblings**, not bottom.
 5. **Prioritize.** Run pass below — always, never ask permission, part of adding task. Several tasks one go → one pass at end, not one per task.
@@ -104,7 +105,7 @@ What grill starts from — `/wa-grill` reads it instead of re-asking what spec a
 
 `backlog.provider: github` — rules in **reference/provider-github.md**. Creating = issue on board, nothing else.
 
-- **Create** → `wa-backlog create --title … --summary … [--size] [--sprint] [--milestone] --note "<idea or spec excerpt>"` (note = issue body) instead of steps 3–4, then `wa-backlog depend <n> --on <x>` per dependency. Ticket lands `todo`, bottom of board, milestone per **reference/milestones.md** (track: `--milestone <track>` on user's yes). **No claim, no branch, no task file** — `/wa-grill` makes them; `ported-from:` / `lands:` go in `--note`, grill copies them to task file.
+- **Create** → `wa-backlog create --title … --summary … [--size] [--sprint] [--milestone] --note "<idea or spec excerpt>"` (note = issue body) instead of steps 3–4, then `wa-backlog depend <n> --on <x>` per dependency. Ticket lands `todo`, bottom of board, milestone per **reference/milestones.md** (track: `--milestone <track>` on user's yes). **No claim, no branch, no task file** — `/wa-grill` makes them; `ported-from:` / `lands:` go in `--note`, grill copies them to task file. `type` not stored yet (no task file): grill infers it (**reference/task-types.md**).
 - **Prioritization (step 5) under GitHub:** **not automatic.** Board order shared with humans and other agents — new ticket lands bottom of `todo`, full stop. Only explicit `/wa-task` (no arg): re-read `wa-backlog list` just before writing, show proposed order, apply with `wa-backlog move` **only on user yes**. Cancel = close issue `not planned` with reason comment, on yes.
 - **`/wa-task release <n>`** — stale claim cleanup, human-triggered only. Show `wa-backlog claims` row (owner, age, last push), confirm, then `release <n> <phase> --reset-to <todo|grilled|review> --reason "stale: <age>, no push"` (`coding` → `review` when PR open, else `grilled`; `grilling` → `grilled` when spec already exists — issue body criteria or task file on branch —, else `todo`). Never on own initiative, never to take ticket another live agent holds.
 
@@ -133,11 +134,12 @@ Product-owner hat: what matters now, what order. New task(s) from this run = **f
    - **keep** — stays in todo.
    - **defer** — keep but push down order.
    - **cancel** — set `status: canceled`, move under Canceled, note why.
-3. **Split** when task too big for one coherent feature: parent → **`split <id>`** (root of sprint named after its title), create child task files (`<slug>-<part>.md`), link to parent via `note:`/`wiki:`.
+3. **Split** when task too big for one coherent feature: parent → **`split <id>`** (root of sprint named after its title), create child task files (`<slug>-<part>.md`), link to parent via `note:`/`wiki:`. Child building on sibling → `depend <child> --on <sibling>`.
    - **Children inherit milestone** — parent's, never highest: split adds no scope (**reference/milestones.md**).
    - **Children inherit sprint.** Parent had one → every child gets same `sprint`. Parent had none → split *is* reason sprints exist: `split` names it after parent title in kebab-case (`Login redesign` → `login-redesign`), set on all children, say so in one-line split proposal. Title doesn't name body of work → fix title first (**reference/voice.md → Titles and summaries**).
 4. **Re-estimate size** when picture changed (`large` 🔴 task split may now be `medium`/`quickwin`). Update each task `size`.
 5. **Reorder.** Order in **Todo** section = priority (top = next). No numeric labels in `{backlog}` — order alone carries priority. Reflect new order in `{backlog}`.
+   - **Blocker above blocked.** Task with open blocker (**reference/blockers.md**) never sits above it in Todo, sprint block included.
    - **Sprint moves as block.** Its tasks stay contiguous in section, own internal order (dependencies first). Prioritize *sprint* against rest, then tasks inside. Splitting sprint across order needs reason — say out loud (*"pulled login-apple out of the block: it unblocks onboarding"*).
 6. **Tighten titles + summaries.** Any task in pass whose `title` or `summary` breaks **reference/voice.md → Titles and summaries** (narrative sentence, metaphor, translated tech term, summary > 8 words) → rewrite it, silently. Slug doesn't change.
 7. Show result using **reference/display.md → Display format**. `#` display-only, recomputed from order just written — always print list after reordering so indexes user sees are current. Sprints in play → progress lines under legend.

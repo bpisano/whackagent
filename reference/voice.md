@@ -21,6 +21,7 @@ Title = **label**, not sentence. Names the thing + what is done to it. ≤ 5 wor
 - **Never a metaphor or image.** `Tests turn red at random` means nothing to anyone → `Fix flaky CLI tests`.
 - **Tech terms stay tech terms**, here too — flaky, job, watermark, toggle, prompt, scope, seed, dashboard, child process. Paraphrasing or translating them produces gibberish.
 - **No elegant rewording.** User says `rework UI` → write `Rework UI`, not `A shared style for the screens`.
+- **Verb matches task `type:`** when set (`${CLAUDE_PLUGIN_ROOT}/reference/task-types.md`): `bug` → `Fix …`. Contradiction → fix title, not type.
 
 Summary = **the goal, plainly**, ≤ 8 words. What it gives once done. Not the mechanism, not the story, not the list of what disappears.
 

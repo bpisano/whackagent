@@ -8,7 +8,7 @@ model: opus
 
 `/wa-code` unattended, over batch. Same PM role, same pipeline, one addition: **independent tasks run parallel, each in own git worktree.** Give batch, walk away, read report.
 
-Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` `session-name.md` `display.md` `worktrees.md` `commits.md` · arg names sprint or task has `sprint:` → + `sprints.md` · arg names milestone → + `milestones.md` · `backlog.provider: github` → + `provider-github.md` `pull-requests.md` · `branch.tracks` non-empty → + `tracks.md` · `branch.test_branch: true` → + `test-branch.md`.
+Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` `session-name.md` `display.md` `worktrees.md` `commits.md` `blockers.md` · arg names sprint or task has `sprint:` → + `sprints.md` · arg names milestone → + `milestones.md` · `backlog.provider: github` → + `provider-github.md` `pull-requests.md` · `branch.tracks` non-empty → + `tracks.md` · `branch.test_branch: true` → + `test-branch.md`.
 
 Wording (screen + reports): **reference/voice.md** — telegraphic, tech terms stay English.
 
@@ -66,6 +66,8 @@ Plan echo shows chain + leaves: `chain: #23 → #18 → #19 → #22 → #24 …`
 ## 1. Plan the batch — what can run at once
 
 Do `/wa-code` step 1 (**Plan**) for **every** task in batch, up front, main thread. Now hold one BRIEF per task — that tell you if two tasks share clock.
+
+**Local provider:** task with open blocker (`blocked_by:`, **reference/blockers.md**) → out of batch, whatever its entry state, even when blocker in same batch: blocker ends `validated` at best, never `done`, so its code isn't on any fork point. Plan names it: `sync-offline waits login-apple (review)`. Named explicitly, user present → ask (recommended: no — code would fork off base without blocker's code). No local stacking.
 
 **GitHub provider:** `wa-backlog get <n>` → `blocked_by` with open blocker. **Related** = blocker shares ticket's sprint, or its track (same milestone, listed in `branch.tracks`) — `get` → `sprint`, `milestone`, both tickets:
 - **Related** → ticket waits for that blocker's wave and **stacks** on it (below), or skip it: blocker not in batch and not landed = forks off code that isn't there.

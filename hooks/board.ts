@@ -112,6 +112,7 @@ export const SIZE_ICON: Partial<Record<string, string>> = { quickwin: '🟢', me
 const SIZE_NAME: Record<string, string> = { quickwin: 'quick win', medium: 'medium', large: 'large' }
 const CLOSED_SHOWN = 3
 const NOT_GRILLED = '⚠'
+const BLOCKED = '⛔'
 
 const unquote = (value: string) => value.replace(/^["']|["']$/g, '')
 const valueOf = (raw: string) => unquote(raw.replace(/\s+#(\s.*)?$/, '').trim())
@@ -251,6 +252,8 @@ export function toTask(entry: BacklogEntry, fields: Record<string, string>): Boa
     milestone: fields.milestone ?? '',
     status: declared ?? entry.status ?? 'todo',
     isGrilled: fields.grilled === 'true',
+    type: fields.type ?? '',
+    blockedBy: inlineList(fields.blocked_by ?? ''),
   }
 }
 
@@ -366,7 +369,7 @@ export function localSprintRows(tasks: readonly BoardTask[], filter = ''): ViewR
         tags: [],
         summary: sprintSummary(done, members.length, parts, false),
         actions: [],
-        children: STATUS_ORDER.flatMap(status => members.filter(task => task.status === status)).map(localRow),
+        children: STATUS_ORDER.flatMap(status => members.filter(task => task.status === status)).map(task => localRow(task, tasks)),
       },
     ]
   })
@@ -577,17 +580,25 @@ function scoped<T extends { milestone: string }>(items: readonly T[], milestoneS
   }
 }
 
-const localRow = (task: BoardTask): ViewRow => ({
-  key: task.slug,
-  size: task.size,
-  title: task.title,
-  tags: [
-    ...(task.sprint ? [{ text: task.sprint, tone: 'sprint' as const }] : []),
-    ...(!task.isGrilled && isLive(task) ? [{ text: NOT_GRILLED, tone: 'warning' as const }] : []),
-  ],
-  summary: task.summary,
-  actions: taskActions(task),
-})
+// Open blocker = known task not done or canceled (reference/blockers.md); unknown slugs block nothing.
+const openBlockersOf = (task: BoardTask, tasks: readonly BoardTask[]) =>
+  isLive(task) ? task.blockedBy.filter(slug => tasks.some(one => one.slug === slug && isLive(one))) : []
+
+const localRow = (task: BoardTask, tasks: readonly BoardTask[]): ViewRow => {
+  const blockers = openBlockersOf(task, tasks)
+  return {
+    key: task.slug,
+    size: task.size,
+    title: task.title,
+    tags: [
+      ...(task.sprint ? [{ text: task.sprint, tone: 'sprint' as const }] : []),
+      ...(!task.isGrilled && isLive(task) ? [{ text: NOT_GRILLED, tone: 'warning' as const }] : []),
+      ...(blockers.length > 0 ? [{ text: `${BLOCKED} ${blockers.join(', ')}`, tone: 'warning' as const }] : []),
+    ],
+    summary: task.summary,
+    actions: taskActions(task),
+  }
+}
 
 const githubRow = (ticket: GithubTicket): ViewRow => ({
   key: String(ticket.number),
@@ -617,9 +628,11 @@ function legendOf(parts: readonly ViewSection[]): string {
   const rows = parts.flatMap(section => section.rows)
   const sizes = Object.keys(SIZE_NAME).filter(size => rows.some(row => row.size === size))
   const hasUngrilled = rows.some(row => row.tags.some(tag => tag.text === NOT_GRILLED))
+  const hasBlocked = rows.some(row => row.tags.some(tag => tag.text.startsWith(`${BLOCKED} `)))
   return [
     ...sizes.map(size => `${SIZE_ICON[size]} ${SIZE_NAME[size]}`),
     ...(hasUngrilled ? [`${NOT_GRILLED} not grilled`] : []),
+    ...(hasBlocked ? [`${BLOCKED} blocked`] : []),
   ].join(' · ')
 }
 
@@ -632,7 +645,7 @@ export function localView(
 ): View {
   const scope = scoped(tasks, milestoneScopes(tasks, milestones, tracks), filter)
   const order = scope.filter ? STATUS_ORDER : STATUS_ORDER.filter(status => status !== 'canceled')
-  const parts = sections(scope.shown, order, task => task.status, LOCAL_TITLE, ['done', 'canceled'], localRow, expanded)
+  const parts = sections(scope.shown, order, task => task.status, LOCAL_TITLE, ['done', 'canceled'], task => localRow(task, tasks), expanded)
   return {
     sections: parts,
     legend: legendOf(parts),
@@ -746,9 +759,11 @@ const listItems = (lines: readonly string[], pattern: RegExp) =>
 
 export function parseTaskFile(text: string): TaskFile {
   const body = bodySections(text)
+  const fields = parseFields(text)
   const verification = (body.Verification ?? []).filter(line => /^\s*[-*]\s+/.test(line)).map(clean)
   return {
-    phase: parseFields(text).phase ?? '',
+    phase: fields.phase ?? '',
+    type: fields.type ?? '',
     criteria: listItems(body['Acceptance criteria'] ?? [], /^(?:\d+\.|[-*])\s+(?:\[[ xX]\]\s+)?(.+)$/),
     bricks: listItems(body.Implementation ?? [], /^\d+\.\s+(.+)$/),
     review: rounds(body.Review ?? []).pop() ?? { heading: '', lines: [] },
@@ -831,17 +846,25 @@ export function localFocusView(tasks: readonly BoardTask[], focus: TaskFocus, he
       blocks: fileBlocks(focus.file),
     }
   }
+  const type = task.type || focus.file?.type
+  const blockers = openBlockersOf(task, tasks)
   const facts = [
-    [withIcon(task.status), task.isGrilled ? 'grilled' : 'not grilled', task.milestone ? `milestone ${task.milestone}` : '']
+    [
+      withIcon(task.status),
+      task.isGrilled ? 'grilled' : 'not grilled',
+      type ? `type: ${type}` : '',
+      task.milestone ? `milestone ${task.milestone}` : '',
+    ]
       .filter(Boolean)
       .join(' · '),
+    ...(blockers.length > 0 ? [`${BLOCKED} blocked by ${blockers.join(', ')}`] : []),
     ...whereLine(focus, here),
   ]
   const members = tasks.filter(one => one.sprint !== '' && one.sprint === task.sprint)
   return {
     id: task.slug,
     icon: STATE_ICON[task.status] ?? '·',
-    row: localRow(task),
+    row: localRow(task, tasks),
     pr: null,
     facts,
     blocks: [
@@ -871,10 +894,15 @@ export function githubFocusView(tickets: readonly GithubTicket[], focus: TaskFoc
   const phase = focus.file?.phase || ticket.phase
   const openBlockers = focus.blockedBy.filter(blocker => blocker.isOpen).map(blocker => `#${blocker.number}`)
   const facts = [
-    [withIcon(ticket.state), phase ? `phase: ${phase}` : '', ticket.milestone ? `milestone ${ticket.milestone}` : '']
+    [
+      withIcon(ticket.state),
+      phase ? `phase: ${phase}` : '',
+      focus.file?.type ? `type: ${focus.file.type}` : '',
+      ticket.milestone ? `milestone ${ticket.milestone}` : '',
+    ]
       .filter(Boolean)
       .join(' · '),
-    ...(openBlockers.length > 0 ? [`⛔ blocked by ${openBlockers.join(', ')}`] : []),
+    ...(openBlockers.length > 0 ? [`${BLOCKED} blocked by ${openBlockers.join(', ')}`] : []),
     ...whereLine(focus, here),
   ]
   const members = tickets.filter(one => one.sprint !== '' && one.sprint === ticket.sprint)
