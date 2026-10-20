@@ -209,6 +209,24 @@ stateDiagram-v2
     state "validated" as validated
 ```
 
+## Test branch (whackagent only, never pushed)
+
+`branch.test_branch: true` + branch per task. One per base: sprint branch, or trunk for standalone tasks.
+
+```mermaid
+flowchart LR
+    base["base<br/>sprint/login-refacto"] --> test["wa-test/sprint-login-refacto<br/>local, throwaway"]
+    a["wa/login-apple<br/>review"] -->|merge --no-ff| test
+    b["wa/login-layout<br/>validated"] -->|merge --no-ff| test
+    c["wa/login-errors<br/>conflicts"] -.->|skipped, logged| test
+```
+
+- Takes tasks in `review` / `validated` with commits on their branch. ≥ 2 → built; fewer → test the task branch.
+- Rebuilt from base after `/wa-code`, `/wa-feedback`, `/wa-validate`, end of `/wa-autopilot`. `/wa-close` rebuilds without the closed task, deletes it under 2.
+- Worktree mode → own worktree `../<repo>-worktrees/wa-test-<base>`. Else checked out only on a clean tree.
+- Conflict → task left out, never resolved there. Never pushed, PR'd, landed or forked from. Hooks never see it.
+- Report 📍 line = where to test: branch you're on, worktree, or test branch.
+
 ## Hook events
 
 | Event | Condition | Result |

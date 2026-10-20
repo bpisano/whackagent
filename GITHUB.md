@@ -200,6 +200,7 @@ Several autopilots, on several machines, can run on one board at once; claims ke
 - Each ticket gets a worktree on its existing branch, and its bricks comment right after its claim.
 - Delivery: verifier clean → **ready PR** with checked criteria (*test, then merge*); findings left open → **draft PR**. A blocked ticket is released back to `grilled` with the blocking question as the reason, so the question lands on the issue.
 - **AFK mode** (`/wa-autopilot afk`) also grills `todo` tickets unattended, answering with its own recommendations tagged `(autopilot assumption)`, and stacks dependent tickets without a depth limit.
+- **Test branch** (`branch.test_branch`): at the end of the run, the tickets in `review` on each base it touched (two or more) are merged from `origin/<ticket branch>` into a local `wa-test/<base>` branch, so you test them in one launch. The same rebuild follows every `/wa-code`, `/wa-feedback` and `/wa-validate` round, and `/wa-close` rebuilds or deletes it after the merge. It is never pushed, so the board, the hooks and your teammates never see it; you still merge ticket by ticket.
 
 ### `/wa-board`
 

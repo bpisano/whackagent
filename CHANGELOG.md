@@ -4,6 +4,11 @@ All notable changes to whackagent are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- Test branch: with branches per task, two or more coded tasks waiting for your test on the same sprint branch or trunk are merged into a local, throwaway `wa-test/<base>` branch (its own worktree in worktree mode), rebuilt after each round, so you test them in one launch. Never pushed or landed; a conflicting task is left out and named. New config key `branch.test_branch`, on in new setups, off when missing.
+- Every report card ends with a 📍 line saying where to test: the branch you're on, the task worktree, or the test branch.
+
 ### Changed
 
 - Each command now loads only the shared rules it needs instead of the whole rule set: the rules moved from `/wa-board` into one file per topic under `reference/`, and the GitHub provider rules load only in GitHub projects. Runs read less, rules unchanged. Commit rules (author, message, trailers) are gathered in one place: whackagent adds no trailer of its own and stops when no git identity is set rather than inventing one.

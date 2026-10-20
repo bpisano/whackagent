@@ -8,7 +8,7 @@ model: opus
 
 You saw build. You have notes. This apply them **without losing rules**.
 
-Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` `session-name.md` `display.md` · `branch.worktree: true` → + `worktrees.md` · `backlog.provider: github` → + `provider-github.md` `pull-requests.md` `commits.md`.
+Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` `session-name.md` `display.md` · `branch.worktree: true` → + `worktrees.md` · `backlog.provider: github` → + `provider-github.md` `pull-requests.md` `commits.md` · `branch.test_branch: true` → + `test-branch.md`.
 
 Wording (screen + reports): **reference/voice.md** — telegraphic, tech terms stay English.
 
@@ -56,7 +56,7 @@ Rules = `/wa-code` → *Resuming, rounds 2+*, in full — delta only, anti-stale
 
 1. **Resolve task.** Arg = slug or display index (`/wa-feedback 2 the button should be secondary`), resolve per **reference/display.md → Task indexes**. No task given → the `in-progress` one, else most recent `review`. Ambiguous → ask, don't guess. Name session per **reference/session-name.md**. Read `.whackagent/config.md` + task file at `{tasks}/<slug>.md` (need `## Acceptance criteria`, `## Implementation`, `## Review`, `## Verification`). `{…}` paths come from config `paths:` block — see **reference/paths.md**.
    - **`status: validated` → review it passed now stale.** Apply notes as usual, then set back to `review`: task need fresh `/wa-validate` before `/wa-close`. Never close on review predating last edit.
-   - **Right branch first.** Task delivered by `/wa-autopilot` — or `/wa-code` with `branch.per_task: true` — live on `<branch.prefix><slug>`. Check current branch; if work not here, say which branch it on and switch **only after user confirms** (their tree may be dirty). Never apply feedback to branch that don't hold the code. `branch.worktree: true` → no switch: work in task worktree, recreated from branch if gone (**reference/worktrees.md**).
+   - **Right branch first.** Task delivered by `/wa-autopilot` — or `/wa-code` with `branch.per_task: true` — live on `<branch.prefix><slug>`. Check current branch; if work not here, say which branch it on and switch **only after user confirms** (their tree may be dirty). Never apply feedback to branch that don't hold the code. On `wa-test/` branch → **reference/test-branch.md**, *Leaving it* (clean: switch, no ask; edits made there: carry them over, they're feedback). `branch.worktree: true` → no switch: work in task worktree, recreated from branch if gone (**reference/worktrees.md**).
 2. **Triage each feedback item** — say out loud which bucket, one line each:
    - **defect** — don't match acceptance criteria → fix, criteria unchanged.
    - **adjustment** — work, but not what user want (naming, placement, wording, behavior detail) → fix, and **update `## Acceptance criteria`** so criteria match reality; else verify re-fail on old criterion forever.
@@ -73,7 +73,7 @@ Rules = `/wa-code` → *Resuming, rounds 2+*, in full — delta only, anti-stale
 6. **Re-run it — only when `verify.mode: always`.** Re-driven in step 4 — by you for inline fix, by implementer otherwise — against **updated** acceptance criteria; tell it explicit when triage moved them, it reuse its checklist otherwise. Failed checks → back through step 4. Can't run → stop and ask. Append to `## Verification`, keep previous round entry.
    Other modes → append `round <n>: manual validation — not run by agent` and hand ball back: summary in step 8 say what to test, one line, so user know exactly what changed under their fingers.
 7. **Log it.** Append round to task `## Feedback` as own block headed `### Round <n> — YYYY-MM-DD` (heading = block boundary, GitHub hook links each new block, line permalink, on ticket and PR): what user asked (their words), triage, what changed, review verdict (`deferred` when `review.when: on_validation`), verify verdict, any rule captured. Refresh `{reports}/<slug>.md`.
-8. **Report + loop.** **wa-code → Report card**, feedback variant: header `## 🟢 <title> · feedback #<n>`, **Asked** (user words, short) replaces Problem + Goal, rest identical — Done, To test, status line, next. More notes → run again, next round. Feature match spec now → **`/wa-validate <slug>`**: that fire verifier; **`/wa-close <slug>`** end it after your retest (GitHub: `/wa-validate` syncs wiki + readies PR; merge on GitHub or `/wa-close <n>`). **Never set `done` here, never commit** — say next command instead.
+8. **Report + loop.** Test branch (`branch.test_branch: true`) → rebuild for task's base first (**reference/test-branch.md**; GitHub: after round-end push), git only. **wa-code → Report card**, feedback variant: header `## 🟢 <title> · feedback #<n>`, **Asked** (user words, short) replaces Problem + Goal, rest identical — Done, To test, status line, next. More notes → run again, next round. Feature match spec now → **`/wa-validate <slug>`**: that fire verifier; **`/wa-close <slug>`** end it after your retest (GitHub: `/wa-validate` syncs wiki + readies PR; merge on GitHub or `/wa-close <n>`). **Never set `done` here, never commit** — say next command instead.
 
 ## GitHub provider
 
@@ -101,7 +101,7 @@ Triage doubt, ambiguous note, `BLOCKED:` from implementer → ask, but **always 
 - Never leave inline fix unbuilt, untested, or untagged.
 - Never implement new feature arriving disguised as feedback.
 - Never add comments explaining fix (`style.md` — code carry meaning, task file carry rationale).
-- Never commit and never close — `/wa-validate` own review, `/wa-close` own commit and branch. GitHub provider exception: round-end commit + push (above).
+- Never commit and never close — `/wa-validate` own review, `/wa-close` own commit and branch. GitHub provider exception: round-end commit + push (above). Test branch merges (step 8) on throwaway `wa-test/` branch only.
 
 ## Next step
 
