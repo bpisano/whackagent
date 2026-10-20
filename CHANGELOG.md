@@ -10,6 +10,7 @@ All notable changes to whackagent are listed here, newest first. The format foll
 - Shorter command descriptions in the `/` menu.
 - GitHub provider: a new board (created without a template) gets exactly the six state columns in lifecycle order, without GitHub's default `In Progress`. On a template copy or an adopted board, `/wa-setup` names the columns no state maps to and offers `wa-backlog provision --prune-status`, which drops only the empty ones and keeps every card's Status.
 - GitHub provider: after each push, the agent checks that the hooks moved the card out of `coding`. When they didn't, it tells you whether the board workflow run failed, is still queued or never started, with the run link, and leaves the state to the hooks.
+- PR bodies now carry a `Changes` list: one user-visible change per line, starting with Add, Change (before → after), Fix, Remove or Improve, rewritten on every refresh. It goes into the template's own changes section when it has one. Sprint and track landing PRs list one line per landed ticket.
 
 ## [1.4.0] - 2026-10-15
 
