@@ -30,6 +30,7 @@ Detect first, ask second. Scan repo to guess:
   - `cli` — executable entry point with args, no GUI/server.
   - `package` — library/SDK (`com.android.library`, SwiftPM library, npm lib, crate lib).
 - **UI toolkit** — `import SwiftUI` → swiftui; `androidx.compose`/`org.jetbrains.compose` in Gradle or `@Composable` in source → compose. Only toolkits with convention module count; others get no UI module.
+- **Apple references** — Swift + SwiftUI only: `xcrun agent skills export --output-dir <temp dir>` succeeds (Xcode 27+) and yields `swiftui-*` folders. `xcrun` can't find `agent` (active developer dir = CommandLineTools or older Xcode) → retry once with `DEVELOPER_DIR=<newest /Applications/Xcode*.app>/Contents/Developer`, never `xcode-select -s`. Still fails → skip silently, question 11 never asked, one line `apple refs: none (needs Xcode 27+)`.
 - **Its own build wrapper** — repo-local CLI (`cli/`, `bin/`, `scripts/`), `Makefile` with build target, or strongest signal — project's own `CLAUDE.md`/README saying *"ALWAYS use X to build"*. Read that instruction if exists: project that mandates wrapper mandates it for implementer too.
 - **Its own quality tools** — Gradle plugin applied in build files or version catalog (`libs.versions.toml` `[plugins]`) with id holding `detekt`, `ktlint` or `spotless` — company wrappers too (`studio.lunabee.plugin.detekt`); command = task it registers (`./gradlew tasks --all | grep -i <tool>`), never guessed. Config file present = project runs it: `detekt.yml` / `config/detekt/`, `.swiftlint.yml`, `.swiftformat`, ktlint (`.editorconfig` `ktlint_*`, Gradle plugin), eslint / biome / prettier config, `ruff.toml` / `[tool.ruff]`, `.golangci.yml`, `clippy.toml`, `.rubocop.yml`. Plus lint/check targets in `Makefile`, `package.json` scripts, CI workflow. Command = how repo already runs it (Gradle task, script, CI step), never invented flags.
 
@@ -57,6 +58,7 @@ Then confirm with user:
    **GitHub backlog** → no backlog file: ask only about **wiki** (and tasks folder). Wording: _"Keep the wiki inside `.whackagent/`, or put it where the team reads — `docs/wiki/`? (recommended: `.whackagent/wiki` — agents read it fine; move it to `docs/wiki` only if teammates who don't run whackagent should browse it on GitHub)"_ Never mention backlog location — it's the Project. Say task specs live in `{tasks}` **on each ticket branch**, merged with the code.
 
 10. **Release flow** — search markdown per **wa-release → Release doc** step 2, silently. Candidate found → _"Your release flow is in `<path#Heading>` — use it for `/wa-release`? (recommended: yes — it's what the team already follows)"_ → sets `release.doc`. Nothing found → no question, leave empty, say `release flow: none documented — /wa-release will set it up`.
+11. **Apple references** — only when detection found them. _"Your Xcode ships Apple's own SwiftUI guidance for agents (best practices, what's new in this SDK). Copy it into `{conventions}/apple/` so implementer and reviewer check APIs against it? (recommended: yes — they open only the page for the topic they touch, costs nothing otherwise)"_ Yes → _"Commit `apple/` (~170 KB of Apple-written pages) or keep it local, gitignored? (recommended: commit on a private repo — teammates without Xcode 27 and autopilot worktrees, which see only committed files, read the same pages; gitignore on a public repo — Apple's text, no license to redistribute it)"_ Gitignore → append `<conventions>/apple/` to root `.gitignore`. Say it's a snapshot of this Xcode: `/wa-setup` refreshes it after an update.
 
 Keep short — 7 to 10 questions (build one fire only on detected wrapper; close policy only when `per_task` and backlog local; PR shape only when PR can happen). Rest take template default.
 
@@ -108,6 +110,7 @@ Create directory and files (do not overwrite existing without asking).
 - `{conventions}/` — copy **only relevant** convention modules there:
   - **Multi-module packs** — **Swift** (`${CLAUDE_PLUGIN_ROOT}/conventions/swift/`), **Kotlin** (`…/conventions/kotlin/`): always `style.md`, `elegance.md`, `testing.md`, `architecture-global.md` (YAGNI/SOLID/DRY/DI — every project in that language). Kind module: `architecture-app.md` if kind is `app`, else `architecture-package.md`. UI module **only if that toolkit used**: `swiftui.md` (Swift), `compose.md` (Kotlin) — skip for server/CLI/library with no UI, whole point.
   - **Single-file packs** — **TypeScript**, **generic** (every other language): copy `${CLAUDE_PLUGIN_ROOT}/conventions/<lang>.md` and set `review.modules` to it alone. Generic = fallback, not second class: tell user it's the file to grow with their team's real rules.
+  - **Apple references** (question 11 yes) — from temp export copy only `swiftui-*` folders into `apple/` beside Swift modules (`{conventions}/apple/`; polyglot: `{conventions}/swift/apple/`), then `chmod -R u+w` (Xcode exports read-only). Other exported skills = one-off tasks (security audit, C bounds safety, test migration), not references. Copy `${CLAUDE_PLUGIN_ROOT}/conventions/swift/apple.md` beside the other modules, list it in `review.modules`. Delete temp export. Never export straight into `{conventions}/`: dumps every skill.
   - Polyglot repo with two packs → copy both into sub-folders (`{conventions}/swift/`, `{conventions}/kotlin/`), list both in `review.modules`.
   - Set `review.modules` in config to exactly what you copied — verifier read that list and nothing else, so module copied but left out of list = rulebook nobody opens.
 - **Xcode projects only** (repo has `.xcodeproj`/`.xcworkspace`): create `.xcodebuildmcp/config.yaml` at repo root (not in `.whackagent/`) so XcodeBuildMCP build incrementally instead of full-rebuild every time. Content:
@@ -118,12 +121,15 @@ Create directory and files (do not overwrite existing without asking).
   Skip if the file already exists (don't clobber a user's config). This is why an implementer with no `build.command` builds through XcodeBuildMCP — command-line `xcodebuild` ignores this file and rebuilds from scratch. With a `build.command` set, the wrapper owns the build dir instead, and this file is just harmless.
 - `{backlog}` — copy `${CLAUDE_PLUGIN_ROOT}/templates/BACKLOG.md`. **Skip under `backlog.provider: github`.**
 - `{wiki}/index.md` — copy `${CLAUDE_PLUGIN_ROOT}/templates/wiki-index.md`.
+- `{wiki}/glossary.md` — copy `${CLAUDE_PLUGIN_ROOT}/templates/glossary.md`. Kind `server`, `cli`, `package` → drop `## Screens`. Plain Markdown for whole team; skills use it when present, nothing needs it.
 - Create empty `{tasks}/` and `{reports}/` directories (`.gitkeep` fine).
 - **Gitignore reports** — append to repo root `.gitignore` (create if absent) `<reports>/*` + `!<reports>/.gitkeep`, `<reports>` = `paths.reports` relative to repo root. Rule already covering it (`git check-ignore -q <reports>/x.md`) → skip. Path outside repo → skip. Why: reports = run output, every section already in task file + wiki; tracked, they're PR noise, churn every feedback round, diverge across machines.
 
 ## 3. Seed the wiki (optional, offer it)
 
 Offer to bootstrap few wiki pages by reading the source (e.g. `architecture`, plus one page per major subsystem) (recommended: yes on existing codebase — agents read wiki first instead of re-scanning source every run; no on near-empty repo, nothing to describe yet). Only if user says yes.
+
+Seeding → also propose first glossary rows from code (model types, screen/route names), one block, written on yes.
 
 ## 4. Compress docs (if `compress_wiki: true`)
 
@@ -144,6 +150,8 @@ The project already works. You're here to **change settings and pick up what the
 5. **Check reports stay local.** `git check-ignore -q {reports}/x.md` fails → offer the gitignore lines from scaffold step (recommended: yes — nothing reads reports beyond the run that wrote them). Reports already tracked (`git ls-files {reports}` beyond `.gitkeep`) → also offer `git rm --cached` on them: files stay on disk, leave the index. Never without yes. `paths.reports` moved → move its gitignore lines with it.
 6. **Check config holds nothing user-specific.** Path under a home dir (`/Users/`, `/home/`, `~`) → ⚠️, offer relative form (`paths.worktrees` → `../<repo>-worktrees`). Personal `commit.author_name` / `author_email` → ⚠️, offer empty (each committer's git identity). Recommended: yes both — config versioned, shared.
 7. **Check board files current** (`backlog.provider: github`). Fetch, then on `origin/<branch.base>`: `.github/workflows/whackagent-board.yml` first line `template version: <v>` vs plugin's `providers/github/whackagent-board.yml`, and `BOARD.md` first line `board-contract: <x>` vs `${CLAUDE_PLUGIN_ROOT}/templates/BOARD.md`. Behind, or file missing → ⚠️ row, offer `/wa-setup backlog` board PR (*GitHub backlog* step 5, *Reconfigure*) (recommended: yes — caller below v16 stops every agent round at **reference/provider-github.md**, *Hooks version gate*; contract mismatch makes CLI warn).
+8. **Glossary.** `{wiki}/glossary.md` missing → 🆕 row: offer template + `[[glossary]]` line in `{wiki}/index.md` (recommended: yes — one word per thing across UI, code, tasks, PRs; plain Markdown teammates read without whackagent). Present → content theirs, never touched.
+9. **Apple references** (Swift + SwiftUI, export works per detection). Re-export to temp dir, `diff -rq -x SKILL.md` against `apple/` (Xcode shuffles `SKILL.md` frontmatter every export: noise). Absent → 🆕 row, question 11 asked as new. Pages differ or `swiftui-*` folder appeared/vanished → ⚠️ row, refresh behind a yes. Same → no row. No Xcode 27 here → leave what's there, no row.
 
 ### 2. Show the state, then ask what changes
 
@@ -175,6 +183,8 @@ With an arg (`/wa-setup paths`), skip the table's unrelated rows and go straight
 5. **Wiki moved out of `.whackagent/` → recommend `compress_wiki: false`** (same reason as step 4: humans read it now).
 
 **Conventions dir — additive only.** Copy in modules that are missing (a module the plugin added, or `swiftui.md`/`compose.md` because the project uses that toolkit now) and update `review.modules` to match. **Never overwrite a module that's already there**: those copies hold the rules `/wa-feedback` captured from the user. A plugin-side module changed upstream → say so, show the diff, copy only on their yes.
+
+**`apple/` = one exception: replaced whole on refresh.** Apple's text, nobody edits it, stale page teaches changed API. Delete old `swiftui-*` folders, copy fresh ones, `chmod -R u+w`. `apple.md` follows additive rule above, never copied without its `apple/` folder.
 
 **Never re-scaffold what exists.** Backlog, task files, reports and wiki pages are content — this command doesn't touch their contents, ever. Missing entirely (a `{tasks}` folder someone deleted) → recreate the empty folder, mention it.
 

@@ -10,6 +10,8 @@ All notable changes to whackagent are listed here, newest first. The format foll
 - Every report card ends with a 📍 line saying where to test: the branch you're on, the task worktree, or the test branch.
 - GitHub provider: new `pr.screenshots` setting. `validation` (the new default written by `/wa-setup`) shoots the screens a ticket touched once, at a clean `/wa-validate`, before the PR goes ready: a new screen as is, a changed screen as a Before | After pair built from the ticket's fork point. A later validation re-shoots only the screens whose code moved. `each_round` keeps the old behavior (final-state shots after every coding round), and is what a config without the key gets; `off` takes none.
 - GitHub provider: `wa-backlog screenshots` uploads with `gh pr edit --attach` when `gh` is 2.102 or later, so the `gh image` extension is no longer needed there. It still falls back to `gh image`, then to the browser. It lays out `<caption>.before` / `<caption>.after` pairs as a table, records the shot commit with `--sha`, keeps images not re-shot with `--keep`, and prints the current section when given no file.
+- Project glossary: `/wa-setup` creates `glossary.md` in your wiki (Concepts and Screens, with the words to avoid). Tasks, grills, code, review and PR test steps use its terms, and new terms are proposed for your yes. Existing projects get it offered on the next `/wa-setup`; without the file nothing changes.
+- Swift: with Xcode 27+, `/wa-setup` can export Apple's SwiftUI guidance from your Xcode into `conventions/apple/` (new `swift/apple.md` module). Agents open only the page for the API they touch. You choose to commit or gitignore the folder; `/wa-setup` refreshes it after an Xcode update.
 
 ### Changed
 

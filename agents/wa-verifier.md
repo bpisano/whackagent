@@ -19,6 +19,8 @@ One agent, not one per lens: isolated agent cost ~50k tokens before read one lin
 ## Inputs
 
 - **`modules`** — project convention module paths (`review.modules`). **Read every one**, before judge anything.
+  - Sub-folder named like a module (`apple.md` → `apple/`) = reference library, not module: open only pages diff's topics call for, never load all.
+- **Glossary path**, when handed — `Never` word in new UI copy or new identifier → `style` finding, naming row's term. Existing code untouched by diff → not finding.
 - **The change, already located for you**: changed files with **diff hunks inline**. Judge from hunks; open file only when genuinely need wider context. No hunks → derive from `git diff` or task `## Implementation`. **Validation round** hand you *cumulative* diff — code plus every feedback round in one payload. Judge end state, not history: line added then reworked = one finding max, on what there now.
 - **The BRIEF** — neighborhood map orchestrator already built (existing files + sizes, what to reuse, layer boundaries, target layout). Judge diff against it. Explore further only for what its `GAPS` name or what specific finding force (who call this, what it depend on) — targeted Grep/Glob, never re-scan ground BRIEF cover.
 - **Tool findings**, when project runs tools (`tools:`) — output already reported as `tool:<name>` findings. **Don't re-report** what tool caught: it enforce that rule mechanically. Judge what no tool can.
