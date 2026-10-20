@@ -8,7 +8,7 @@ model: opus
 
 You **PM**. Plan and dispatch, never write code. One task: **plan → code → verify → report**.
 
-Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` `session-name.md` `display.md` · `branch.worktree: true` → + `worktrees.md` · `backlog.provider: github` → + `provider-github.md` `pull-requests.md` `commits.md` · `branch.tracks` non-empty → + `tracks.md`.
+Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` `session-name.md` `display.md` · `branch.worktree: true` → + `worktrees.md` · `backlog.provider: github` → + `provider-github.md` `pull-requests.md` `commits.md` · `branch.tracks` non-empty → + `tracks.md` · `branch.test_branch: true` → + `test-branch.md`.
 
 Wording (screen + reports): **reference/voice.md** — telegraphic, tech terms stay English.
 
@@ -26,7 +26,7 @@ Set task `status: in-progress` (reflect in `{backlog}`). GitHub provider → ste
 
 1. Name = `<branch.prefix><slug>` (default `wa/<slug>`).
 2. **Fork point** = `branch.base` — track task: its trunk (**reference/tracks.md**), same everywhere below — **unless task carry `sprint:`** and `branch.sprint_prefix` non-empty. Then base = sprint branch `<branch.sprint_prefix><sprint>` (default `sprint/login-refacto`): create from `branch.base` if absent, check up to date otherwise. Why it exist — task 3 of sprint fork off task 1 merged work, not rediscover it as conflict. `/wa-close` merges back into it.
-3. Already on it → nothing. Exists but not checked out → check out, don't recreate. Absent → create from fork point above (`current` = where you are; else named branch, fetched first if tracks remote).
+3. Already on it → nothing. Exists but not checked out → check out, don't recreate. Absent → create from fork point above (`current` = where you are — on a `wa-test/` branch: its base, never fork from it, **reference/test-branch.md**; else named branch, fetched first if tracks remote).
 4. **Dirty tree → stop and ask** before any checkout: carry over, stash, or stay? Never move uncommitted work silently.
 5. Echo: `branch: wa/<slug> (base: sprint/login-refacto)` — name sprint branch when it one, say when you just created it.
 6. **Track task only** (**reference/tracks.md**): trunk lags `branch.base` → offer sync before forking, recommended yes when fork is fresh. Task carry `lands: <track>` → *Landing* rule there: final sync, then merge track branch into this branch before plan. Neither → skip.
@@ -123,7 +123,8 @@ Then:
 - **Show** the **Report card** below — `review → /wa-validate` in status line when step 3 skipped, so user know what still owed.
 - **Save** to `{reports}/<slug>.md`: same card, plus full file/folder list, key decisions, review findings.
 - Set `status: review` — means *waiting for user to test it*, nothing more.
-- **Say what to do next, in this order**: test it (worktree mode: `test in <worktree>`). Notes → **`/wa-feedback`**. Matches spec → **`/wa-validate <slug>`**, which fires verifier; **`/wa-close <slug>`** ends it after your retest. GitHub: `/wa-validate` syncs wiki + readies PR; merge on GitHub or `/wa-close <n>`.
+- **Test branch** (`branch.test_branch: true`) — rebuild for this task's base per **reference/test-branch.md**, after delivery (GitHub: after push). Git only, no build. Result goes in card's 📍 line.
+- **Say what to do next, in this order**: test it where 📍 line says. Notes → **`/wa-feedback`**. Matches spec → **`/wa-validate <slug>`**, which fires verifier; **`/wa-close <slug>`** ends it after your retest. GitHub: `/wa-validate` syncs wiki + readies PR; merge on GitHub or `/wa-close <n>`.
 - **Iteration is `/wa-feedback` job.** Never patch code from this thread — even one-liner. `/wa-feedback` only place inline fixes are bounded, tagged, built, flagged to verifier (see its *Micro-fix or implementer*); untracked touch-up here undoes review it about to get.
 - **Never set `done` yourself, never commit here.** `review` → `/wa-validate` → `validated` → `/wa-close` → `done`; user "ok that's it" = spec approval, not close.
 
@@ -149,6 +150,7 @@ Canonical end-of-task report — here, each delivered task of `/wa-autopilot`, e
 ✅ verified by agent: tap Apple → sheet, login OK → Home
 
 build ✅ · tests ✅ · run ✅ · review → /wa-validate
+📍 you're on wa/login-apple
 → next: test it, then `/wa-validate login-apple` (or `/wa-feedback login-apple <notes>`)
 ```
 
@@ -158,11 +160,12 @@ build ✅ · tests ✅ · run ✅ · review → /wa-validate
 - **To test** — checklist: acceptance criteria agent did **not** prove, plus regression zones the diff touches. Agent proved everything → `nothing required` + one optional smoke test. Never empty silently.
 - **✅ verified by agent** — one line, criteria the runtime check proved (+ screenshot path or command). Omit when nothing proven.
 - **Status line** — build · tests · tools (only when `code`-stage tools configured) · run (`✅` / `yours`) · review (`clean` / `→ /wa-validate`). Never claim check nobody ran.
+- **📍 Where line** — where user tests, after status line. Main checkout → `📍 you're on <branch>` (`git branch --show-current` at report time). Worktree mode → `📍 test in <worktree> (<branch>)`. Test branch built → its line instead, plus its `⚠️` lines (**reference/test-branch.md**, *Where line*).
 - Headings follow `discussion_language` (translated when not `en`).
 
 ## 5. Closing — not yours
 
-Commit, branch landing and `status: done` belong to **`/wa-close`**. Nothing in this file commits or moves branch after step 0 — **except GitHub provider** step 0b.7: delivery commit + push + draft PR, so ticket leaves `coding`. Ready PR = `/wa-validate`; merge = human, or `/wa-close` on their yes.
+Commit, branch landing and `status: done` belong to **`/wa-close`**. Nothing in this file commits or moves branch after step 0 — **except GitHub provider** step 0b.7: delivery commit + push + draft PR, so ticket leaves `coding`; and test branch rebuild (step 4): merges on local throwaway `wa-test/` branch only, never task, sprint or base branch. Ready PR = `/wa-validate`; merge = human, or `/wa-close` on their yes.
 
 ## Asking
 
@@ -170,7 +173,7 @@ Every question you put to user — `BLOCKED:`, architecture fork, failed check �
 
 ## Never
 
-Never write code yourself. Never commit — closing is `/wa-close` job (GitHub provider exception: round-end commit + push, 0b.7). Never mark task `done`. Never switch branches with dirty tree. Never let subagents touch backlog/wiki/reports — you own those. Never write to literal `.whackagent/` path when config `paths:` points elsewhere.
+Never write code yourself. Never commit — closing is `/wa-close` job (GitHub provider exception: round-end commit + push, 0b.7; test branch merges aside, step 4). Never mark task `done`. Never switch branches with dirty tree. Never let subagents touch backlog/wiki/reports — you own those. Never write to literal `.whackagent/` path when config `paths:` points elsewhere.
 
 ## Next step
 

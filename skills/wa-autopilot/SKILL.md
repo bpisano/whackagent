@@ -8,7 +8,7 @@ model: opus
 
 `/wa-code` unattended, over batch. Same PM role, same pipeline, one addition: **independent tasks run parallel, each in own git worktree.** Give batch, walk away, read report.
 
-Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` `session-name.md` `display.md` `worktrees.md` `commits.md` · arg names sprint or task has `sprint:` → + `sprints.md` · arg names milestone → + `milestones.md` · `backlog.provider: github` → + `provider-github.md` `pull-requests.md` · `branch.tracks` non-empty → + `tracks.md`.
+Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` `session-name.md` `display.md` `worktrees.md` `commits.md` · arg names sprint or task has `sprint:` → + `sprints.md` · arg names milestone → + `milestones.md` · `backlog.provider: github` → + `provider-github.md` `pull-requests.md` · `branch.tracks` non-empty → + `tracks.md` · `branch.test_branch: true` → + `test-branch.md`.
 
 Wording (screen + reports): **reference/voice.md** — telegraphic, tech terms stay English.
 
@@ -134,6 +134,10 @@ The "stop and ask" rule is inverted here: nobody is watching. A `BLOCKED:` from 
 
 A blocker in one task **does not** stall its wave — the others keep going.
 
+## 4. Test branch — after last wave
+
+`branch.test_branch: true` → one per base touched (base of each task delivered this run), per **reference/test-branch.md**: every qualifying task of that base, not only this run's. Runs after every delivery commit (GitHub: push) — what step 3 commits, and where, unchanged: test branch merges land on throwaway `wa-test/` branch only, never task, sprint or base branch. Conflict → task left out of test branch, logged, never resolved — task itself stays delivered. Key off or < 2 tasks on a base → nothing, report as before.
+
 ## Final report
 
 Print and save `{reports}/autopilot-<date>.md`:
@@ -157,17 +161,19 @@ Print and save `{reports}/autopilot-<date>.md`:
 Question: reset by email or magic link?
 Rec: magic link, already in place for signup.
 
+📍 test in ../<repo>-worktrees/wa-test-sprint-login-refacto — wa-test/sprint-login-refacto = sprint + login-apple · login-layout
 → next: test login-apple, then `/wa-close login-apple`
 ```
 
-Three parts, always this order:
+Parts, always this order:
 
 1. **Recap** — every task of the batch, **reference/display.md → Display format** (line 1 only), suffix `— to test · review clean`, `— to test · <n> findings open` or `— ⛔ blocked`. Sprint in play → progress line in title; several sprints → group recap by sprint.
 2. **One card per delivered task** — **wa-code → Report card**, branch in header instead of sprint tag. Same skeleton as attended `/wa-code`.
 3. **Blocked** — per task: open question + your recommended answer, one line each. Kept worktree → say so.
+4. **📍 Where to test** (only when step 4 built one) — one 📍 line per test branch + its `⚠️` lines (**reference/test-branch.md**, *Where line*), right before `→ next:`. Cards keep branch in header, no 📍 line of their own.
 
 One branch per task still, never one per sprint: user reviews and merges task by task. Never write `review: clean` for a task the verifier never saw or with findings open.
 
 ## Next step
 
-Test the delivered branches — already reviewed by the verifier. Notes on one → **`/wa-feedback <slug> <notes>`** (checks it out, applies them through the same pipeline; task back to `review`, needs `/wa-validate` again). Matches spec → **merge the ready PR** on GitHub or with **`/wa-close <n>`** (GitHub provider; wiki already synced, hook sets `done`), or **`/wa-close <slug>`** on the local provider — it merges into the sprint branch or lands per `close.strategy`. Delivered with findings open → `/wa-feedback` or `/wa-validate` first.
+Test the delivered branches — already reviewed by the verifier; test branch built → there, all at once (📍 line). Notes on one → **`/wa-feedback <slug> <notes>`** (checks it out, applies them through the same pipeline; task back to `review`, needs `/wa-validate` again). Matches spec → **merge the ready PR** on GitHub or with **`/wa-close <n>`** (GitHub provider; wiki already synced, hook sets `done`), or **`/wa-close <slug>`** on the local provider — it merges into the sprint branch or lands per `close.strategy`. Delivered with findings open → `/wa-feedback` or `/wa-validate` first.

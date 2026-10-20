@@ -7,7 +7,7 @@ description: Close validated task — commit, land branch, clean up. GitHub: mer
 
 **Task finished.** You retested reviewed code, still does what you asked. `/wa-close` write that down, put branch where belong.
 
-Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` `session-name.md` `commits.md` · arg is display index → + `display.md` · `branch.worktree: true` → + `worktrees.md` · task or arg has sprint → + `sprints.md` · `close.strategy: pr` or GitHub → + `pull-requests.md` · `backlog.provider: github` → + `provider-github.md` · `branch.tracks` non-empty → + `tracks.md`.
+Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` `session-name.md` `commits.md` · arg is display index → + `display.md` · `branch.worktree: true` → + `worktrees.md` · task or arg has sprint → + `sprints.md` · `close.strategy: pr` or GitHub → + `pull-requests.md` · `backlog.provider: github` → + `provider-github.md` · `branch.tracks` non-empty → + `tracks.md` · `branch.test_branch: true` → + `test-branch.md`.
 
 Wording (screen + reports): **reference/voice.md** — telegraphic, tech terms stay English.
 
@@ -22,6 +22,7 @@ Where sit: `/wa-task` → `/wa-grill` → `/wa-code` → *you test, `/wa-feedbac
    - `status: review` → **never reviewed.** Say so, send to `/wa-validate <slug>`, stop. Closing here close unreviewed code.
    - `status: in-progress` → not coded. Stop.
    - `status: done` / `canceled` → already closed. Say what branch did, stop.
+   - Started on `wa-test/` branch → **reference/test-branch.md**, *Leaving it*: never close or merge from it.
 2. **Check nothing moved** since review round — `git diff` against state `## Review` recorded. Code changed → say what, send back to `/wa-validate` for delta. Review only worth tree it read.
 2b. **Sync wiki — always, before plan.** Run **`/wa-wiki`** update mode scoped to this task (its diff + task file, `wiki:` pages it flagged), on task branch. Wiki pages edited → listed in plan block, committed **with task** in step 4 (one commit, one PR — wiki never lands separately or later). Nothing to update → say `wiki: nothing to sync`. Wiki edits don't count as "code moved" for step 2: docs, not reviewed code.
 3. **Show landing plan, get yes.** One block, before touching git — see *Plan block*. Only confirmation command ask; everything after run without more prompting.
@@ -30,6 +31,7 @@ Where sit: `/wa-task` → `/wa-grill` → `/wa-code` → *you test, `/wa-feedbac
    - `branch.worktree: true` → commit in task worktree: code + wiki. Local task file + `{backlog}` stay main-checkout bookkeeping, not in task commit (**reference/worktrees.md**).
 5. **Land branch** — *Landing* below. Task in sprint → into sprint branch (`close.strategy: pr` → PR onto it, else merge). Else → `close.strategy`.
 6. **Clean up** — *Cleanup* below. Worktree then branch, that order, `close.delete_branch` decide.
+   - **Test branch** (`branch.test_branch: true`) of task's base → rebuilt without it; < 2 tasks left → deleted (**reference/test-branch.md**). Plan block names which.
 7. **`status: done`**, reflect in `{backlog}` (move line under **Done**, keep `· <sprint>` suffix).
 8. **Sprint complete?** Last task of sprint just closed → *Sprint landing*.
 9. **Next branch** — when `branch.per_task` **and** `commit.auto_commit_after_validation` **and** `branch.checkout_next`: next task = top `todo` in `{backlog}` order, branch created/checked out per `/wa-code` step 0 (its sprint decide base — dirty tree → ask). Echo `✅ <slug> closed → branch wa/<next-slug> ready`, next line `/wa-code <next-slug>` (**reference/voice.md → Next line**). Worktree mode → its worktree created instead, echo `→ worktree ../<repo>-worktrees/<next-slug> ready`.
@@ -57,7 +59,7 @@ Where sit: `/wa-task` → `/wa-grill` → `/wa-code` → *you test, `/wa-feedbac
 4. **Claim** `wa-backlog claim <n> coding` from `review`: no other round pushes while you merge (exit 3 → someone mid-round, say who, stop). Rebase planned → `git rebase --onto origin/<base> $start^` (ticket range, **reference/provider-github.md**; plain `git rebase <base>` replays squashed parents), mechanical conflicts yourself, logic → stop and ask with recommended resolution; build + tests, red → release `--reset-to review`, back to `/wa-feedback`; `push --force-with-lease`. Push ends round: hook drops claim → wait for it (`wa-backlog get <n>` shows `review`, no claim), re-claim `coding`, re-run step 2 checks (pending → `gh pr checks <pr> --watch`), then merge.
 5. **Merge** — `wa-backlog merge <pr>` (async merge: only way GitHub merges stacked PR, fine for any; waits for result; ticket carrying `lands: <track>` → `--method merge`, **reference/tracks.md**). Exit 4 → PR below in stack still open or PR not ready: say so. Remote branch goes with `delete_branch_on_merge` (provision sets it; off → say so, leave it — deleting by hand closes PRs stacked on it). Refused → claim still held → `release <n> coding --reset-to review --reason "merge refused: <why>"`; say why, stop.
 6. **Board** — hook sets `done`, drops claim, closes issue. Confirm `wa-backlog get <n>` shows `done` (re-read once after ~30 s). Never set state yourself.
-7. **Cleanup** — worktree removed when clean (dirty → stop and ask), local branch `git branch -D` (squash leaves it unmerged to git; PR merged = code on base), `git fetch --prune`. `close.delete_branch: never` → keep local branch, say so. Never `push --delete`.
+7. **Cleanup** — worktree removed when clean (dirty → stop and ask), local branch `git branch -D` (squash leaves it unmerged to git; PR merged = code on base), `git fetch --prune`. `close.delete_branch: never` → keep local branch, say so. Never `push --delete`. Test branch of PR base → rebuilt or deleted, as local step 6.
 8. **Sprint** — ticket was its sprint's last open sub-issue → *Sprint landing*: sprint PR onto `close.target` (track sprint: its trunk) per **reference/pull-requests.md** (`{title}` = sprint name), body names sprint parent (`Sprint #<parent>`). Offer merging it (`--merge`, never squash, second yes) only when step 2 checks already pass; else say it merges once reviewed — on GitHub, or `/wa-close <sprint>` later. Merge → hook closes parent.
 9. **Next** (`branch.checkout_next`) → next ticket only through **claim**: `/wa-code` without arg picks top unclaimed `grilled`. Never check out ticket branch you don't hold.
 
@@ -75,6 +77,7 @@ commit    : 2 uncommitted files + 2 wiki pages → commit (Jane Doe)
 sprint    : merge wa/login-apple → sprint/login-refacto
 branch    : wa/login-apple deleted (merged)
 worktree  : ../<repo>-worktrees/login-apple removed
+test      : wa-test/sprint-login-refacto rebuilt — login-layout · login-errors
 after     : 🏁 login-refacto — 3/5
 
 ok? [y/n]
@@ -179,7 +182,7 @@ Last task of sprint reach `done` — no task of that sprint left in `todo`, `in-
    ```
    Lands by **merge commit, never squash** (**reference/sprints.md**): PR body says so, `merge` strategy uses `--no-ff`. GitHub provider → offer merging sprint PR (`gh pr merge <pr> --merge`), own yes, only when GitHub step 2 checks already pass; local `pr` strategy → only when user asks.
 3. **Only on yes.** No is a normal answer — the branch stays, the sprint stays complete, nothing is lost. Never fold this into the task's own confirmation at step 3: two different things landing, two yeses.
-4. Sprint branch merged or PR'd → `delete_branch` applies to it the same way it applies to a task branch.
+4. Sprint branch merged or PR'd → `delete_branch` applies to it the same way it applies to a task branch. Its test branch `wa-test/<sprint branch>` → deleted whatever the answer: no task of it left to test.
 
 A sprint is never `done` as a thing — there's no sprint status to set. It's complete when its tasks are, and this step is the only place that notices.
 
@@ -195,7 +198,7 @@ A sprint is never `done` as a thing — there's no sprint status to set. It's co
 - Never close a task the verifier never saw (`review` → `/wa-validate` first).
 - Never merge, push, open a PR, mark one ready or delete a branch without the confirmed plan block.
 - Never merge a PR the confirmed plan block didn't name. Never `--admin`, never bypass branch protection. Local `close.strategy: pr` → PR never merged, branch never merged locally (sprint PR only when user asks).
-- Never plain force-push, never rewrite a shared branch, never touch a branch that isn't this task's or its sprint's. Only exception: `--force-with-lease` on this ticket's own branch after ticket-range rebase (*GitHub provider* step 4).
+- Never plain force-push, never rewrite a shared branch, never touch a branch that isn't this task's, its sprint's or their `wa-test/` one. Only exception: `--force-with-lease` on this ticket's own branch after ticket-range rebase (*GitHub provider* step 4).
 - Never delete a branch whose work isn't somewhere else.
 - Never commit as Claude.
 - Never write to a literal `.whackagent/` path when the config's `paths:` points elsewhere.
