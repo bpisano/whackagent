@@ -516,6 +516,17 @@ function stepActions(task: BoardTask): Action[] {
 export const taskActions = (task: BoardTask): Action[] =>
   isLive(task) ? [...stepActions(task), action('autopilot', `/wa-autopilot ${task.slug}`)] : []
 
+// Blocked task (reference/blockers.md): never coded or autopiloted before its blocker lands, so the first
+// blocker's next step comes first, then what the blocked task still allows (grill, feedback, validate, close).
+export function blockedActions(task: BoardTask, blockers: readonly string[], tasks: readonly BoardTask[]): Action[] {
+  const blocker = tasks.find(one => one.slug === blockers[0])
+  const first = blocker ? stepActions(blocker).slice(0, 1) : []
+  return [
+    ...first.map(one => action(`${one.label} ${blocker?.slug}`, one.command)),
+    ...stepActions(task).filter(one => one.label !== 'code'),
+  ]
+}
+
 // Draft PR → test it, then feedback or validate (a clean /wa-validate marks it ready, even when `phase` already
 // says validated). Ready PR → test it, then merge: /wa-close merges on the user's yes. A ready PR whose task file
 // still says `review` (marked ready by hand) goes through /wa-validate first; no phase = another work loop's PR.
@@ -596,7 +607,7 @@ const localRow = (task: BoardTask, tasks: readonly BoardTask[]): ViewRow => {
       ...(blockers.length > 0 ? [{ text: `${BLOCKED} ${blockers.join(', ')}`, tone: 'warning' as const }] : []),
     ],
     summary: task.summary,
-    actions: taskActions(task),
+    actions: blockers.length > 0 ? blockedActions(task, blockers, tasks) : taskActions(task),
   }
 }
 

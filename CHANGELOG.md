@@ -14,7 +14,7 @@ All notable changes to whackagent are listed here, newest first. The format foll
 - Swift: with Xcode 27+, `/wa-setup` can export Apple's SwiftUI guidance from your Xcode into `conventions/apple/` (new `swift/apple.md` module). Agents open only the page for the API they touch. You choose to commit or gitignore the folder; `/wa-setup` refreshes it after an Xcode update.
 - Optional task `type:` (`feature`, `improvement`, `bug`, `refactor`), set by `/wa-task` and refined by `/wa-grill`. It picks the Conventional Commits prefix when your repo uses them, the kind label for the PR among your repo's labels, and the title verb (`Fix …` for a bug). Tasks without it behave as before. Under the GitHub provider it lives in the task file on the ticket branch; nothing new on the issue or board.
 - `/wa-setup` on a project already set up now runs migrations: it detects older task formats, shows a plan and applies each one on your yes (`/wa-setup migrate` for migrations alone). First two: `note: Depends on …` becomes `blocked_by:`, and an optional `type:` backfill for open tasks. Migrations never touch the GitHub board, `BOARD.md` or the hooks, and never commit.
-- The pane's task tab shows the task type and, for local tasks too, open blockers.
+- The pane's task tab shows the task type and, for local tasks too, open blockers. A blocked row's buttons offer the blocker's next step first and no longer offer `/wa-code` or `/wa-autopilot` on the blocked task.
 
 ### Changed
 

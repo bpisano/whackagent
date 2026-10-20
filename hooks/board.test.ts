@@ -148,6 +148,30 @@ test('open blockers tag the row and the legend; done, canceled and unknown block
   expect(localView([task({ slug: 'free', grilled: 'true' })], [], []).legend).toBe('')
 })
 
+test('a blocked row offers its blocker first, never code or autopilot on itself', async () => {
+  const tasks = [
+    task({ slug: 'base', grilled: 'true' }, 'review'),
+    task({ slug: 'sync', grilled: 'true', blocked_by: '[base]' }),
+    task({ slug: 'raw', blocked_by: '[base]' }),
+    task({ slug: 'free', grilled: 'true', blocked_by: '[ghost]' }),
+  ]
+  const rows = localView(tasks, [], []).sections.flatMap(section => section.rows)
+  const actionsOf = (slug: string) => rows.find(one => one.key === slug)?.actions
+  expect(actionsOf('sync')).toEqual([{ label: 'feedback base', command: '/wa-feedback base ' }])
+  expect(actionsOf('raw')?.map(one => one.label)).toEqual(['feedback base', 'grill'])
+  expect(actionsOf('free')?.map(one => one.label)).toEqual(['code', 'autopilot'])
+})
+
+test('sprint child rows carry the blocked tag and actions too', async () => {
+  const tasks = [
+    task({ slug: 'base', grilled: 'true', sprint: 'login' }, 'in-progress'),
+    task({ slug: 'layout', grilled: 'true', sprint: 'login', blocked_by: '[base]' }),
+  ]
+  const child = localSprintRows(tasks)[0]?.children?.find(one => one.key === 'layout')
+  expect(child?.tags.map(tag => tag.text)).toEqual(['login', '⛔ base'])
+  expect(child?.actions.map(one => one.label)).toEqual(['code base'])
+})
+
 test('paths resolve relative to the backlog folder', async () => {
   expect(joinPath('/repo/docs', 'tasks/a.md')).toBe('/repo/docs/tasks/a.md')
   expect(joinPath('/repo/docs', '../other/./b.md')).toBe('/repo/other/b.md')
