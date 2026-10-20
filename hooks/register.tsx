@@ -10,6 +10,7 @@ import {
   activeGithubIds,
   activeLocalIds,
   branchTaskId,
+  boardTitles,
   bricksComment,
   dirname,
   githubFocusView,
@@ -347,7 +348,7 @@ export const register: Register = (on, options) => {
                 type: 'object',
                 properties: {
                   id: { type: 'string', description: 'GitHub issue number (#12), or the local task slug.' },
-                  title: { type: 'string', description: 'The task\'s short title.' },
+                  title: { type: 'string', description: 'The task\'s own short title, as on the board. Never the command, step or state.' },
                 },
                 required: ['id', 'title'],
               },
@@ -377,7 +378,9 @@ export const register: Register = (on, options) => {
   on('tool.call', { tool: NAME_TOOL_CALL }, async ($, e) => {
     const tasks = Array.isArray(e.tasks) ? (e.tasks as NamedTask[]) : []
     const { mainRoot } = await checkout($, await $.session.root())
-    const name = sessionName(mainRoot.split('/').pop() ?? '', tasks)
+    const current = await read($, board)
+    const known = current.kind === 'local' || current.kind === 'github' ? current : await refresh($, true)
+    const name = sessionName(mainRoot.split('/').pop() ?? '', tasks, boardTitles(known))
     if (name && name !== sessionTitle) {
       sessionTitle = name
       $.clock.after(0, () => void $.command.run({ command: 'rename', args: name }))

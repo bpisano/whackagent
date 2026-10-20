@@ -4,6 +4,10 @@ All notable changes to whackagent are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+### Fixed
+
+- The session name carries the task's title from the board, never the command or state a task command runs (`shop · #324 validate` becomes `shop · #324 Offline sync`).
+
 ## [1.4.0] - 2026-10-15
 
 ### Added

@@ -246,7 +246,7 @@ Any skill taking task can take indexes instead of slugs: `/wa-code 3`, `/wa-auto
 
 ## Session name
 
-Task commands (`/wa-grill`, `/wa-code`, `/wa-feedback`, `/wa-validate`, `/wa-close`, `/wa-autopilot`) name session after task worked on. Once task(s) resolved, before work: tool `mcp__whackagent__name_session` listed → call it once, `tasks` = every task of run, backlog order: `id` = `#12` (GitHub) or slug (local), `title` = task title (short, per **Titles and summaries**). Pane renames session `<project> · #12 Login Apple`. Sprint arg → its tickets. Tool absent (option off, host without pane) → skip silently. Never mention it in report.
+Task commands (`/wa-grill`, `/wa-code`, `/wa-feedback`, `/wa-validate`, `/wa-close`, `/wa-autopilot`) name session after task worked on. Once task(s) resolved, before work: tool `mcp__whackagent__name_session` listed → call it once, `tasks` = every task of run, backlog order: `id` = `#12` (GitHub) or slug (local), `title` = task's own title as on board (short, per **Titles and summaries**), never command, step or state (`validate`, `review`, `coding`). Pane prefers board title when it knows id. Pane renames session `<project> · #12 Login Apple`. Sprint arg → its tickets. Tool absent (option off, host without pane) → skip silently. Never mention it in report.
 
 ## Output
 
