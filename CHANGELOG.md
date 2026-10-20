@@ -28,6 +28,10 @@ All notable changes to whackagent are listed here, newest first. The format foll
 - `/wa-code` warns before coding a task whose blocker hasn't landed and recommends the blocker first. Under the GitHub provider it no longer codes a ticket from the base while a blocker in its sprint or track is open, as `BOARD.md` asks.
 - Local provider: dependencies are now structured. `/wa-task` and `/wa-grill` record them as `blocked_by: [<slug>, …]` in the task file instead of a free-text `Depends on …` note. A blocked task shows `⛔ <blocker>` on the board and in the pane, is never suggested next, stays below its blocker when prioritized, and `/wa-autopilot` leaves it out until the blocker is done.
 
+### Fixed
+
+- The session name carries the task's title from the board, never the command or state a task command runs (`shop · #324 validate` becomes `shop · #324 Offline sync`).
+
 ## [1.4.0] - 2026-10-15
 
 ### Added

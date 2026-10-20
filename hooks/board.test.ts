@@ -1,8 +1,11 @@
 import { expect, test } from 'claude-code/testing'
 
+import type { Board } from '../types'
+
 import {
   ALL_TAB,
   activeGithubIds,
+  boardTitles,
   githubSprintRows,
   localSprintRows,
   githubReleases,
@@ -638,4 +641,13 @@ test('session name: project, ticket numbers and short titles; titles dropped pas
   )
   expect(sessionName('shop', [{ id: 'sync', title: '' }])).toBe('shop · sync')
   expect(sessionName('shop', [])).toBe('')
+})
+
+test('session name: board titles win over the title the agent names', async () => {
+  const github = { kind: 'github', tickets: [{ number: 324, title: 'Offline sync' }] } as unknown as Board
+  const local = { kind: 'local', tasks: [{ slug: 'login-apple', title: 'Login Apple' }] } as unknown as Board
+  expect(sessionName('shop', [{ id: '324', title: 'validate' }], boardTitles(github))).toBe('shop · #324 Offline sync')
+  expect(sessionName('shop', [{ id: 'login-apple', title: 'review' }], boardTitles(local))).toBe('shop · Login Apple')
+  expect(sessionName('shop', [{ id: '#9', title: 'Export CSV' }], boardTitles(github))).toBe('shop · #9 Export CSV')
+  expect(boardTitles({ kind: 'loading' }).size).toBe(0)
 })

@@ -1,4 +1,4 @@
-import type { BoardTask, GithubState, GithubTicket, MilestoneCount, SprintParent, TaskFile, TaskFocus, TaskStatus } from '../types'
+import type { Board, BoardTask, GithubState, GithubTicket, MilestoneCount, SprintParent, TaskFile, TaskFocus, TaskStatus } from '../types'
 
 export type WaConfig = {
   backlog: string
@@ -476,12 +476,19 @@ const NAME_TITLES_UP_TO = 2
 const shortTitle = (title: string) =>
   title.length > NAME_TITLE_LENGTH ? `${title.slice(0, NAME_TITLE_LENGTH - 1).trimEnd()}…` : title
 
-export function sessionName(project: string, tasks: readonly NamedTask[]): string {
+/** Task titles on the board, by `#12` or slug: they win over the title an agent names, which may be a step or a state. */
+export function boardTitles(current: Board): Map<string, string> {
+  if (current.kind === 'local') return new Map(current.tasks.map(task => [task.slug, task.title]))
+  if (current.kind === 'github') return new Map(current.tickets.map(ticket => [`#${ticket.number}`, ticket.title]))
+  return new Map()
+}
+
+export function sessionName(project: string, tasks: readonly NamedTask[], titles: ReadonlyMap<string, string> = new Map()): string {
   const withTitles = tasks.length <= NAME_TITLES_UP_TO
   const labels = tasks.flatMap(task => {
     const id = task.id.trim().replace(/^(\d+)$/, '#$1')
     const number = id.startsWith('#') ? id : ''
-    const title = shortTitle(task.title.trim())
+    const title = shortTitle((titles.get(id) || task.title).trim())
     const label = (withTitles ? [number, title].filter(Boolean).join(' ') : number || title) || id
     return label ? [label] : []
   })
