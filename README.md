@@ -168,12 +168,14 @@ pr:
   assignees: ["@me"]
   reviewers: [my-org/android]   # requested when the PR goes ready, never on a draft
   doc: CONTRIBUTING.md#Pull requests   # rules the keys can't express (changelog line, size limit)
+  screenshots: validation   # GitHub provider: when UI screenshots are taken (validation | each_round | off)
 ```
 
 - **Every PR gets at least one label from your repo's own labels**, on top of `pr.labels`: the best fit for the change (bug, feature, docs, then an area label if you have them), named in the report. Labels are never created; a repo with no labels at all gets PRs without one.
 - **The template is filled, not replaced.** Its headings stay, each section is written from the task file, and its checkboxes are ticked only when a round proved them (build, tests, tools, runtime check) or the diff shows them.
 - **whackagent's part sits in its own marked block**: `Closes #n`, a `Changes` list (one user-visible change per line: Add, Change, Fix, Remove, Improve), the acceptance criteria checklist, numbered manual test steps (setup, navigation path from launch to the feature, then each action with its expected result), the status line. A template with its own testing or changes section gets the steps or the list there instead. Each round rewrites that block only, so whatever a human added to the body stays.
 - **Reviewers aren't pinged on drafts.** A draft is your turn to test; reviewers are requested when the PR goes ready.
+- **Screenshots** (GitHub provider, diff that changes UI): with `screenshots: validation`, `/wa-validate` shoots the touched screens once the verifier is clean, before the PR goes ready. A new screen is shown as is; a changed screen gets a before | after pair, the before side built from the ticket's fork point in a temporary worktree. At most six states, one device, fixed status bar; a later validation re-shoots only the screens whose code moved. `each_round` shoots the final state after every coding round (what happens with no `screenshots` key); `off` takes none. Images are uploaded as GitHub attachments (`gh pr edit --attach`, gh 2.102 or later, else the `gh image` extension), never pushed to a branch.
 - No `pr:` block keeps the previous behavior: no template, title = task title, assigned to you.
 
 ### Other settings

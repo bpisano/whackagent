@@ -8,6 +8,8 @@ All notable changes to whackagent are listed here, newest first. The format foll
 
 - Test branch: with branches per task, two or more coded tasks waiting for your test on the same sprint branch or trunk are merged into a local, throwaway `wa-test/<base>` branch (its own worktree in worktree mode), rebuilt after each round, so you test them in one launch. Never pushed or landed; a conflicting task is left out and named. New config key `branch.test_branch`, on in new setups, off when missing.
 - Every report card ends with a 📍 line saying where to test: the branch you're on, the task worktree, or the test branch.
+- GitHub provider: new `pr.screenshots` setting. `validation` (the new default written by `/wa-setup`) shoots the screens a ticket touched once, at a clean `/wa-validate`, before the PR goes ready: a new screen as is, a changed screen as a Before | After pair built from the ticket's fork point. A later validation re-shoots only the screens whose code moved. `each_round` keeps the old behavior (final-state shots after every coding round), and is what a config without the key gets; `off` takes none.
+- GitHub provider: `wa-backlog screenshots` uploads with `gh pr edit --attach` when `gh` is 2.102 or later, so the `gh image` extension is no longer needed there. It still falls back to `gh image`, then to the browser. It lays out `<caption>.before` / `<caption>.after` pairs as a table, records the shot commit with `--sha`, keeps images not re-shot with `--keep`, and prints the current section when given no file.
 
 ### Changed
 

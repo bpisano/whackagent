@@ -131,7 +131,7 @@ Rules that come with it:
 - **Body refreshed every round** from the task file: the marked block is rewritten (current summary, a `Changes` list with one user-visible change per line, current criteria, `- [x]` only for criteria a round actually proved, numbered manual test steps from launch to the feature with each expected result, a status line saying what's still owed), and template sections are touched only where the round changed what they say. Text a human added stays. A PR body describing superseded behavior is a lying PR.
 - **Assignees**: the PR is always assigned to you (`@me`), plus anyone in `pr.assignees`.
 - **Reviewers** (`pr.reviewers`) are requested when the PR goes ready, at `/wa-validate` or on an autopilot ready PR, never on a draft.
-- **Screenshots**, when the diff changes UI: uploaded with `gh image` (extension `drogers0/gh-image`) into a `## Screenshots` section. When `gh image` can't get an upload token (common on org repos with SAML SSO), the agent uploads them through the browser instead, via a PR comment box it never posts, and hands the resulting links to `wa-backlog screenshots`. Images are never pushed to a branch.
+- **Screenshots**, when the diff changes UI: taken once at `/wa-validate` with `pr.screenshots: validation` (new screens in a row, changed screens in a Before | After table), or after every coding round with `each_round` (the behavior when the key is missing), or never with `off`. They go into a `## Screenshots` section that only `wa-backlog screenshots` rewrites, uploaded with `gh pr edit --attach` (gh 2.102 or later), else the `gh image` extension (`drogers0/gh-image`). When neither can upload (older `gh` without the extension, or no upload token, common on org repos with SAML SSO), the agent uploads them through the browser instead, via a PR comment box it never posts, and hands the resulting links to `wa-backlog screenshots`. Images are never pushed to a branch.
 
 ## Command by command
 
@@ -175,7 +175,8 @@ Claims `coding` from `review`, runs the project tools and the verifier over the 
 
 1. Syncs the wiki and commits it with the task file (`phase: validated`, `## Review`) and the fixes, so docs ride in the same PR.
 2. When the PR base moved, rebases the ticket's own commits onto it, then rebuilds and reruns the tests.
-3. Pushes (with lease after a rebase), refreshes the body, and runs `gh pr ready`, requesting `pr.reviewers`. When autofix changed code since your test, the status line names the files to retest.
+3. When the diff changes UI and `pr.screenshots` is `validation`, shoots the touched screens: a new screen as is, a changed screen as a before/after pair, the before side built from the ticket's fork point in a temporary worktree. A later validation re-shoots only the screens whose code moved since the recorded commit.
+4. Pushes (with lease after a rebase), refreshes the body, uploads the screenshots, and runs `gh pr ready`, requesting `pr.reviewers`. When autofix changed code since your test, the status line names the files to retest.
 
 Findings left open → the round still pushes, but the PR stays draft and the status line lists them. Either way the hook moves the ticket back to `review` and drops the claim. `validated` is internal to whackagent: the board never shows it.
 

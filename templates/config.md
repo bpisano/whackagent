@@ -203,6 +203,12 @@ pr:                            # HOW every PR whackagent open look — ticket dr
                                # Empty → none requested (CODEOWNERS still apply).
   doc: ""                      # PR rules keys can't say (changelog line, size limit) — `path` or
                                # `path#Heading` (CONTRIBUTING.md#Pull requests). Empty → none.
+  screenshots: validation      # PR screenshots when diff changes UI — GitHub provider only:
+                               #   validation — once, at /wa-validate clean verdict: new screen as is,
+                               #     changed screen before | after (base built in temp worktree).
+                               #     Re-shot only when screen moved since. Coding rounds shoot none.
+                               #   each_round — final state after every coding round (key missing → this).
+                               #   off — none.
 
 compress_wiki: true            # caveman-compress config + wiki pages to save re-read tokens
                                # (at /wa-setup and after every /wa-wiki update; .original backups removed)

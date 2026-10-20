@@ -17,9 +17,11 @@ import datetime as dt
 import functools
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 from urllib.parse import quote
@@ -816,39 +818,98 @@ def op_depend(args):
 
 
 SHOTS_START, SHOTS_END = "<!-- wa-screenshots -->", "<!-- /wa-screenshots -->"
+SHOTS_SECTION = re.compile(r"<!-- wa-screenshots(?: sha=(\w+))? -->.*?" + re.escape(SHOTS_END), re.S)
+SHOT_IMG = re.compile(r'<img src="(https://[^"]+)"[^>]*? alt="([^"]+)"')
+MD_IMG = re.compile(r"!\[[^\]]*\]\((https://[^)]+)\)")
+
+
+def with_section(body, section):
+    if SHOTS_SECTION.search(body):
+        return SHOTS_SECTION.sub(lambda _: section, body, count=1)
+    return body.rstrip() + "\n\n" + section + "\n"
+
+
+def upload_attach(repo, pr, body, files):
+    """`gh pr edit --attach` (gh >= 2.102): the body's `![..](./file)` refs become user-attachments URLs.
+    Returns the URLs in file order, or None when gh lacks --attach or any upload failed."""
+    if "--attach" not in gh(["pr", "edit", "--help"], check=False).stdout:
+        return None
+    with tempfile.TemporaryDirectory() as tmp:
+        names = []
+        for index, path in enumerate(files):
+            names.append(f"wa-shot-{index}{Path(path).suffix.lower()}")
+            shutil.copyfile(path, Path(tmp, names[-1]))
+        refs = "\n".join(f"![{Path(path).stem}](./{name})" for path, name in zip(files, names))
+        Path(tmp, "body.md").write_text(with_section(body, f"{SHOTS_START}\n{refs}\n{SHOTS_END}"))
+        attach = [arg for name in names for arg in ("--attach", f"./{name}")]
+        proc = subprocess.run(
+            ["gh", "pr", "edit", str(pr), "--repo", repo, "--body-file", "body.md", *attach],
+            cwd=tmp,
+            capture_output=True,
+            text=True,
+        )
+    now = SHOTS_SECTION.search(rest("GET", f"repos/{repo}/pulls/{pr}")["body"] or "")
+    urls = MD_IMG.findall(now.group(0)) if now else []
+    return urls if proc.returncode == 0 and len(urls) == len(files) else None
+
+
+def upload_gh_image(repo, files):
+    proc = subprocess.run(["gh", "image", "--repo", repo, *files], capture_output=True, text=True)
+    urls = MD_IMG.findall(proc.stdout)
+    return urls if proc.returncode == 0 and len(urls) == len(files) else None
+
+
+def shots_section(shots, sha, width):
+    """Single shots in one row; `<caption>.before` / `<caption>.after` pairs in a Before | After table."""
+    img = lambda key: f'<img src="{shots[key]}" width="{width}" alt="{key}">' if key in shots else "—"
+    pairs = list(dict.fromkeys(key.rsplit(".", 1)[0] for key in shots if key.endswith((".before", ".after"))))
+    singles = [key for key in shots if not key.endswith((".before", ".after"))]
+    parts = []
+    if singles:
+        cells = "".join(f'<td align="center">{img(key)}<br><sub>{key}</sub></td>' for key in singles)
+        parts.append(f"<table><tr>{cells}</tr></table>")
+    if pairs:
+        rows = "".join(
+            f'<tr><td><sub>{key}</sub></td><td align="center">{img(key + ".before")}</td>'
+            f'<td align="center">{img(key + ".after")}</td></tr>'
+            for key in pairs
+        )
+        parts.append(f"<table><tr><th></th><th>Before</th><th>After</th></tr>{rows}</table>")
+    start = f"<!-- wa-screenshots sha={sha} -->" if sha else SHOTS_START
+    return f"{start}\n## Screenshots\n\n" + "\n\n".join(parts) + f"\n{SHOTS_END}"
 
 
 def op_screenshots(args):
-    """Upload screenshots with `gh image` (GitHub user-attachments) and show them in PR <pr>'s body.
+    """Upload screenshots (GitHub user-attachments) and show them in PR <pr>'s body; no image = read back.
 
     Never pushed to a branch: attachments live outside git, like images pasted in the web UI.
-    An image given as `<caption>=<https url>` is already uploaded (browser fallback when `gh image`
-    can't get an upload token) and kept as is. Rerun replaces the section.
+    Upload: `gh pr edit --attach` (gh >= 2.102), else the `gh image` extension. An image given as
+    `<caption>=<https url>` is already uploaded (browser fallback when neither gets an upload token)
+    and kept as is. File stem = caption; `<caption>.before` / `<caption>.after` = a changed screen.
+    Rerun replaces the section only, rest of the body untouched; --keep merges the current images.
     """
     config = load()
     repo = config["repo"]
+    body = rest("GET", f"repos/{repo}/pulls/{args.pr}")["body"] or ""
+    current = SHOTS_SECTION.search(body)
+    kept = {alt: url for url, alt in SHOT_IMG.findall(current.group(0))} if current else {}
+    if not args.images:
+        emit({"pr": args.pr, "sha": current.group(1) if current else None, "images": kept})
+        return
     shots = [image.split("=", 1) if re.match(r"[^=/]+=https://", image) else [Path(image).stem, image] for image in args.images]
     files = [path for _, path in shots if not path.startswith("https://")]
     uploaded = []
     if files:
-        proc = subprocess.run(["gh", "image", "--repo", repo, *files], capture_output=True, text=True)
-        uploaded = re.findall(r"!\[[^\]]*\]\((https://[^)]+)\)", proc.stdout)
-        if proc.returncode != 0 or len(uploaded) != len(files):
-            raise Failure(f"gh image: {proc.stderr.strip() or proc.stdout.strip()} (needs the drogers0/gh-image extension)")
+        uploaded = upload_attach(repo, args.pr, body, files) or upload_gh_image(repo, files)
+        if not uploaded:
+            rest("PATCH", f"repos/{repo}/pulls/{args.pr}", {"body": body})
+            raise Failure("upload failed: gh pr edit --attach (gh >= 2.102) and gh image (drogers0/gh-image) both failed")
     uploaded = iter(uploaded)
-    urls = [path if path.startswith("https://") else next(uploaded) for _, path in shots]
-    cells = "".join(
-        f'<td align="center"><img src="{url}" width="{args.width}"><br><sub>{caption}</sub></td>'
-        for (caption, _), url in zip(shots, urls)
-    )
-    section = f"{SHOTS_START}\n## Screenshots\n\n<table><tr>{cells}</tr></table>\n{SHOTS_END}"
-    body = rest("GET", f"repos/{repo}/pulls/{args.pr}")["body"] or ""
-    if SHOTS_START in body:
-        body = re.sub(re.escape(SHOTS_START) + ".*?" + re.escape(SHOTS_END), lambda _: section, body, flags=re.S)
-    else:
-        body = body.rstrip() + "\n\n" + section + "\n"
-    rest("PATCH", f"repos/{repo}/pulls/{args.pr}", {"body": body})
-    emit({"pr": args.pr, "urls": urls})
+    urls = {caption: path if path.startswith("https://") else next(uploaded) for caption, path in shots}
+    images = {**kept, **urls} if args.keep else urls
+    section = shots_section(images, args.sha, args.width)
+    rest("PATCH", f"repos/{repo}/pulls/{args.pr}", {"body": with_section(body, section)})
+    emit({"pr": args.pr, "sha": args.sha, "images": images})
 
 
 def op_link_pr(args):
@@ -1291,13 +1352,16 @@ def parser():
     s.add_argument("--timeout", type=int, default=300, help="seconds to wait for GitHub to finish the merge")
     s.set_defaults(func=op_merge)
 
-    s = sub.add_parser("screenshots", help="upload images with gh image, show them in the PR body")
+    s = sub.add_parser("screenshots", help="upload images (gh pr edit --attach, else gh image), show them in the PR body")
     s.add_argument("pr", type=int)
     s.add_argument(
         "images",
-        nargs="+",
-        help="PNG/JPEG/WebP paths (file stem = caption), or <caption>=<https url> for an image already uploaded",
+        nargs="*",
+        help="PNG/JPEG/WebP paths (file stem = caption, <caption>.before/.after = changed screen), "
+        "or <caption>=<https url> for an image already uploaded. None → print the section's sha + images",
     )
+    s.add_argument("--sha", help="head commit the shots show, recorded in the section marker")
+    s.add_argument("--keep", action="store_true", help="keep current images whose caption isn't given again")
     s.add_argument("--width", type=int, default=260, help="display width in px")
     s.set_defaults(func=op_screenshots)
 
