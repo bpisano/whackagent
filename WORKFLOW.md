@@ -223,7 +223,7 @@ flowchart LR
 
 - Takes tasks in `review` / `validated` with commits on their branch. ≥ 2 → built; fewer → test the task branch.
 - Rebuilt from base after `/wa-code`, `/wa-feedback`, `/wa-validate`, end of `/wa-autopilot`. `/wa-close` rebuilds without the closed task, deletes it under 2.
-- Worktree mode → own worktree `../<repo>-worktrees/wa-test-<base>`. Else checked out only on a clean tree.
+- Worktree mode → own worktree `../<repo>-worktrees/wa-test-<base>`. Else a branch ref, checked out only at the end of attended `/wa-code`, `/wa-feedback`, `/wa-validate`, on a clean tree. `/wa-autopilot` and `/wa-close` never check it out.
 - Conflict → task left out, never resolved there. Never pushed, PR'd, landed or forked from. Hooks never see it.
 - Report 📍 line = where to test: branch you're on, worktree, or test branch.
 

@@ -34,7 +34,7 @@ Who sets what:
 
 The word `review` names both a board state and a sub-phase. Say which one when editing.
 
-Keep each step's ownership intact when editing. For example, only `/wa-close` commits task work in attended runs on the local provider (under the GitHub provider every agent round commits and pushes its ticket branch, and `/wa-close` merges the ready PR on the user's yes; `/wa-autopilot` commits on its own task branch only; `/wa-release` commits, tags and pushes only what the project's release doc says, each outward step confirmed), and the orchestrator skills never write code themselves.
+Keep each step's ownership intact when editing. For example, only `/wa-close` commits task work in attended runs on the local provider (under the GitHub provider every agent round commits and pushes its ticket branch, and `/wa-close` merges the ready PR on the user's yes; `/wa-autopilot` commits on its own task branch only; `/wa-release` commits, tags and pushes only what the project's release doc says, each outward step confirmed; the one exception is the test branch: with `branch.test_branch: true`, `/wa-code`, `/wa-feedback`, `/wa-validate`, `/wa-autopilot` and `/wa-close` make merge commits on the local, never-pushed `wa-test/…` branch, which is not task work and is never pushed or landed), and the orchestrator skills never write code themselves.
 
 ## Rules when editing
 

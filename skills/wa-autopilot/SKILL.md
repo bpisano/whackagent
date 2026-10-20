@@ -138,7 +138,7 @@ A blocker in one task **does not** stall its wave — the others keep going.
 
 ## 4. Test branch — after last wave
 
-`branch.test_branch: true` → one per base touched (base of each task delivered this run), per **reference/test-branch.md**: every qualifying task of that base, not only this run's. Runs after every delivery commit (GitHub: push) — what step 3 commits, and where, unchanged: test branch merges land on throwaway `wa-test/` branch only, never task, sprint or base branch. Conflict → task left out of test branch, logged, never resolved — task itself stays delivered. Key off or < 2 tasks on a base → nothing, report as before.
+`branch.test_branch: true` → one per base touched (base of each task delivered this run), per **reference/test-branch.md**: every qualifying task of that base, not only this run's. Ref (or its worktree) only, never checked out: user's checkout never moves unattended. Runs after every delivery commit (GitHub: push) — what step 3 commits, and where, unchanged: test branch merges land on throwaway `wa-test/` branch only, never task, sprint or base branch. Conflict → task left out of test branch, logged, never resolved — task itself stays delivered. Key off or < 2 tasks on a base → nothing, report as before.
 
 ## Final report
 

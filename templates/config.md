@@ -161,10 +161,12 @@ branch:
                                # (only when per_task AND commit.auto_commit_after_validation)
   test_branch: true            # with per_task: ≥2 coded tasks waiting your test on one base
                                #   (sprint branch or trunk) → merged into LOCAL throwaway branch
-                               #   wa-test/<base> (worktree mode: own worktree), so you test them
+                               #   wa-test/<base> (worktree mode: own worktree; else checked out at end
+                               #   of attended round, clean tree only), so you test them
                                #   in one launch. Rebuilt after each delivery. Never pushed, never
                                #   landed; conflicting task skipped. Rules: reference/test-branch.md.
                                #   false or missing → no test branch, test each task branch.
+                               #   per_task off → ignored (/wa-setup writes false then).
 
 close:                         # WHERE work land when /wa-close finish a task. Task in a sprint
                                # always merge into its sprint branch first — this block say what

@@ -127,7 +127,7 @@ Then:
 - **Show** the **Report card** below — `review → /wa-validate` in status line when step 3 skipped, so user know what still owed.
 - **Save** to `{reports}/<slug>.md`: same card, plus full file/folder list, key decisions, review findings.
 - Set `status: review` — means *waiting for user to test it*, nothing more.
-- **Test branch** (`branch.test_branch: true`) — rebuild for this task's base per **reference/test-branch.md**, after delivery (GitHub: after push). Git only, no build. Result goes in card's 📍 line.
+- **Test branch** (`branch.test_branch: true`) — rebuild for this task's base per **reference/test-branch.md**, after delivery (GitHub: after push). Git only, no build. Built → checked out last, clean tree only (*Checkout* there). Result goes in card's 📍 line.
 - **Say what to do next, in this order**: test it where 📍 line says. Notes → **`/wa-feedback`**. Matches spec → **`/wa-validate <slug>`**, which fires verifier; **`/wa-close <slug>`** ends it after your retest. GitHub: `/wa-validate` syncs wiki + readies PR; merge on GitHub or `/wa-close <n>`.
 - **Iteration is `/wa-feedback` job.** Never patch code from this thread — even one-liner. `/wa-feedback` only place inline fixes are bounded, tagged, built, flagged to verifier (see its *Micro-fix or implementer*); untracked touch-up here undoes review it about to get.
 - **Never set `done` yourself, never commit here.** `review` → `/wa-validate` → `validated` → `/wa-close` → `done`; user "ok that's it" = spec approval, not close.
@@ -169,7 +169,7 @@ build ✅ · tests ✅ · run ✅ · review → /wa-validate
 
 ## 5. Closing — not yours
 
-Commit, branch landing and `status: done` belong to **`/wa-close`**. Nothing in this file commits or moves branch after step 0 — **except GitHub provider** step 0b.7: delivery commit + push + draft PR, so ticket leaves `coding`; and test branch rebuild (step 4): merges on local throwaway `wa-test/` branch only, never task, sprint or base branch. Ready PR = `/wa-validate`; merge = human, or `/wa-close` on their yes.
+Commit, branch landing and `status: done` belong to **`/wa-close`**. Nothing in this file commits or moves branch after step 0 — **except GitHub provider** step 0b.7: delivery commit + push + draft PR, so ticket leaves `coding`; and test branch rebuild + checkout (step 4): merges on local throwaway `wa-test/` branch only, never task, sprint or base branch. Ready PR = `/wa-validate`; merge = human, or `/wa-close` on their yes.
 
 ## Asking
 
