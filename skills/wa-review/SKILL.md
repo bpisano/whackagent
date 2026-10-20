@@ -7,7 +7,7 @@ description: Standalone code review — diff, path, branch or whole project, fou
 
 Standalone review — audit existing code, diff, or whole project. Same engine as `/wa-code` verify phase, usable anywhere.
 
-Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` · `<branch>` arg under `backlog.provider: github` → + `provider-github.md`.
+Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` · `<branch>` arg under `backlog.provider: github` → + `provider-github.md`.
 
 Wording (screen + reports): **reference/voice.md** — telegraphic, tech terms stay English.
 

@@ -60,7 +60,7 @@ Then confirm with user:
 10. **Release flow** — search markdown per **wa-release → Release doc** step 2, silently. Candidate found → _"Your release flow is in `<path#Heading>` — use it for `/wa-release`? (recommended: yes — it's what the team already follows)"_ → sets `release.doc`. Nothing found → no question, leave empty, say `release flow: none documented — /wa-release will set it up`.
 11. **Apple references** — only when detection found them. _"Your Xcode ships Apple's own SwiftUI guidance for agents (best practices, what's new in this SDK). Copy it into `{conventions}/apple/` so implementer and reviewer check APIs against it? (recommended: yes — they open only the page for the topic they touch, costs nothing otherwise)"_ Yes → _"Commit `apple/` (~170 KB of Apple-written pages) or keep it local, gitignored? (recommended: commit on a private repo — teammates without Xcode 27 and autopilot worktrees, which see only committed files, read the same pages; gitignore on a public repo — Apple's text, no license to redistribute it)"_ Gitignore → append `<conventions>/apple/` to root `.gitignore`. Say it's a snapshot of this Xcode: `/wa-setup` refreshes it after an update.
 
-Keep short — 7 to 10 questions (build one fire only on detected wrapper; close policy only when `per_task` and backlog local; PR shape only when PR can happen). Rest take template default.
+Keep short — 11 questions at most, plus follow-ups only where they apply (build one fire only on detected wrapper; Apple refs only on detection; release silent when nothing found; test branch and close policy only when `per_task`, close policy only on local backlog; PR shape only when PR can happen; screenshots only GitHub + `app`/`web`). Rest take template default.
 
 **Only if project is runnable (kind `app`, `web`, `server`, `cli`):** ask **who tests it** after green build — _"In autopilot the agent exercises what it built itself (taps + screenshots, browser, curl, CLI run) since nobody's watching. When you're at the keyboard, should it do the same, or stop at build + tests and let you test? (recommended: you test — you'll run it anyway, and driving it costs a few minutes per round)"_ → sets `verify.mode` (`autopilot` | `always` | `off`). Name third option only if they push back on autopilot driving at all: `off` = nobody drives it, ever. `package` → `verify.platform: none`, don't ask.
 
@@ -129,11 +129,11 @@ Create directory and files (do not overwrite existing without asking).
 
 Offer to bootstrap few wiki pages by reading the source (e.g. `architecture`, plus one page per major subsystem) (recommended: yes on existing codebase — agents read wiki first instead of re-scanning source every run; no on near-empty repo, nothing to describe yet). Only if user says yes.
 
-Seeding → also propose first glossary rows from code (model types, screen/route names), one block, written on yes.
+Seeding → also propose first glossary rows from code (model types, screen/route names), one block, written on yes (recommended: yes — names already in code, agents and team then use same word).
 
 ## 4. Compress docs (if `compress_wiki: true`)
 
-To cut re-read tokens, run **caveman-compress** skill on `.whackagent/config.md` and every wiki page just written (`{wiki}/*.md`). After each compression, delete `*.original.md` backup it creates — git history is backup. Do **not** compress the backlog, task files, or reports. Skip this step entirely if `compress_wiki: false`.
+To cut re-read tokens, run **caveman-compress** skill on `.whackagent/config.md` and every wiki page just written (`{wiki}/*.md`, except `glossary.md`: team-facing, stays plain). After each compression, delete `*.original.md` backup it creates — git history is backup. Do **not** compress the backlog, task files, or reports. Skip this step entirely if `compress_wiki: false`.
 
 **Wiki outside `.whackagent/` + `compress_wiki: true` → ask before compressing.** A wiki you moved to `docs/` is one a teammate reads directly; caveman prose is for the agents' token budget, not for humans. Recommend flipping `compress_wiki: false` in that case.
 
@@ -167,7 +167,7 @@ One table — current value, and a flag on anything worth attention:
 | build.command| (empty)               | ⚠️ `make build` detected since |
 ```
 
-Then **one question: what do you want to change?** Re-ask a full question (step 1's wording) only for what they name, plus every new key from stock-taking step 3 — those they've never been asked. Current value is the default in every one; "leave it" is always a valid answer. Don't walk all ten questions at somebody who came to flip one toggle.
+Then **one question: what do you want to change?** Re-ask a full question (step 1's wording) only for what they name, plus every new key from stock-taking step 3 — those they've never been asked. Current value is the default in every one; "leave it" is always a valid answer. Don't walk all eleven questions at somebody who came to flip one toggle.
 
 With an arg (`/wa-setup paths`), skip the table's unrelated rows and go straight to that section's questions.
 

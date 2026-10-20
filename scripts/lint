@@ -123,6 +123,7 @@ def check_refs():
 # ---------------------------------------------------------------- 2. Read line covers cited reference files
 
 READ_LINE = "Read `${CLAUDE_PLUGIN_ROOT}/reference/`:"
+PLACEHOLDER = re.compile(r"\{(backlog|tasks|wiki|reports|conventions|worktrees)\}")
 
 
 def check_read_lines():
@@ -140,6 +141,7 @@ def check_read_lines():
         if "cited below" in read_l:  # wa-setup: every file read when its step runs
             continue
         files = [skill] + md_files(f"{skill.parent.relative_to(ROOT)}/**/*.md")
+        placeholder = None
         for f in dict.fromkeys(files):
             for n, line in enumerate(f.read_text().splitlines(), 1):
                 if f == skill and n == read_n:
@@ -147,6 +149,10 @@ def check_read_lines():
                 for name in re.findall(r"reference/([a-z-]+\.md)", line):
                     if name not in listed:
                         err(f, n, f"cites reference/{name}, missing from {skill.parent.name} Read line")
+                if not placeholder and PLACEHOLDER.search(line):
+                    placeholder = (f, n, PLACEHOLDER.search(line).group(0))
+        if placeholder and "paths.md" not in listed:  # placeholders resolve through reference/paths.md
+            err(placeholder[0], placeholder[1], f"uses {placeholder[2]}, paths.md missing from {skill.parent.name} Read line")
     for agent in md_files("agents/*.md"):
         for n, line in enumerate(agent.read_text().splitlines(), 1):
             if "reference/" in line:

@@ -8,7 +8,7 @@ model: haiku
 
 Dashboard. Lift lid on backlog, point next move.
 
-Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `display.md` `blockers.md` · arg given → + `sprints.md` `milestones.md` · `backlog.provider: github` → + `provider-github.md` · `branch.tracks` non-empty → + `tracks.md`.
+Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` `display.md` `blockers.md` · arg given → + `sprints.md` `milestones.md` · `backlog.provider: github` → + `provider-github.md` · `branch.tracks` non-empty → + `tracks.md`.
 
 ## Do
 

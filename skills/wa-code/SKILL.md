@@ -86,6 +86,7 @@ Local provider → `comment` is no-op, nothing to do. Later round re-plans brick
 
 - **Brick 1** — spawn `wa-implementer`, **note `agentId`**. Pass: task path, BRIEF, brick + target files/folders, conventions dir, test plan, `build.command` / `build.test_command` when config sets them (it never reads config — hand it commands), `tools` entries whose `when` holds `code` (name, `run`, `fix`), `verify` block **including `mode`** (it never reads config — say plainly whether it owes runtime proof), `autopilot: false`. Worktree mode → plus worktree path and its *work only under* line (**reference/worktrees.md**).
 - **Glossary** — `{wiki}/glossary.md` exists → brick 1 also gets its path (step 3 verifier too). Absent → nothing passed.
+- **Screenshots** — GitHub provider + `pr.screenshots: each_round` (or key missing) → every brick dispatch asks: *diff changes UI → return final-state `SCREENSHOTS:`* (**reference/provider-github.md**, *Screenshots*). Last receipt's shots = upload. `validation`, `off` or local provider → never asked.
 - **Bricks 2..n** — `SendMessage` that id next brick **alone**. No conventions dir, no BRIEF, no task path: it holds them. It built brick 1 too, so know what to reuse — DRY stop being rule it must rediscover.
 
 Receipts:

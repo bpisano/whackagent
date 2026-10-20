@@ -7,7 +7,7 @@ description: Keep the wiki up to date, or look up project knowledge. /wa-wiki up
 
 Two modes, picked by argument.
 
-Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md`.
+Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` · commit step runs → + `commits.md`.
 
 Wording (screen + reports): **reference/voice.md** — telegraphic, tech terms stay English.
 
@@ -26,9 +26,9 @@ Task status + report handled by `/wa-code`. This step keep shared knowledge true
    - Cross-link: wiki↔wiki, link task where useful.
    - Create any page a task's `wiki:` flagged missing.
    - Keep narrative (*why* + shape), not code dump.
-   - **Glossary** (`{wiki}/glossary.md` exists) — task `Glossary: + <row>` lines → write rows (user said yes at task/grill). Term diff introduced, unlisted → propose row, write on yes only; unattended → name it in report, write nothing. Pages use its terms.
-   - **Compress** (if `compress_wiki: true`): run **caveman-compress** on each page written, then delete `*.original.md` backup. Wiki only. **`{wiki}` outside `.whackagent/` → say it once and recommend `compress_wiki: false`**: wiki moved into project tree is one humans read, caveman prose buys tokens at their expense.
-3. **Commit (only if allowed).** If `commit.auto_commit_after_validation: true` AND task is `validated` or `done` (i.e. went through `/wa-validate`), commit with configured author name/email — **never** as Claude. Else leave it. Outside autopilot, never commit unvalidated work.
+   - **Glossary** (`{wiki}/glossary.md` exists) — task `Glossary: + <row>` lines → write rows (user said yes at task/grill). Term diff introduced, unlisted → propose row *"add `+ Term — means`? (recommended: yes — code already uses it, next tasks should too)"*, write on yes only; unattended → name it in report, write nothing. Pages use its terms.
+   - **Compress** (if `compress_wiki: true`): run **caveman-compress** on each page written, then delete `*.original.md` backup. Wiki only, never `glossary.md`: team-facing, plain Markdown. **`{wiki}` outside `.whackagent/` → say it once and recommend `compress_wiki: false`**: wiki moved into project tree is one humans read, caveman prose buys tokens at their expense.
+3. **Commit (only if allowed).** If `commit.auto_commit_after_validation: true` AND task is `validated` or `done` (i.e. went through `/wa-validate`), commit, author + message per **reference/commits.md**. Else leave it. Outside autopilot, never commit unvalidated work.
 
 Stop and ask if can't tell which page a change belongs to — don't scatter duplicates.
 
