@@ -53,6 +53,7 @@ Multi-module project → one Gradle module per feature (`:feature:<name>`) and p
 - **Group by feature, not by type.** No global `viewmodels/`/`repositories/` packages for app features.
 - **UDF respected**: UI renders state + sends events; state mutated only in ViewModel/presenter; no two-way mutable state shared with UI.
 - **Layer boundaries**: no data source or DTO in UI layer; no Android UI types in ViewModel; repository is the only door to its data.
+- **Entity mapping on the entity**: DB entity → domain model mapping = member of the entity (`toModel(…)` / `to<DomainType>(…)`, extra inputs such as related rows as params; `fromModel()` in its companion). Never private mapper inside the data source.
 - **Module direction**: feature → core, never feature → feature; `commonMain` never depends on platform code.
 - **Naming**: `FooScreen`, `FooViewModel`, `FooUiState`, `FooRepository` (+ `FooRepositoryImpl` or `DefaultFooRepository`, whichever project uses), `FooDataSource`, `DoThingUseCase`.
 

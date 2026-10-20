@@ -4,6 +4,10 @@ All notable changes to whackagent are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+### Changed
+
+- Kotlin conventions: the app architecture checklist now asks for database entity → domain model mapping to live on the entity (`toModel(…)`, `fromModel()` in its companion), not in a private mapper inside the data source.
+
 ## [1.5.0] - 2026-10-20
 
 ### Added
