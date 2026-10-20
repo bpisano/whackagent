@@ -1,6 +1,6 @@
 ---
 name: wa-review
-description: Make a code review. --fix to autofix.
+description: Standalone code review — diff, path, branch or whole project, four lenses. --fix to autofix.
 ---
 
 # /wa-review

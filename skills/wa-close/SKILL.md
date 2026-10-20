@@ -1,6 +1,6 @@
 ---
 name: wa-close
-description: Close validated task — record done, commit, land branch (sprint merge, PR marked ready for review, or nothing per config), clean branch and worktree. GitHub provider — merges ready ticket PR on your yes. Last step of task lifecycle. `/wa-close <sprint>` lands a complete sprint.
+description: Close validated task — commit, land branch, clean up. GitHub: merges ready PR on your yes. `/wa-close <sprint>` lands sprint.
 ---
 
 # /wa-close

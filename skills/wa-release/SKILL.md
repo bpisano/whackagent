@@ -1,6 +1,6 @@
 ---
 name: wa-release
-description: Ship one milestone — check its tasks landed, then walk you through the project's own documented release flow, step by step, confirming every outward move. No flow documented → set it up first, never guessed.
+description: Ship one milestone — check its tasks landed, then walk project's documented release flow, confirming every outward step.
 ---
 
 # /wa-release

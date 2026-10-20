@@ -1,6 +1,6 @@
 ---
 name: wa-task
-description: Create tasks from an idea or a spec — large spec cut into a few feature-sized tasks — then re-prioritize backlog. Never grills: suggests /wa-grill next. No argument = prioritization pass alone.
+description: Create tasks from idea or spec, cutting large specs, then re-prioritize backlog. No arg = prioritization only. Never grills.
 ---
 
 # /wa-task

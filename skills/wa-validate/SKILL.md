@@ -1,6 +1,6 @@
 ---
 name: wa-validate
-description: Your green light on coded feature — "this is what I asked for". Runs verifier over whole diff (style, elegance, structure, correctness) and records verdict. GitHub provider — clean verdict marks ticket PR ready (wiki synced, rebased). Does NOT close or merge — /wa-close does.
+description: Your green light on coded task — verifier over whole diff, verdict recorded. GitHub: marks PR ready. Never merges.
 ---
 
 # /wa-validate

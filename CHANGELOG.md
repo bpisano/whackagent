@@ -7,6 +7,7 @@ All notable changes to whackagent are listed here, newest first. The format foll
 ### Changed
 
 - Each command now loads only the shared rules it needs instead of the whole rule set: the rules moved from `/wa-board` into one file per topic under `reference/`, and the GitHub provider rules load only in GitHub projects. Runs read less, rules unchanged. Commit rules (author, message, trailers) are gathered in one place: whackagent adds no trailer of its own and stops when no git identity is set rather than inventing one.
+- Shorter command descriptions in the `/` menu.
 
 ## [1.4.0] - 2026-10-15
 
