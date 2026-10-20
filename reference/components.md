@@ -16,7 +16,7 @@ A task inside a sentence: `#42 Add Apple login` (`files`: `3 Add Apple login`).
   - `· <sprint>` — dropped when the view is that sprint
   - `· ⛔ #12` — open blockers
   - `· 🔒 <owner> <age>` — lock held; stale → `🔒⏳`
-  - `· ⇡ #42` — stacked on #42 (keeps `⛔ #42` while #42 is open)
+  - `· ⇡ #42` — stacked on #42 (+ `⛔ #42` while open)
   - `— <outcome>` — only in **Batch report**
 - Id: `files` → display index `3 ·` (never `3.`), `github` → `#42 ·`.
 - Size: 🟢 quickwin · 🟡 medium · 🔴 large.
@@ -36,9 +36,9 @@ N tasks. Never a table.
 ```
 
 - **Task line** + `summary` indented 4 spaces. Never the body.
-- One section per non-empty state, lifecycle order (**tasks → States**). Done: few recent only.
-- Priority order inside a section. Indexes run on across sections. Legend once, below.
-- One 🏁 line per sprint in play: `🏁 <sprint> — <done>/<total> (<n> <state>, …)`, canceled out of the count. Sprint view → that line on top.
+- One section per non-empty state, lifecycle order (**tasks → States**). Done: recent few.
+- Priority order per section; indexes run on. Legend once, below.
+- One 🏁 line per sprint in play: `🏁 <sprint> — <done>/<total> (<n> <state>, …)` minus canceled. Sprint view → that line on top.
 
 ## Question
 
@@ -48,7 +48,7 @@ N tasks. Never a table.
   Alt: memory only — safer, re-login every cold start.
 ```
 
-- One at a time. Recommendation always, one-line why, grounded (code, convention, criteria, YAGNI). Real alternative → `Alt:`.
+- One at a time. Recommendation always, one-line why, grounded. Real alternative → `Alt:`.
 - No basis → pick the cheapest to undo, flag it as a guess.
 - Choice between named options → numbered list, recommended first.
 
@@ -56,7 +56,7 @@ N tasks. Never a table.
 
 `⛔ blocked by #12 Add Apple login (todo) — code it first?` + `ok?`
 
-- `⚠️` / `⛔` / `🔒` + what + consequence. `ok?` only when the user must decide.
+- `⚠️` / `⛔` / `🔒` + what + consequence. `ok?` only if the user decides.
 
 ## Plan
 
@@ -70,7 +70,6 @@ ok? [y/n]
 - Batch waves: `wave 1 (∥): #42 · #43` / `wave 2: #44 ⇡ #42` / `skipped: #48 ⛔ #12`.
 
 ## Glossary rows
-
 
 ```
 + Screen · Login screen — email + password · `LoginView`
@@ -94,7 +93,7 @@ Review results, severity first:
 ```
 
 - 🔴 critical · 🟠 major · 🟡 minor. ≤ 12 words a line. Clean → `✅ review clean`.
-- User decides → each line ends with the pick: `fix` / `accept` / `→ /wa-task`.
+- User decides → line ends with the pick: `fix` / `accept` / `→ /wa-task`.
 
 ## Branch line
 
@@ -104,22 +103,22 @@ Where the user stands now. Always in a **Report**.
 - `test branch: sprint/login-refacto-test = sprint + #42 · #43 — you're on it`
 - Missing piece → `⚠️ #45 not in — conflicts with #42 (AuthStore.swift)`
 - Not built → `⚠️ test branch not built — dirty tree` (or `uncommitted`)
-- Couldn't switch → `⚠️ still on <branch> — dirty tree · git checkout <task branch>`
+- Couldn't switch → `⚠️ still on <branch> — dirty tree · git checkout <branch>`
 - Batch report → task's own branch (`github`: + draft PR)
 
 ## Status line
 
 `build ✅ · tests ✅ · run ✅ · review → /wa-validate`
 
-- Check `✅` / `❌` / `yours`; review `clean` / `→ /wa-validate`. Never claim a check nobody ran.
+- Check `✅` / `❌` / `yours`; review `clean` / `→ /wa-validate`. Never claim an unrun check.
 
 ## Next
 
-Last line of every skill: `→ next: /wa-code 42`. One command, at most one alternative (`… or /wa-feedback 42`).
+Last line of every skill: `→ next: /wa-code 42`. One command, ≤ one alt (`… or /wa-feedback 42`).
 
 ## Report
 
-End of a round: `/wa-code`, `/wa-feedback`, `/wa-validate`.
+Round end: `/wa-code`, `/wa-feedback`, `/wa-validate`.
 
 ```
 🟢 #42 · **Add Apple login** · Login refacto — to test
@@ -138,16 +137,27 @@ build ✅ · tests ✅ · run ✅ · review → /wa-validate
 → next: test it, then /wa-feedback 42 or /wa-validate 42
 ```
 
-- Header = **Task line** + summary. Feedback round → `· round <n>` + **Asked** (user's notes) above Done.
-- **Done** — what changes for the app, ≤ 5 bullets, key file in backticks.
+- Header = **Task line** + summary. Feedback round → `· round <n>` + **Asked** above Done.
+- **Done** — app changes, ≤ 5 bullets, key file in backticks.
 - **To test** — criteria not proven + regression zones. All proven → `nothing required` + one smoke test. Never empty.
 - **Review** — `/wa-validate` only, as **Findings**, above To test.
-- `✅ agent:` — what the runtime check proved + screenshot path. Omit when nothing.
-- Then **Branch line**, **Status line**, **Next**. Full file list → saved report only.
+- `✅ agent:` — what the runtime check proved + screenshot path, if any.
+- Then **Shots**, **Branch line**, **Status line**, **Next**. Full file list → saved report only.
+
+## Shots
+
+PR screenshots, in **Report** / **Landing**:
+
+```
+📸 Login screen · new · 2
+⚠️ Map screen · error — needs a real login
+```
+
+- Line = screen · kind · count. Skip or fail → `⚠️` + reason.
 
 ## Landing
 
-`/wa-close`. Plain text, no fence, nothing else.
+`/wa-close`. Plain text, no fence.
 
 ```
 `wa/42-add-apple-login` → `sprint/login-refacto`
@@ -155,7 +165,7 @@ PR #57 · **Add Apple login**
 ```
 
 - PR line only with a PR. Failed step → one extra line.
-- Code changed since the user's test → + **Warning** `⚠️ code changed since your test: <what>`, `ok?`.
+- Code changed since the user's test → **Warning** + `ok?`.
 
 ## Batch report
 
@@ -180,5 +190,5 @@ test branch: wa/autopilot-2026-09-18-test = #42 · #44 — you're on it
 → next: /wa-validate 42
 ```
 
-- Recap = **Task lines** + outcome: `to test`, `blocked` (question), `skipped` (lock, blocker, state moved). By sprint when several.
+- Recap = **Task lines** + outcome: `to test`, `blocked`, `skipped` (lock, blocker, state moved). By sprint if several.
 - One **Report** per delivered task, one **Question** per blocked one.

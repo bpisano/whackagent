@@ -23,7 +23,7 @@ Read: voice, pr, components, tasks, git, store
      - not on it → name it, switch only on yes (**git → Dirty tree**)
      - sprint test branch → **git → Sprint test branch → Leaving it**
 2. **Review** `to-test` → *Review*.
-3. **Check nothing moved** — `git diff` against the state `## Review` recorded. Changed → say what, *Review* with scope = delta.
+3. **Check nothing moved** — `git diff` against the state `## Review` recorded. Changed → say what, *Review* with scope = delta. Shot screen touched → re-shoot (**pr → Screenshots**).
 4. **Wiki** → *Wiki*, before commit.
 5. **Print** a **Landing** before touching git, then go on: no yes needed.
    - Code changed since the user's test → **Warning** + `ok?`, wait.
@@ -39,7 +39,7 @@ Read: voice, pr, components, tasks, git, store
 11. **Next branch** — `files`, when `branch.per_task` + `commit.auto_commit_after_validation` + `branch.checkout_next`:
     - top unblocked `todo` → its branch per **git → Task branch** (**git → Dirty tree**)
     - show its **Branch line**, **Next** `/wa-code <n>`
-12. **Report** — the **Landing** again, PR URL when one exists. Failed step → its extra line only.
+12. **Report** — the **Landing** again + **Shots**, PR URL if any. Failed step → its extra line only.
 
 ## Review
 
@@ -89,7 +89,7 @@ Failure before the push → lock still held: say so. User leaves it → `release
   - Conflict → stop, leave merge in progress, name files, task stays `to-close`.
 - **Standalone** → `close.strategy`:
   - `nothing` (default) → stop after commit. **Landing** extra line: branch kept, PR is yours.
-  - `pr` → push, `gh pr create --base <close.target>`, title + body per **pr** (To test from `## Acceptance criteria`). Print URL.
+  - `pr` → push, `gh pr create --base <close.target>`, title, body, screenshots per **pr** (To test from `## Acceptance criteria`). Print URL.
     - `gh` missing or unauthenticated → say so, fall back to `nothing`, branch stays pushed.
   - `merge` → merge into `close.target` locally, no push.
     - Target checked out elsewhere or dirty → say so, stop.
@@ -108,7 +108,7 @@ Failure before the push → lock still held: say so. User leaves it → `release
 
 Sprint complete per **tasks → Sprints**.
 
-- `github` → completes when the last task PR merges. This close can't see it: 🏁 line (**components → Task list**) + sprint PR once the task PR merges. Next `/wa-close` or `/wa-board` that finds it complete proposes it.
+- `github` → completes when the last task PR merges. This close can't see it: 🏁 line (**components → Task list**). Next `/wa-close` or `/wa-board` finding it complete proposes the sprint PR.
 
 Then:
 

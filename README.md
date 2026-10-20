@@ -100,7 +100,7 @@ The task file stays the source of truth. A GitHub Project shows it to the team.
 - **The board follows the files.** A GitHub Action reads the task file on every push and moves the card. A merged PR moves it to Done and closes the issue.
 - **One person per task.** Grilling and coding take a lock. Someone else trying gets `🔒 #42 grilling — alice@mbp since 2h`. A review locks the task too, but the card stays in To test.
 - **One draft PR per task.** Every round pushes to it and rewrites its body. `/wa-close` marks it ready. You merge.
-- **Same PR shape every time**: one sentence, `Changes` (`Add …`, `Change …`, `Fix …`, `Remove …`, `Improve …`), `To test`, optional `Notes`, `Closes #n` last. Template in `conventions/pr.md`, yours to edit; the repo's `.github/pull_request_template.md` wins if present. Language: `pr_language`. Never signed by Claude.
+- **Same PR shape every time**: one sentence, `Changes` (`Add …`, `Change …`, `Fix …`, `Remove …`, `Improve …`), `Screenshots` (UI only), `To test`, optional `Notes`, `Closes #n` last. Template in `conventions/pr.md`, yours to edit; the repo's `.github/pull_request_template.md` wins if present. Language: `pr_language`. Never signed by Claude.
 
 Setup needs `gh` with the `project` scope and a token for the Action (`WA_PROJECT_TOKEN`). `/wa-setup` walks you through both.
 
@@ -145,6 +145,7 @@ In `.whackagent/config.md`:
 - **`verify.mode`** — who tests the running app. `autopilot` (default): the agent, only in `/wa-autopilot`. `always`, `off`.
 - **`branch.per_task`** — one branch per task (always on with GitHub).
 - **`close.strategy`** (`files` only) — what `/wa-close` does with the branch: `nothing` (default), `pr`, `merge`.
+- **`pr_screenshots`** (apps with a PR) — `/wa-validate` puts screenshots of the touched screens in the PR: a new screen as is, a changed screen as before/after (the base is built aside). `mode: auto` (default) or `off`, `width: 250` (iPhone). Taken once, on the same simulator, uploaded with `gh pr edit --attach` (gh ≥ 2.102). A failed shot never blocks the PR.
 - **`review.when`** — review once at the end (default), or after every round.
 - **`paths`** — move the wiki, tasks or backlog, e.g. to `docs/` so the team can read them.
 

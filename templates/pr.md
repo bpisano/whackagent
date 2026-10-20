@@ -9,6 +9,9 @@ Headings translated to `pr_language`. HTML comments never copied into the PR.
 <!-- one change per line, pattern per type, this order: Add · Change · Fix · Remove · Improve -->
 - Add …
 
+## Screenshots
+<!-- UI changed only, filled by whackagent (pr_screenshots). New screen → images in a row; changed screen → Before | After table. Else drop the section. -->
+
 ## To test
 <!-- one manual check per line -->
 - [ ] …

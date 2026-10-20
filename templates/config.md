@@ -6,6 +6,9 @@ ui_strings_language: en        # user-facing strings
 pr_language: ""                # PR titles + bodies. Empty → discussion_language
 pr_title_prefix: false         # true → PR title starts with the commit prefix (`fix: …`): squash
                                # merges then keep conventional commits on main. Not asked at setup.
+pr_screenshots:                # screenshots of changed screens in PR, taken once at /wa-validate
+  mode: auto                   # auto — UI changed → new screen shots, changed screen before/after · off
+  width: 250                   # px in PR body, height auto (250 = iPhone)
 primary_language: swift        # swift | typescript | generic | ...
 project_kind: app              # app | package | cli | server  (pick architecture module)
 

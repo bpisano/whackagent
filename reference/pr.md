@@ -36,6 +36,24 @@ One change a line, glossary terms, sorted by type:
 - Words the user sees, not `debounce` / `backoff`. Why, not how.
 - `Improve` only with a measure.
 
+## Screenshots
+
+`pr_screenshots.mode: auto` + `verify.platform` set + a PR in the flow (`github`, or `close.strategy: pr`). Else none, section dropped.
+
+- **Capture** — task review clean → one `wa-screenshot`. Inputs: task file, diff, `merge-base`, `verify.platform`, glossary **Screens** / **Parts**, out dir `{reports}/<key>/shots/`.
+  - Cached with its sha. Later delta touches a shot screen → re-shoot that screen only.
+  - No screen touched → none.
+- **Section** `## Screenshots`, after `## Changes`, even if the template lacks it. Caption = glossary screen name.
+  - New screen → images in a row.
+  - Changed screen → `| Before | After |` table, one row a state. State absent before → `—`.
+- **Upload**, two passes:
+  1. Body with `![<Screen> <state>](./<file>.png)` in place → `gh pr edit <pr> --body-file … --attach <file>…` (`gh pr create` at `/wa-close`). Paths rewritten to `user-attachments` URLs.
+  2. Each `![alt](url)` → `<img src="url" width="<pr_screenshots.width>" alt="alt">` → `gh pr edit --body-file`.
+  - Body rewrite → keep uploaded URLs, attach new shots only.
+- **Sprint PR** → reuse task PR URLs: per screen, first task's before, last task's after. No capture, no upload.
+- **Failure** never blocks (build, sim, `gh` < 2.102, `--attach` non-zero). Keep what uploaded, never half a pair. **Warning** + **components → Shots**.
+- No confirm before upload. Never a shot from the sprint test branch.
+
 ## Example
 
 ```md

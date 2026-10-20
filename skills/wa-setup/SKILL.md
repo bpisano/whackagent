@@ -12,7 +12,7 @@ Read: voice, components, tasks, git, store-files, store-github
 ## Steps
 
 1. **Pick the run.** No `.whackagent/config.md` → **First setup**. Else **Re-run**.
-   - Arg (`tasks`, `paths`, `review`, `build`, `branch`, `commit`, `verify`, `languages`) → that section's **Questions** only. First setup + arg → say it's ignored.
+   - Arg (`tasks`, `paths`, `review`, `build`, `branch`, `commit`, `verify`, `pr`, `languages`) → that section's **Questions** only. First setup + arg → say it's ignored.
 2. **Run the block.**
 
 ## First setup
@@ -38,7 +38,7 @@ Read: voice, components, tasks, git, store-files, store-github
 
 ## Questions
 
-One **Question** each, detected value as default. 7–12 total, rest = template default. Ask 8 before 7.
+One **Question** each, detected value as default. 7–13 total, rest = template default. Ask 8 before 7.
 
 1. **Languages** — discussion: detected from the user. `pr_language` (`github` or `close.strategy: pr`): language of the last 10 merged PRs (`gh pr list --state merged`), else discussion.
 2. **Language + kind** — confirm (`app` / `package` / `cli` / `server`); kind picks the architecture module.
@@ -74,6 +74,9 @@ One **Question** each, detected value as default. 7–12 total, rest = template 
 12. **Verify** — kind `app` only → `verify.mode` + `verify.platform` / `verify.target`. Autopilot always drives. Attended: agent drives, or you test? Recommend you test (`autopilot`).
     - `always` = agent drives too. Name `off` only on pushback.
     - iOS → XcodeBuildMCP. Android / device → needs `mobile-next/mobile-mcp`, say so.
+13. **PR screenshots** — kind `app` + a PR in the flow (`github` or `close.strategy: pr`) → `pr_screenshots.mode`, recommend `auto`. `width` not asked.
+    - Say: shot once at validation; new screen → shots, changed screen → before/after (base built aside). **pr → Screenshots**.
+    - `gh` < 2.102 (no `--attach`) → say to upgrade.
 
 ## Scaffold
 

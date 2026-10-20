@@ -36,6 +36,7 @@ Read: voice, pr, components, tasks, git, store
    - Else, code moved → say plainly it changed since the user's test, name files.
 7. **Set state** `to-close` per **store**.
    - Findings still open → stay `to-test`: not closable.
+   - Clean → screenshots per **pr → Screenshots**: one `wa-screenshot`. `github` → uploaded in this round's PR edit. `files` → kept for `/wa-close`.
    - `github` → round end per **store-github → Rounds**: file `status:` + `## Review`, commit (**git → Commits**), push. Hook moves the card.
    - `github`, aborted before any push → `release <n> coding` alone.
    - Sprint task + autofix changed code → rebuild the sprint test branch (**git → Sprint test branch**). Nothing changed → no rebuild.
