@@ -131,6 +131,7 @@ commit:
   author_email: ""             # `git config user.name` / `user.email` at commit time, never made-up one.
                                # Config versioned, shared → never personal identity here: teammates'
                                # commits would carry it. Set only for shared identity (team bot).
+                               # Rules: reference/commits.md.
 
 branch:
   per_task: false              # /wa-code work on own branch per task instead of current one
@@ -150,7 +151,7 @@ branch:
                                #   {server: develop_synchro} — key = milestone title, value = branch.
                                # Task in that milestone fork from + land on that branch instead of
                                # base:/close.target. New tasks never join it by default; agent
-                               # suggests, you decide. Rules: wa-board → Tracks. Needs per_task.
+                               # suggests, you decide. Rules: reference/tracks.md. Needs per_task.
                                # You own list. Empty (default) → no track, flow unchanged.
   checkout_next: true          # after /wa-close commit, hop onto next task branch (worktree mode:
                                #   create its worktree)
@@ -179,7 +180,7 @@ close:                         # WHERE work land when /wa-close finish a task. T
                                # Worktree for the slug (autopilot leftover) removed with it.
 
 pr:                            # HOW every PR whackagent open look — ticket draft, /wa-close PR, sprint PR.
-                               # Rules: wa-board → Pull requests. Release PR not: release doc own it.
+                               # Rules: reference/pull-requests.md. Release PR not: release doc own it.
   template: auto               # (key missing → none, old behavior)
                                # auto — repo PR template when present (.github/pull_request_template.md,
                                #   .github/PULL_REQUEST_TEMPLATE/…): sections filled from task file,

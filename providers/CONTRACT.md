@@ -74,10 +74,10 @@ Exit codes: 0 ok · 1 error · 2 usage · 3 claim taken · 4 wrong state. Treat 
 
 ## Milestones
 
-Release scope (iteration, version) — **not** a sprint. Sprint = feature grouping with its own branch (**wa-board → Sprints**); milestone = what ships together. Ticket carries both, either, or none. Skill-side rules: **wa-board → Milestones**.
+Release scope (iteration, version) — **not** a sprint. Sprint = feature grouping with its own branch (**reference/sprints.md**); milestone = what ships together. Ticket carries both, either, or none. Skill-side rules: **reference/milestones.md**.
 
 - **Humans own the list.** They open milestones on the tracker (local: config). No verb creates one; `set-field` / `create --milestone` with unknown title → exit 2. Closing = human on tracker, or `close-milestone` from `/wa-release` on user's yes.
-- **`create` defaults to highest open milestone**, so new work lands in the scope being planned, never in current or past one. `--milestone m` = that one; `--milestone ""` = none. No open milestone → none. **Track milestones** (keys of `branch.tracks`, **wa-board → Tracks**) never picked as default — provider knows them from its settings (GitHub: `WA_TRACKS`; local: config); only `--milestone <track>` puts ticket there.
+- **`create` defaults to highest open milestone**, so new work lands in the scope being planned, never in current or past one. `--milestone m` = that one; `--milestone ""` = none. No open milestone → none. **Track milestones** (keys of `branch.tracks`, **reference/tracks.md**) never picked as default — provider knows them from its settings (GitHub: `WA_TRACKS`; local: config); only `--milestone <track>` puts ticket there.
 - **Highest** = title in version order, digit runs compared as numbers (`0.10.0` > `0.9.0` > `0.3.0` > `0.2.1`); same rank → creation order (GitHub milestone number, local position in `backlog.milestones`). Why title, not creation: patch milestone opened late (`0.2.1` after `0.3.0`) is current scope, not where new work lands.
 - Tracker without milestones → `milestones` returns `[]`, `milestone` null, flag accepted and ignored.
 

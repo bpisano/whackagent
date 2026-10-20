@@ -11,7 +11,7 @@ sprint:                 # OPTIONAL kebab-case label group big work ("login-refac
                         # Empty = standalone task. Sprint exist because task name it —
                         # no sprint file, no create command. See /wa-task → Sprints.
 milestone:              # release scope. Set at creation = highest open (version order of backlog.milestones).
-                        # Not sprint. See /wa-board → Milestones.
+                        # Not sprint. See reference/milestones.md.
 status: todo            # todo | in-progress | review | validated | done | canceled
                         #   review    = coded, wait YOU test it
                         #   validated = you say match spec, verifier ran, wait your retest
@@ -19,7 +19,7 @@ status: todo            # todo | in-progress | review | validated | done | cance
 grilled: false          # true once clarified via /wa-grill (grill-me)
 wiki:                   # [[page]] refs, comma-separated
 note:                   # free-form trigger / context (optional, not auto-evaluated)
-# ported-from: #530     # TRACKS only (wa-board → Tracks): back-port of track PR onto base. Sync reads it.
+# ported-from: #530     # TRACKS only (reference/tracks.md): back-port of track PR onto base. Sync reads it.
 # lands: server         # TRACKS only: this task merges track into base. Uncomment when set.
 created:                # YYYY-MM-DD
 ---

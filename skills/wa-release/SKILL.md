@@ -7,18 +7,20 @@ description: Ship one milestone — check its tasks landed, then walk you throug
 
 **Milestone ready to ship.** `/wa-release` check scope landed, then follow **project's** release flow — the one written down, not one Claude know from elsewhere. Every app ship different (store, registry, deploy, tag, nothing). Guessing = shipping wrong thing.
 
-Wording (screen + reports): **wa-board → Voice**. Every question: recommendation + one-line reason, **wa-grill → Question format**. Milestone rules: **wa-board → Milestones**.
+Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` `display.md` `provider.md` `milestones.md` `commits.md` · `backlog.provider: github` → + `provider-github.md` · `branch.tracks` non-empty → + `tracks.md`.
+
+Wording (screen + reports): **reference/voice.md**. Every question: recommendation + one-line reason, **wa-grill → Question format**. Milestone rules: **reference/milestones.md**.
 
 Where sit: tasks → `/wa-close` each → *milestone complete* → **`/wa-release <milestone>`**. Outside task lifecycle: touches no task state, claims nothing.
 
 ## Do
 
-1. **Resolve milestone.** Read `.whackagent/config.md` (`{…}` paths per **wa-board → Paths**). Provider `milestones` verb (**wa-board → Backlog provider**).
-   - Arg → match title (exact, then unique case-insensitive). Unknown → list milestones, stop. Track milestone (key of `branch.tracks`) → refuse: track ships through its landing task inside a release milestone (**wa-board → Tracks**), stop. Closed → say `already closed — released?`; resume only if `{reports}/release-<milestone>.md` has unfinished steps (step 5), else stop.
+1. **Resolve milestone.** Read `.whackagent/config.md` (`{…}` paths per **reference/paths.md**). Provider `milestones` verb (**reference/provider.md**).
+   - Arg → match title (exact, then unique case-insensitive). Unknown → list milestones, stop. Track milestone (key of `branch.tracks`) → refuse: track ships through its landing task inside a release milestone (**reference/tracks.md**), stop. Closed → say `already closed — released?`; resume only if `{reports}/release-<milestone>.md` has unfinished steps (step 5), else stop.
    - No arg → list open milestones except tracks, highest last, with progress (`🎯 0.2.0 — 5/5 done`), recommend **lowest open** — highest is where new work lands, lowest is what ships next. Fully done one beats it only when user says so.
-   - No milestone at all → say release needs one (**wa-board → Milestones**: local `backlog.milestones`, GitHub repo milestones), stop.
+   - No milestone at all → say release needs one (**reference/milestones.md**: local `backlog.milestones`, GitHub repo milestones), stop.
 2. **Readiness.** `list --milestone <m> --all`. Canceled / closed-not-done tickets don't count.
-   - **Not done** → list them (wa-board list format, line 1). Ask, recommendation by state:
+   - **Not done** → list them (**reference/display.md → Display format**, line 1). Ask, recommendation by state:
      - move leftovers to next open milestone (`set-field <id> milestone <next>`) — recommended when all `todo`/grilled: scope cut, release keeps its date;
      - stop, finish them first — recommended when any in review/validated/coding: one step from done;
      - ship anyway, they stay in milestone — only on explicit word.
@@ -76,7 +78,7 @@ version  : 0.2.0            (doc: version = milestone title)
 ## Running steps
 
 - **One step at a time**, echo `3/7 run tests + release builds`. Result → report file, then next.
-- **Commits** — `commit.author_name` / `commit.author_email` (empty → repo's git identity), **never as Claude**. Message format per doc, else repo's convention.
+- **Commits** — author + message per **reference/commits.md**.
 - **Release notes** (only when doc asks) — from milestone's done tasks: title + summary, grouped per doc's format (else per task, newest first). Shown as draft, user edits before it lands anywhere.
 - **Failure** → stop. Shortest decisive error line, cause, fix matching doc. Retry on yes. Never skip a step silently, never work around doc (no `--no-verify`, no forced push unless doc says).
 - **Branch state** checks (clean tree, right branch, up to date) — when doc names release branch, check before first ⚠️ step. Dirty → stop, ask.
@@ -84,7 +86,7 @@ version  : 0.2.0            (doc: version = milestone title)
 
 ## GitHub provider
 
-Same flow, provider verbs only (**wa-board → Backlog provider**). Readiness via `wa-backlog list --milestone <m> --all`; `close-milestone` through `wa-backlog`. Doc says open release PR / GitHub release → `gh` commands shown in plan as ⚠️, own yes each. Hooks untouched: release PR is not a ticket PR.
+Same flow, provider verbs only (**reference/provider-github.md**). Readiness via `wa-backlog list --milestone <m> --all`; `close-milestone` through `wa-backlog`. Doc says open release PR / GitHub release → `gh` commands shown in plan as ⚠️, own yes each. Hooks untouched: release PR is not a ticket PR.
 
 ## Never
 

@@ -8,15 +8,17 @@ model: opus
 
 `/wa-code` unattended, over batch. Same PM role, same pipeline, one addition: **independent tasks run parallel, each in own git worktree.** Give batch, walk away, read report.
 
-Wording (screen + reports): **wa-board → Voice** — telegraphic, tech terms stay English.
+Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` `session-name.md` `display.md` `worktrees.md` `commits.md` · arg names sprint or task has `sprint:` → + `sprints.md` · arg names milestone → + `milestones.md` · `backlog.provider: github` → + `provider-github.md` `pull-requests.md` · `branch.tracks` non-empty → + `tracks.md`.
+
+Wording (screen + reports): **reference/voice.md** — telegraphic, tech terms stay English.
 
 ## Scope
 
 Given tasks, or every `todo` task if none (confirm list first if user present). Best on small well-scoped tasks — say so if one look large. Each task enters at its own state — **Entry state** below.
 
-**Args take slugs, display indexes, sprint name or milestone title** (resolution **wa-board → Milestones**), mixed, any order: `/wa-autopilot login-apple`, `/wa-autopilot 2,4,5`, `/wa-autopilot 2-5`, `/wa-autopilot 3 sync-offline`, `/wa-autopilot login-refacto`. Indexes = `#` from wa-board list — resolve per **wa-board → Task indexes**. Always **echo resolved list** (`2 → login-apple`). Name session per **wa-board → Session name**. Bad index → stop, say which, no guess.
+**Args take slugs, display indexes, sprint name or milestone title** (resolution **reference/milestones.md**), mixed, any order: `/wa-autopilot login-apple`, `/wa-autopilot 2,4,5`, `/wa-autopilot 2-5`, `/wa-autopilot 3 sync-offline`, `/wa-autopilot login-refacto`. Indexes = `#` from wa-board list — resolve per **reference/display.md → Task indexes**. Always **echo resolved list** (`2 → login-apple`). Name session per **reference/session-name.md**. Bad index → stop, say which, no guess.
 
-**Sprint name expands to its `todo` tasks**, backlog order — `in-progress`, `review`, `validated` already moving or waiting on user, don't touch. Resolve per **wa-board → Sprints**; echo expansion (`login-refacto → login-apple · login-layout · login-errors (3 todo, 2 already in review)`) so user see what left out. Sprint with no todo task → say so, stop. Sprint tasks usually touch same screen, so expect most land in **separate waves** — wave planner doing job, not failure.
+**Sprint name expands to its `todo` tasks**, backlog order — `in-progress`, `review`, `validated` already moving or waiting on user, don't touch. Resolve per **reference/sprints.md**; echo expansion (`login-refacto → login-apple · login-layout · login-errors (3 todo, 2 already in review)`) so user see what left out. Sprint with no todo task → say so, stop. Sprint tasks usually touch same screen, so expect most land in **separate waves** — wave planner doing job, not failure.
 
 ## Entry state — any state, from where it stands
 
@@ -33,20 +35,20 @@ Task **named explicitly** (slug, index, `#n`) joins batch whatever its state. Sp
 | GitHub `grilling` / `coding` | claimed: `claim` exit 3 → skip, echo owner | — |
 | `done` / `canceled` | skip, echo | — |
 
-GitHub: claim before touching, as any round — `grilling` from `todo`, `coding` from `grilled` or `review` (**wa-board → Backlog provider**, *Agent round*). Round ends with nothing to push → `release <n> coding --reset-to review` when PR open, else `--reset-to grilled`.
+GitHub: claim before touching, as any round — `grilling` from `todo`, `coding` from `grilled` or `review` (**reference/provider-github.md**, *Agent round*). Round ends with nothing to push → `release <n> coding --reset-to review` when PR open, else `--reset-to grilled`.
 
 ## GitHub provider
 
-`backlog.provider: github` (rules **wa-board → Backlog provider**). Several autopilots, on several machines, may run on one board at once — claims keep them apart.
+`backlog.provider: github` (rules **reference/provider-github.md**). Several autopilots, on several machines, may run on one board at once — claims keep them apart.
 
 - **Scope** = unclaimed `grilled` tickets, board order (`wa-backlog list --state grilled`); args = `#n`, indexes, sprint name or milestone title (`list --sprint` / `--milestone`). Expansion never takes `todo` (grilling needs user) — except **AFK mode** (below). Ticket named explicitly → **Entry state**.
 - **Claim each ticket before its worktree** — `wa-backlog claim <n> coding`. Exit 3 → drop from batch, echo `#12 skipped: coded by <agent>` (`assigned: true` → `#12 skipped: assigned to @<login>`). Claim just before wave starts, not whole batch up front: later waves' tickets stay free for others until needed. **Post bricks** (`/wa-code` step 1) right after claim, never before: ticket not held = not yours to write on.
 - **Also check open PRs** before planning waves: `gh pr list --json number,headRefName,files` — ticket whose BRIEF files overlap files of open PR → warn in plan (`#14 touches LoginView like open PR #9 — merge conflict likely`). Warning, not block.
-- **Worktree from existing ticket branch** (grilling pushed it) — fetch, then `git worktree add {worktrees}/<n>-<slug> <branch>`. Never `-b` when branch exists: spec lives on it. No branch (spec in issue body) → per **wa-board → Backlog provider**, *Spec in issue body*, worktree on branch it creates.
-- **Delivery** — end of round per **wa-board → Backlog provider** (*Agent round*, *Draft PR*, *Hooks version gate*): commit (task file `phase: validated` + `## Review` included — `phase: review` when findings stay open, see step 3), push, open PR (hook links it to ticket), then — UI in diff — `wa-backlog screenshots <pr> <files>` (**wa-board → Backlog provider**, *Screenshots*). PR per **wa-board → Pull requests** (template, title, labels, assignees). **Validated → ready PR** (no `--draft`; already draft → `gh pr ready <pr>`) + `pr.reviewers` requested, acceptance criteria checklist **checked** (`- [x]`), body line `Validated by autopilot — verifier clean. Test, then merge — or /wa-feedback <n> <notes>.` Criterion only user can prove (agent couldn't run it) → stays `- [ ]`, named in body. **Findings open → draft PR**, boxes unchecked, `Draft — autopilot delivery, verifier findings open. Test, then /wa-feedback · /wa-validate.` No confirm: unattended. Hook moves ticket to `review`, drops claim — nothing sits in `coding` overnight. Print URL in report card header. Ready PR = user tests, then merges (GitHub or `/wa-close <n>`) — wiki already synced; `/wa-feedback` turns it back to draft (then `/wa-validate` readies it again).
+- **Worktree from existing ticket branch** (grilling pushed it) — fetch, then `git worktree add {worktrees}/<n>-<slug> <branch>`. Never `-b` when branch exists: spec lives on it. No branch (spec in issue body) → per **reference/provider-github.md**, *Spec in issue body*, worktree on branch it creates.
+- **Delivery** — end of round per **reference/provider-github.md** (*Agent round*, *Draft PR*, *Hooks version gate*): commit (task file `phase: validated` + `## Review` included — `phase: review` when findings stay open, see step 3), push, open PR (hook links it to ticket), then — UI in diff — `wa-backlog screenshots <pr> <files>` (**reference/provider-github.md**, *Screenshots*). PR per **reference/pull-requests.md** (template, title, labels, assignees). **Validated → ready PR** (no `--draft`; already draft → `gh pr ready <pr>`) + `pr.reviewers` requested, acceptance criteria checklist **checked** (`- [x]`), body line `Validated by autopilot — verifier clean. Test, then merge — or /wa-feedback <n> <notes>.` Criterion only user can prove (agent couldn't run it) → stays `- [ ]`, named in body. **Findings open → draft PR**, boxes unchecked, `Draft — autopilot delivery, verifier findings open. Test, then /wa-feedback · /wa-validate.` No confirm: unattended. Hook moves ticket to `review`, drops claim — nothing sits in `coding` overnight. Print URL in report card header. Ready PR = user tests, then merges (GitHub or `/wa-close <n>`) — wiki already synced; `/wa-feedback` turns it back to draft (then `/wa-validate` readies it again).
 - **Handoff** — nothing held after delivery: `/wa-feedback`, `/wa-validate`, `/wa-close` each claim from `review` for their own round, from any worktree or machine.
 - **Blocked ticket** → `wa-backlog release <n> coding --reset-to grilled --reason "BLOCKED: <question>"` — question lands on issue, ticket free for next attempt once answered.
-- **Tracks** (**wa-board → Tracks**, only when `branch.tracks` non-empty) — track tickets run like any, off their trunk. Never move ticket between trunks, never sync, never code `lands:` ticket: each needs user's yes → ticket stays out, named in plan. Blocker on other trunk → never stack across trunks: ticket waits (`#14 waits #9 on develop — needs sync`). Stale trunk → run anyway, drift named in report card.
+- **Tracks** (**reference/tracks.md**, only when `branch.tracks` non-empty) — track tickets run like any, off their trunk. Never move ticket between trunks, never sync, never code `lands:` ticket: each needs user's yes → ticket stays out, named in plan. Blocker on other trunk → never stack across trunks: ticket waits (`#14 waits #9 on develop — needs sync`). Stale trunk → run anyway, drift named in report card.
 
 ## AFK mode — whole backlog, nobody back before the end
 
@@ -69,8 +71,8 @@ Do `/wa-code` step 1 (**Plan**) for **every** task in batch, up front, main thre
 - **Related** → ticket waits for that blocker's wave and **stacks** on it (below), or skip it: blocker not in batch and not landed = forks off code that isn't there.
 - **Unrelated** (other sprint or track, or none) → ignored for git: ticket forks from its own base like any, own PR, body line `Blocked by #<x>: merge order is yours.`, plan names it. Never stacks.
 
-**Stacking** — related blocker in same batch, not landed: its wave delivers first, then dependent ticket **stacks on it**: worktree from ticket's own branch, `git rebase --onto origin/<blocker branch> $start^` (ticket range, **wa-board → Backlog provider**), `push --force-with-lease`, draft PR base = blocker branch, then `wa-backlog stack <pr> --on <blocker pr>` (**wa-board → Backlog provider**, *Stacked PRs*): chain = one GitHub stack. One open blocker per stacked ticket: two unlanded blockers on different branches → can't stack, ticket waits for next run. Ask user max stack depth before planning (recommend 2: every feedback round on bottom ticket cascades one rebase per layer) — AFK mode: no limit, no question. Echo stack in plan: `wave 2 (∥): #17 · #20 · #26   ← stacked on #16`.
-  - **Stack stays linear.** Each delivery stacks on chain tip, so chain = one stack. Feedback or fix round on lower ticket → cascade upper ones (**wa-board → Backlog provider**, *Stacked PRs*) before round ends — GitHub refuses non-linear stack.
+**Stacking** — related blocker in same batch, not landed: its wave delivers first, then dependent ticket **stacks on it**: worktree from ticket's own branch, `git rebase --onto origin/<blocker branch> $start^` (ticket range, **reference/provider-github.md**), `push --force-with-lease`, draft PR base = blocker branch, then `wa-backlog stack <pr> --on <blocker pr>` (**reference/provider-github.md**, *Stacked PRs*): chain = one GitHub stack. One open blocker per stacked ticket: two unlanded blockers on different branches → can't stack, ticket waits for next run. Ask user max stack depth before planning (recommend 2: every feedback round on bottom ticket cascades one rebase per layer) — AFK mode: no limit, no question. Echo stack in plan: `wave 2 (∥): #17 · #20 · #26   ← stacked on #16`.
+  - **Stack stays linear.** Each delivery stacks on chain tip, so chain = one stack. Feedback or fix round on lower ticket → cascade upper ones (**reference/provider-github.md**, *Stacked PRs*) before round ends — GitHub refuses non-linear stack.
   - `stack` exit 4 (blocker not top) → PR stays chained on blocker branch, merge order by hand: body says `Stacked on #<pr>: merge it first.`, plan names it.
 
 **Two tasks independent when all hold:**
@@ -93,7 +95,7 @@ wave 2     : sync-offline   (touches AuthStore, like login-apple)
 
 Each task get own checkout, so parallel implementers never see each other's edits.
 
-1. **Create worktree** at `{worktrees}/<slug>` (**wa-board → Worktrees**: outside repo), always branching whatever `branch.per_task` says. Fork point per `/wa-code` step 0: `branch.base` (track task: its trunk, **wa-board → Tracks**), **or sprint branch** when task carry `sprint:` and `branch.sprint_prefix` non-empty — create `<branch.sprint_prefix><sprint>` from that once, before wave, then fork every task of that sprint off it. GitHub: missing on `origin` → push it before first ticket forks or PR targets it, logged in report (**wa-board → Sprints**).
+1. **Create worktree** at `{worktrees}/<slug>` (**reference/worktrees.md**: outside repo), always branching whatever `branch.per_task` says. Fork point per `/wa-code` step 0: `branch.base` (track task: its trunk, **reference/tracks.md**), **or sprint branch** when task carry `sprint:` and `branch.sprint_prefix` non-empty — create `<branch.sprint_prefix><sprint>` from that once, before wave, then fork every task of that sprint off it. GitHub: missing on `origin` → push it before first ticket forks or PR targets it, logged in report (**reference/sprints.md**).
    ```
    git worktree add {worktrees}/<slug> -b <branch.prefix><slug> <fork point>
    ```
@@ -117,11 +119,11 @@ Each task get own checkout, so parallel implementers never see each other's edit
 
 ## 3. Close each task
 
-1. **Commit in its worktree**, on its branch, with the configured author name/email. **Never as Claude. Never merge to base. Never touch another branch.** The commit is the delivery, not a close: code reviewed by the verifier but unseen by the user, sitting on a branch nobody merged.
+1. **Commit in its worktree**, on its branch, author per **reference/commits.md**. **Never merge to base. Never touch another branch.** The commit is the delivery, not a close: code reviewed by the verifier but unseen by the user, sitting on a branch nobody merged.
 2. **`status: validated`** (verifier clean) or **`review`** (findings open) + notes — never `done`. A task leaves autopilot waiting for the user to test it; clean one needs only their retest + `/wa-close`. **Never merge into the sprint branch here** — that's `/wa-close`, after the user tests; an unreviewed merge poisons the base of every later task in the sprint. **Validated → sync wiki in the delivery**: `/wa-wiki` update mode scoped to the task (its ticket-range diff + task file + `wiki:` pages), committed on the ticket branch before push — docs ride the ready PR, so **user tests then merges** — on GitHub, or `/wa-close <n>` merges on their yes. Stacked chain → each ticket syncs on top of the one below, never conflicting. Findings open → skip: GitHub, `/wa-validate` syncs it; local, `/wa-close` step 2b.
 3. **Remove the worktree** (`git worktree remove {worktrees}/<slug>`) — the branch survives, that's what the user tests later. A blocked task keeps its worktree; say so in the report.
 
-Skip the report-and-iterate phase entirely — nobody's there to iterate with. Save the report to `{reports}/<slug>.md` (`{…}` from the config's `paths:` block, see **wa-board → Paths**) — **in the main checkout, never inside a worktree**: the worktree gets removed and the report with it.
+Skip the report-and-iterate phase entirely — nobody's there to iterate with. Save the report to `{reports}/<slug>.md` (`{…}` from the config's `paths:` block, see **reference/paths.md**) — **in the main checkout, never inside a worktree**: the worktree gets removed and the report with it.
 
 ## Blockers — skip and log, never ask, never guess
 
@@ -160,7 +162,7 @@ Rec: magic link, already in place for signup.
 
 Three parts, always this order:
 
-1. **Recap** — every task of the batch, **wa-board list format** (line 1 only), suffix `— to test · review clean`, `— to test · <n> findings open` or `— ⛔ blocked`. Sprint in play → progress line in title; several sprints → group recap by sprint.
+1. **Recap** — every task of the batch, **reference/display.md → Display format** (line 1 only), suffix `— to test · review clean`, `— to test · <n> findings open` or `— ⛔ blocked`. Sprint in play → progress line in title; several sprints → group recap by sprint.
 2. **One card per delivered task** — **wa-code → Report card**, branch in header instead of sprint tag. Same skeleton as attended `/wa-code`.
 3. **Blocked** — per task: open question + your recommended answer, one line each. Kept worktree → say so.
 

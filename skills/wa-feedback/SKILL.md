@@ -8,7 +8,9 @@ model: opus
 
 You saw build. You have notes. This apply them **without losing rules**.
 
-Wording (screen + reports): **wa-board → Voice** — telegraphic, tech terms stay English.
+Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md` `session-name.md` `display.md` · `branch.worktree: true` → + `worktrees.md` · `backlog.provider: github` → + `provider-github.md` `pull-requests.md` `commits.md`.
+
+Wording (screen + reports): **reference/voice.md** — telegraphic, tech terms stay English.
 
 Feedback where quality leak: change feel small, so code patched straight from main thread — no convention modules loaded, no reviewer look, nothing re-run. Three rounds later feature drift off style, off architecture, nobody re-check it work. This skill make that impossible: **inline fix safe because reviewer still see it before commit** — never because it looked small.
 
@@ -52,9 +54,9 @@ Rules = `/wa-code` → *Resuming, rounds 2+*, in full — delta only, anti-stale
 
 ## Do
 
-1. **Resolve task.** Arg = slug or display index (`/wa-feedback 2 the button should be secondary`), resolve per **wa-board → Task indexes**. No task given → the `in-progress` one, else most recent `review`. Ambiguous → ask, don't guess. Name session per **wa-board → Session name**. Read `.whackagent/config.md` + task file at `{tasks}/<slug>.md` (need `## Acceptance criteria`, `## Implementation`, `## Review`, `## Verification`). `{…}` paths come from config `paths:` block — see **wa-board → Paths**.
+1. **Resolve task.** Arg = slug or display index (`/wa-feedback 2 the button should be secondary`), resolve per **reference/display.md → Task indexes**. No task given → the `in-progress` one, else most recent `review`. Ambiguous → ask, don't guess. Name session per **reference/session-name.md**. Read `.whackagent/config.md` + task file at `{tasks}/<slug>.md` (need `## Acceptance criteria`, `## Implementation`, `## Review`, `## Verification`). `{…}` paths come from config `paths:` block — see **reference/paths.md**.
    - **`status: validated` → review it passed now stale.** Apply notes as usual, then set back to `review`: task need fresh `/wa-validate` before `/wa-close`. Never close on review predating last edit.
-   - **Right branch first.** Task delivered by `/wa-autopilot` — or `/wa-code` with `branch.per_task: true` — live on `<branch.prefix><slug>`. Check current branch; if work not here, say which branch it on and switch **only after user confirms** (their tree may be dirty). Never apply feedback to branch that don't hold the code. `branch.worktree: true` → no switch: work in task worktree, recreated from branch if gone (**wa-board → Worktrees**).
+   - **Right branch first.** Task delivered by `/wa-autopilot` — or `/wa-code` with `branch.per_task: true` — live on `<branch.prefix><slug>`. Check current branch; if work not here, say which branch it on and switch **only after user confirms** (their tree may be dirty). Never apply feedback to branch that don't hold the code. `branch.worktree: true` → no switch: work in task worktree, recreated from branch if gone (**reference/worktrees.md**).
 2. **Triage each feedback item** — say out loud which bucket, one line each:
    - **defect** — don't match acceptance criteria → fix, criteria unchanged.
    - **adjustment** — work, but not what user want (naming, placement, wording, behavior detail) → fix, and **update `## Acceptance criteria`** so criteria match reality; else verify re-fail on old criterion forever.
@@ -75,16 +77,16 @@ Rules = `/wa-code` → *Resuming, rounds 2+*, in full — delta only, anti-stale
 
 ## GitHub provider
 
-`backlog.provider: github` (rules **wa-board → Backlog provider**). Two entry points:
+`backlog.provider: github` (rules **reference/provider-github.md**). Two entry points:
 
-Ticket sits in `review` between rounds (**wa-board → Backlog provider**, *Agent round*). One round here:
+Ticket sits in `review` between rounds (**reference/provider-github.md**, *Agent round*). One round here:
 
-- **Hooks version gate** (**wa-board → Backlog provider**, *Hooks version gate*) before claim.
+- **Hooks version gate** (**reference/provider-github.md**, *Hooks version gate*) before claim.
 - **Claim first** — `wa-backlog claim <n> coding` (exit 3 → someone mid-round, say who, stop). Check out ticket branch, rebase not needed yet.
 - **Input** = user notes **plus PR review threads** (`gh pr view <pr> --comments`, `gh api repos/{repo}/pulls/<pr>/comments`) — quote reviewer words as feedback items, triage same way.
 - **PR already ready** (not draft) → `gh pr ready --undo` right before first commit, not earlier: code moving after validation, nobody merges it meanwhile. Board stays `review`. Undo ran, round then aborts → `gh pr ready` again.
 - **Round ends without push** — nothing to push (all items new scope), user drops round, `BLOCKED:` left open → `release <n> coding --reset-to review --reason "<why>"`. Claim never left dangling.
-- **Round end** — commit fixes + task file (`phase: review`, `## Feedback` round) with `commit.author_*`, push to PR, then **refresh PR body** (**wa-board → Backlog provider**, *PR body refresh*) — criteria triage moved, new behavior, status line `Draft — feedback round <n> not reviewed yet`. UI changed → refresh screenshots (**wa-board → Backlog provider**, *Screenshots*). Hook keeps `review`, drops claim, comments on ticket and PR with line permalink to new `## Feedback` round (`### Round <n>` block) — task file stays source, no `gh issue comment` / `gh pr comment` here, would double it. Next: your retest.
+- **Round end** — commit fixes + task file (`phase: review`, `## Feedback` round) per **reference/commits.md**, push to PR, then **refresh PR body** (**reference/provider-github.md**, *PR body refresh*) — criteria triage moved, new behavior, status line `Draft — feedback round <n> not reviewed yet`. UI changed → refresh screenshots (**reference/provider-github.md**, *Screenshots*). Hook keeps `review`, drops claim, comments on ticket and PR with line permalink to new `## Feedback` round (`### Round <n>` block) — task file stays source, no `gh issue comment` / `gh pr comment` here, would double it. Next: your retest.
 
 Never mark ready, never merge — `/wa-validate` marks ready, `/wa-close` merges on user's yes.
 

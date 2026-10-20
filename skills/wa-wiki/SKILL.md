@@ -7,12 +7,14 @@ description: Keep the wiki up to date, or look up project knowledge. /wa-wiki up
 
 Two modes, picked by argument.
 
-Wording (screen + reports): **wa-board → Voice** — telegraphic, tech terms stay English.
+Read `${CLAUDE_PLUGIN_ROOT}/reference/`: `voice.md` `paths.md`.
+
+Wording (screen + reports): **reference/voice.md** — telegraphic, tech terms stay English.
 
 - **`/wa-wiki`** (no arg) → **update** mode: sync wiki with changes.
 - **`/wa-wiki <feature or question>`** → **query** mode: look up project knowledge, answer.
 
-Read `.whackagent/config.md` first — its `paths:` block say where `{wiki}` and `{reports}` live (see **wa-board → Paths**). Wiki most often moved out of `.whackagent/`, so team can read it: write there, never default.
+Read `.whackagent/config.md` first — its `paths:` block say where `{wiki}` and `{reports}` live (see **reference/paths.md**). Wiki most often moved out of `.whackagent/`, so team can read it: write there, never default.
 
 ## Update mode — `/wa-wiki`
 
