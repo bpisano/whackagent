@@ -40,6 +40,8 @@ One change a line, glossary terms, sorted by type:
 
 `pr_screenshots.mode: auto` + `verify.platform` set + a PR in the flow (`github`, or `close.strategy: pr`). Else none, section dropped.
 
+- Independent of `verify.mode`: `autopilot` / `off` gate runtime checks, never shots.
+
 - **Capture** — task review clean → one `wa-screenshot`. Inputs: task file, diff, `merge-base`, `verify.platform`, glossary **Screens** / **Parts**, out dir `{reports}/<key>/shots/`.
   - Cached with its sha. Later delta touches a shot screen → re-shoot that screen only.
   - No screen touched → none.

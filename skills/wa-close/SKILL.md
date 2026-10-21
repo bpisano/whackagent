@@ -25,7 +25,7 @@ Read: voice, pr, components, tasks, git, store
 2. **Review** `to-test` → *Review*.
 3. **Check nothing moved** — `git diff` against the state `## Review` recorded. Changed → say what, *Review* with scope = delta.
 4. **Wiki** → *Wiki*, before commit.
-5. **Shots** — per **pr → Screenshots**, whatever path led here (validated or not). No shot for a touched screen at `HEAD` → one `wa-screenshot`, uploaded with the PR edit or create. Never blocks.
+5. **Shots** — per **pr → Screenshots**, whatever path led here (validated or not), whatever `verify.mode`. No shot for a touched screen at `HEAD` → one `wa-screenshot`, uploaded with the PR edit or create. Never blocks.
 6. **Go on, no yes.** Code changed since the user's test → **Landing** `⚠️` line, in user terms.
    - Only `files` + `close.strategy: merge` (no PR gate) → **Warning** + `ok?`, wait.
      - No → stop. Task stays `to-close`, review recorded, wiki pages left in tree, say so.
