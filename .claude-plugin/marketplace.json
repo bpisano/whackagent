@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Dev workflow with Claude Code: tasks, code, review and wiki.",
-    "version": "0.25.0"
+    "version": "0.26.0"
   },
   "plugins": [
     {
       "name": "whackagent",
       "source": "./",
       "description": "Dev workflow with Claude Code: tasks, code, review and wiki.",
-      "version": "0.25.0",
+      "version": "0.26.0",
       "author": {
         "name": "Benjamin Pisano"
       },

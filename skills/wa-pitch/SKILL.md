@@ -52,7 +52,7 @@ Read: voice, components, tasks, store
 UI project = `project_kind: app`, or pitch has screens (web app, site, dashboard). After grill, before split.
 
 - **Wording module** first.
-- Built per **wa-proto → Shell**, saved `{wiki}/protos/pitch.html`, published per **wa-proto** step 5.
+- Built per **wa-proto → Musts**, saved `{wiki}/protos/pitch.html`, published per **wa-proto** step 5.
 - One screen per v1 feature → `Screen` control, core-loop order. Key states (empty, filled) → `State` control. Nothing from `Later`.
 - Say once: features, not brand.
 - Ask once `Preview OK, or screens to change?`, own doubt as recommendation.
@@ -77,7 +77,7 @@ UI project = `project_kind: app`, or pitch has screens (web app, site, dashboard
 ## Out of scope
 ## Later
 ## Open guesses   ← grill cut short only
-## Preview        ← UI only: [pitch.html](protos/pitch.html) + artifact link
+## Preview        ← UI only: [pitch](protos/pitch.html) + artifact link
 ```
 
 ## Split

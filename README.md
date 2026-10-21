@@ -64,7 +64,7 @@ Each command ends with the next one to run.
 | `/wa-close [task]` | Reviews if needed, updates the wiki, commits, lands the branch. |
 | `/wa-autopilot [tasks\|sprint]` | Codes several tasks unattended, in parallel when possible. |
 | `/wa-review [scope] [--fix]` | Reviews any code, outside a task. |
-| `/wa-proto [idea\|task]` | Prototypes a UI idea as an HTML page: light/dark, controls on the right. No argument: what you're talking about. |
+| `/wa-proto [idea\|task]` | Prototypes a UI idea as a Claude artifact: free design, light/dark, controls to vary it. No argument: what you're talking about. |
 | `/wa-wiki [question]` | Answers from the wiki. No argument: syncs it. |
 
 A task is its backlog number (`/wa-code 3`) or its issue number with GitHub (`/wa-code 42`). Lists and ranges work: `2,4,5`, `2-5`.
