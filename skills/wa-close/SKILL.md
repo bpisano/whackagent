@@ -19,27 +19,27 @@ Read: voice, pr, components, tasks, git, store
    - Stacked (`stacked on:` in `## Implementation`) → maintain it per **git → Stacking**:
      - blocker not landed → **Warning** `⛔`, **Next** `/wa-close <blocker>`, stop
      - blocker landed → rebase own commits onto real base before review; `github`: `gh pr edit <pr> --base <base>`
-   - **Be on the task branch** — as **wa-validate** step 2:
-     - not on it → name it, switch only on yes (**git → Dirty tree**)
+   - **Be on the task branch**:
+     - not on it, clean tree → switch, say so. Dirty → **git → Dirty tree**
      - sprint test branch → **git → Sprint test branch → Leaving it**
 2. **Review** `to-test` → *Review*.
-3. **Check nothing moved** — `git diff` against the state `## Review` recorded. Changed → say what, *Review* with scope = delta. Shot screen touched → re-shoot (**pr → Screenshots**).
+3. **Check nothing moved** — `git diff` against the state `## Review` recorded. Changed → say what, *Review* with scope = delta.
 4. **Wiki** → *Wiki*, before commit.
-5. **Print** a **Landing** before touching git, then go on: no yes needed.
-   - Code changed since the user's test → **Warning** + `ok?`, wait.
-     - No → stop. Task stays `to-close`, review recorded, wiki pages left in tree, say so. `github` → `release <n> coding`.
-   - PR line: number once it exists, `PR · **Add Apple login**` when about to be created. Title → **pr**. Body never shown.
-6. **Commit** — `files`: when `commit.auto_commit_after_validation`; `github`: always. Author → **git → Commits**.
+5. **Shots** — per **pr → Screenshots**, whatever path led here (validated or not). No shot for a touched screen at `HEAD` → one `wa-screenshot`, uploaded with the PR edit or create. Never blocks.
+6. **Go on, no yes.** Code changed since the user's test → **Landing** `⚠️` line, in user terms.
+   - Only `files` + `close.strategy: merge` (no PR gate) → **Warning** + `ok?`, wait.
+     - No → stop. Task stays `to-close`, review recorded, wiki pages left in tree, say so.
+7. **Commit** — `files`: when `commit.auto_commit_after_validation`; `github`: always. Author → **git → Commits**.
    - Clean tree → skip.
    - Nothing committed + dirty tree → stop before any branch move.
-7. **Land** — `github` → *GitHub landing*. `files` → *Land*.
-8. **Clean up** — `files` only → *Cleanup*.
-9. **Set `done`** — `files` only, per **store** (backlog line keeps `· <Sprint>`). `github`: never, the hook does.
-10. **Sprint complete?** Last task of a sprint closed (`github`: merged) → *Sprint landing*.
-11. **Next branch** — `files`, when `branch.per_task` + `commit.auto_commit_after_validation` + `branch.checkout_next`:
+8. **Land** — `github` → *GitHub landing*. `files` → *Land*.
+9. **Clean up** — `files` only → *Cleanup*.
+10. **Set `done`** — `files` only, per **store** (backlog line keeps `· <Sprint>`). `github`: never, the hook does.
+11. **Sprint complete?** Last task of a sprint closed (`github`: merged) → *Sprint landing*.
+12. **Next branch** — `files`, when `branch.per_task` + `commit.auto_commit_after_validation` + `branch.checkout_next`:
     - top unblocked `todo` → its branch per **git → Task branch** (**git → Dirty tree**)
     - show its **Branch line**, **Next** `/wa-code <n>`
-12. **Report** — the **Landing** again + **Shots**, PR URL if any. Failed step → its extra line only.
+13. **Report** — **Landing**.
 
 ## Review
 
@@ -51,7 +51,7 @@ Run **wa-validate** steps 3–7 in full, scope = cumulative diff (or delta):
 
 Outcomes:
 - Clean, autofix changed nothing → silent.
-- Clean, autofix changed code → step 5 warns, in user terms. Yes = retested. Never bury it.
+- Clean, autofix changed code → step 6 `⚠️` line, in user terms. Never bury it.
 - Findings open → **Findings** with picks. Nothing lands, task back to `to-test`.
   - `github` → commit + push the round, task file `status: to-test` (moves the card), lock released.
 
@@ -59,7 +59,7 @@ Outcomes:
 
 `/wa-wiki` update mode, every time, scoped to this task:
 - diff (`branch.base` or sprint branch `..HEAD` + tree), `wiki:` field, `## Implementation`, report
-- pages left in tree, committed at step 6
+- pages left in tree, committed at step 7
 - nothing to change → silent
 - unsure which page → **Question**
 
@@ -88,7 +88,7 @@ Failure before the push → lock still held: say so. User leaves it → `release
   - Merge, never rebase or squash.
   - Conflict → stop, leave merge in progress, name files, task stays `to-close`.
 - **Standalone** → `close.strategy`:
-  - `nothing` (default) → stop after commit. **Landing** extra line: branch kept, PR is yours.
+  - `nothing` (default) → stop after commit. **Landing** `⚠️`: branch kept, PR is yours.
   - `pr` → push, `gh pr create --base <close.target>`, title, body, screenshots per **pr** (To test from `## Acceptance criteria`). Print URL.
     - `gh` missing or unauthenticated → say so, fall back to `nothing`, branch stays pushed.
   - `merge` → merge into `close.target` locally, no push.
@@ -138,4 +138,4 @@ Then:
 ## Next
 
 - `files` → `→ next: /wa-board`.
-- `github` → `→ next: merge the PR on GitHub`.
+- `github` → `→ next: merge <PR URL>`.

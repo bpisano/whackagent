@@ -93,6 +93,7 @@ One **Question** each, detected value as default. 7–13 total, rest = template 
 - **Xcode** → `.xcodebuildmcp/config.yaml` at repo root, unless present: `schemaVersion: 1`, `incrementalBuildsEnabled: true`.
 - Templates below = `${CLAUDE_PLUGIN_ROOT}/templates/`. `files` → `{backlog}` from `BACKLOG.md`, empty `{tasks}/`.
 - `{wiki}/index.md` from `wiki-index.md`, glossary link relative to `{wiki}`; empty `{reports}/`.
+- `{reports}` inside the repo → add it to `.gitignore`. Never committed.
 
 ## GitHub scaffold
 

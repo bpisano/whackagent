@@ -43,7 +43,7 @@ Test the app. Send notes with `/wa-feedback`, or close the task:
 /wa-close
 ```
 
-`/wa-close` reviews the code, updates the wiki, commits, and lands the branch.
+`/wa-close` reviews the code, updates the wiki, commits, and lands the branch. No question asked: it only stops on open findings or a conflict, and only reports what needs you.
 
 Each command ends with the next one to run.
 
@@ -145,7 +145,7 @@ In `.whackagent/config.md`:
 - **`verify.mode`** — who tests the running app. `autopilot` (default): the agent, only in `/wa-autopilot`. `always`, `off`.
 - **`branch.per_task`** — one branch per task (always on with GitHub).
 - **`close.strategy`** (`files` only) — what `/wa-close` does with the branch: `nothing` (default), `pr`, `merge`.
-- **`pr_screenshots`** (apps with a PR) — `/wa-validate` puts screenshots of the touched screens in the PR: a new screen as is, a changed screen as before/after (the base is built aside). `mode: auto` (default) or `off`, `width: 250` (iPhone). Taken once, on the same simulator, uploaded with `gh pr edit --attach` (gh ≥ 2.102). A failed shot never blocks the PR.
+- **`pr_screenshots`** (apps with a PR) — `/wa-validate` or `/wa-close` puts screenshots of the touched screens in the PR: a new screen as is, a changed screen as before/after (the base is built aside). `mode: auto` (default) or `off`, `width: 250` (iPhone). Taken once, on the same simulator, uploaded with `gh pr edit --attach` (gh ≥ 2.102). A failed shot never blocks the PR.
 - **`review.when`** — review once at the end (default), or after every round.
 - **`paths`** — move the wiki, tasks or backlog, e.g. to `docs/` so the team can read them.
 
@@ -158,7 +158,7 @@ In `.whackagent/config.md`:
   BACKLOG.md         # task order (files backend)
   tasks/<slug>.md    # one file per task
   wiki/              # project knowledge, [[wikilinks]] — pitch.md + its UI preview live here
-  reports/           # one report per delivered task
+  reports/           # one report per delivered task, git-ignored
 ```
 
 ## Conventions

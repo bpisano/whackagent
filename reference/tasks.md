@@ -9,6 +9,7 @@ The model every skill shares: config, paths, states, ids, sprints, types, blocke
   - Key missing → `.whackagent/<BACKLOG.md|tasks|wiki|reports|conventions>`.
   - Relative → from repo root. Absolute allowed.
   - Points at nothing → name key + target, suggest `/wa-setup`. Never fall back to `.whackagent/`, never create the folder elsewhere.
+- Other key missing → its default in `${CLAUDE_PLUGIN_ROOT}/templates/config.md`. Never off by absence.
 - Task file template: `${CLAUDE_PLUGIN_ROOT}/templates/task.md`.
 
 ## States
