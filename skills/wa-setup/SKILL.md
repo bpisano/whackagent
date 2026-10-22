@@ -7,7 +7,7 @@ description: Configures whackagent in a project, or re-asks its questions to cha
 
 Sets up whackagent. Re-run = same questions, current answers as defaults. Plugin updates → `/wa-update`.
 
-Read: voice, components, tasks, git, store-files, store-github
+Read: voice, components, tasks, git, store-files, store-github, store-plane
 
 ## Steps
 
@@ -32,7 +32,7 @@ Read: voice, components, tasks, git, store-files, store-github
      - UI: screen types (`*View`, `*Screen`, routes) → **Screens**; views on 2+ screens → **Parts**; navigation (`NavigationStack`, coordinators, router) → **Flows**
    - Build wrapper: `cli/`, `bin/`, `scripts/`, `Makefile` target. Project `CLAUDE.md` / README "ALWAYS use X to build" → strongest, binds the implementer.
 2. **Ask** **Questions**.
-3. **Scaffold** → **Scaffold**; `github` → **GitHub scaffold** too.
+3. **Scaffold** → **Scaffold**; `github` → **GitHub scaffold**, `plane` → **Plane scaffold** too.
 4. **Offer wiki seeding**: `architecture` + one page per subsystem, from source. Yes only.
 5. **Compress** if `compress_wiki: true`: `caveman-compress` config + wiki pages written now, delete `*.original.md`. Never backlog, tasks, reports. Wiki outside `.whackagent/` → ask first, recommend `compress_wiki: false`.
 
@@ -40,7 +40,7 @@ Read: voice, components, tasks, git, store-files, store-github
 
 One **Question** each, detected value as default. 7–13 total, rest = template default. Ask 8 before 7.
 
-1. **Languages** — discussion: detected from the user. `pr_language` (`github` or `close.strategy: pr`): language of the last 10 merged PRs (`gh pr list --state merged`), else discussion.
+1. **Languages** — discussion: detected from the user. `pr_language` (`board` or `close.strategy: pr`): language of the last 10 merged PRs (`gh pr list --state merged`), else discussion.
 2. **Language + kind** — confirm (`app` / `package` / `cli` / `server`); kind picks the architecture module.
 3. **Review timing** → `review.when`, recommend `on_validation`.
    - `each_round`: drift caught early, verifier round per note.
@@ -52,16 +52,17 @@ One **Question** each, detected value as default. 7–13 total, rest = template 
    - Say: author = machine git config, never Claude (**git → Commits**). Never ask for or store an author.
    - `user.email` empty → say so now.
    - Outside autopilot, nothing committed before validation.
-7. **Branch** — `github` → skip (`branch.per_task: true`, no close question: draft PR, user merges).
+7. **Branch** — `board` → skip (`branch.per_task: true`, no close question: draft PR, user merges).
    - Branch per task (`wa/add-apple-login`) or current? → `branch.per_task`. Yes → confirm `branch.prefix`, `branch.base` (`current` or `main`).
    - Say: + auto-commit → closing checks out the next task branch (`branch.checkout_next`, offer off). `/wa-autopilot` always branches. `branch.sprint_prefix` exists, not asked.
    - `per_task` → **on close**: `close.strategy` (`nothing` | `pr` | `merge`) + `close.target`, recommend `nothing`.
      - Sprint task merges into its sprint branch first; this sets the sprint's end.
      - `pr` needs `gh`, asks before each PR. `close.delete_branch` stays `auto`.
-8. **Task store** — GitHub remote only, else `files` → `tasks.backend`. Recommend `github` for a team, `files` alone.
+8. **Task store** — GitHub remote only, else `files` → `tasks.backend`. Recommend `github` for a team, `plane` if the team runs Plane, `files` alone.
    - Explain `github`: issue per task on a Project (column = state, order = priority, sprint = milestone); task file on `wa/<n>-<slug>`, a hook moves cards; locks; each round pushes, one draft PR per task.
-   - Costs one PAT secret per repo.
-9. **Paths** → `paths.*`, recommend `.whackagent/`. One question, per path only on "some of them". `github` → no backlog.
+   - `plane`: same flow, work item per task on a Plane project (state, estimate, label, module). Asks the project URL. Plane reachable from GitHub Actions.
+   - Costs one secret per repo (PAT, or Plane key).
+9. **Paths** → `paths.*`, recommend `.whackagent/`. One question, per path only on "some of them". `board` → no backlog.
    - Shared wiki/backlog → committed folder (`docs/`). `paths.reports` stays local.
    - Absolute OK. `.whackagent/config.md` never moves.
 10. **Apple references** — detected only. Copy into `{conventions}/apple/`? Recommend yes (agents open one topic page). Say: Apple text lands in your repo (public: your call); `/wa-update` refreshes.
@@ -74,7 +75,7 @@ One **Question** each, detected value as default. 7–13 total, rest = template 
 12. **Verify** — kind `app` only → `verify.mode` + `verify.platform` / `verify.target`. Autopilot always drives. Attended: agent drives, or you test? Recommend you test (`autopilot`).
     - `always` = agent drives too. Name `off` only on pushback.
     - iOS → XcodeBuildMCP. Android / device → needs `mobile-next/mobile-mcp`, say so.
-13. **PR screenshots** — kind `app` + a PR in the flow (`github` or `close.strategy: pr`) → `pr_screenshots.mode`, recommend `auto`. `width` not asked.
+13. **PR screenshots** — kind `app` + a PR in the flow (`board` or `close.strategy: pr`) → `pr_screenshots.mode`, recommend `auto`. `width` not asked.
     - Say: shot once at validation; new screen → shots, changed screen → before/after (base built aside). **pr → Screenshots**.
     - `gh` < 2.102 (no `--attach`) → say to upgrade.
 
@@ -117,6 +118,21 @@ Team-visible. One **Plan** (auth, project, status, size, variables, hook, secret
 6. `.md` tasks exist → **Import to GitHub**, same **Plan**.
 7. **Offer smoke test** (recommend yes): `create` → `claim <n> grilling` → `release <n> grilling --reset-to draft` → `cancel <n> --reason "smoke test"`.
 
+## Plane scaffold
+
+Team-visible. One **Plan** (token, project, states, estimate, labels, variables, hook, secret, config). Helper → **store-plane → Helper**.
+
+1. **Token** — env `WA_PLANE_TOKEN` set? Missing → user creates a key (Plane → Profile settings → Personal access tokens), adds `export WA_PLANE_TOKEN=…` to the shell profile, restarts Claude. Re-check.
+2. **Provision** — ask the project URL (`https://<host>/<workspace>/projects/<id>/…`). `provision --url <url> --tasks-path {tasks} --branch-prefix <prefix>`. Creates the eight states (Draft default), estimate `quickwin` / `medium` / `large`, type labels; sets `WA_*` variables.
+   - `--state todo="Ready"` maps a team state, `--type improvement=enhancement` a label.
+   - `states_extra` → name, ask; recommend dropping Plane defaults (Backlog, In Progress…). Yes → `--prune-states`. Items on them → user moves them first.
+   - Unreachable or API error → say it, stop.
+3. **Hook** — as **GitHub scaffold** 3, from `${CLAUDE_PLUGIN_ROOT}/templates/plane-board.yml`.
+4. **Secret** `WA_PLANE_TOKEN` — a Plane key (bot account if any): user runs `! pbpaste | gh secret set WA_PLANE_TOKEN -R <owner>/<repo>`. `provision` again → `secret_WA_PLANE_TOKEN: true`.
+5. **Config**: `tasks.backend: plane`, `tasks.project: <url>`, `branch.per_task: true`.
+6. `.md` tasks exist → no import: say open tasks are recreated with `/wa-draft`.
+7. **Smoke test** — as **GitHub scaffold** 7.
+
 ## Re-run
 
 1. **Detect** (**First setup** 1).
@@ -124,7 +140,7 @@ Team-visible. One **Plan** (auth, project, status, size, variables, hook, secret
 3. **Apply** what changed, each effect behind its **Plan**:
    - Config key by key, never re-copy the template. Rest byte-for-byte.
    - Path changed → move files: list, `git mv` (or move); dirty tree → say so first. Target not empty → stop: merge, other path, abort. Fix links (backlog → tasks relative to its folder, `[[page]]`, `wiki:`). Wiki left `.whackagent/` → recommend `compress_wiki: false`.
-   - `files` → `github` → **GitHub scaffold** + **Import to GitHub**.
+   - `files` → `github` → **GitHub scaffold** + **Import to GitHub**. → `plane` → **Plane scaffold** (6).
    - Module newly picked (Apple, wording, architecture swap) → copy per **Scaffold**. Never overwrite one present.
    - Folder deleted (key unchanged) → recreate empty, mention.
    - No wiki seeding, no compression.
@@ -136,7 +152,7 @@ Team-visible. One **Plan** (auth, project, status, size, variables, hook, secret
 
 1. Open tasks only (`draft`…`to-close`); `done` / `canceled` stay as archive.
 2. Backlog order: `create --title --summary --size [--type] [--sprint]` (drafts `--note`), `move <n> --bottom`. Then `blocked_by:` → `depend`.
-3. Grilled (`todo` and later): `gh issue develop`. Old local `wa/<slug>` → rebase commits onto it, delete locally (pushed: remote stays, say so). File → `{tasks}/<n>-<slug>.md`, add `issue:`, drop `title`, `summary`, `size`, `sprint`, `blocked_by`. Commit, push.
+3. Grilled (`todo` and later): `develop`. Old local `wa/<slug>` → rebase commits onto it, delete locally (pushed: remote stays, say so). File → `{tasks}/<n>-<slug>.md`, add `issue:`, drop `title`, `summary`, `size`, `sprint`, `blocked_by`. Commit, push.
 4. Remove imported files + `{backlog}` from base **after** all exist. Any failure → stop, remove nothing, report.
 
 ## Never
@@ -145,7 +161,8 @@ Team-visible. One **Plan** (auth, project, status, size, variables, hook, secret
 - Never continue `github` without `project` scope.
 - Never ask for or paste the token in chat.
 - Never push the hook to the default branch directly.
-- Never migrate `github` → `files`: unsupported, recommend staying.
+- Never migrate `github` / `plane` → `files`, or between them: unsupported, recommend staying.
+- Never continue `plane` without `WA_PLANE_TOKEN`.
 
 ## Next
 

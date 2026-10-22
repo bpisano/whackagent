@@ -14,7 +14,7 @@ Every PR whackagent opens or edits. Read by teammates who never saw the task. **
 
 ## Body
 
-- Template = `.github/pull_request_template.md` if the repo has one, else `{conventions}/pr.md`. Fill it as-is: sections, order, `Closes` last. ≤ 20 lines.
+- Template = `.github/pull_request_template.md` if the repo has one, else `{conventions}/pr.md`. Fill it as-is: sections, order, `Closes` last (`plane`: **store → Other**). ≤ 20 lines.
 - **Rewritten whole** at every write: end state, never round history ("after feedback").
 - **Sprint PR** sums up the sprint: never one bullet per task.
 - No task slugs, sprint jargon, verifier rounds, test counts, process section, follow-up list.

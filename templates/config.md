@@ -38,7 +38,10 @@ tasks:                         # WHERE tasks live. See wa-board → Task store.
                                #   coding one task. Every round commits + pushes; one draft PR per task.
                                #   {backlog} unused. Needs `gh` with `project` scope + WA_PROJECT_TOKEN
                                #   secret. See wa-board → Task store.
-  project: ""                  # github only: <owner>/<number> of the board, set by /wa-setup.
+                               # plane  — same flow, one work item per task on a Plane project (cloud
+                               #   or self-hosted). Code, branches, PRs stay on GitHub. Needs env
+                               #   WA_PLANE_TOKEN (Plane API key) + WA_PLANE_TOKEN repo secret.
+  project: ""                  # github: <owner>/<number> of the board · plane: project URL. Set by /wa-setup.
                                #   One board per repo, owned by whackagent.
 
 review:

@@ -105,9 +105,20 @@ The task file stays the source of truth. A GitHub Project shows it to the team.
 
 Setup needs `gh` with the `project` scope and a token for the Action (`WA_PROJECT_TOKEN`). `/wa-setup` walks you through both.
 
+### `plane`
+
+Same flow as `github`, with the board on a [Plane](https://plane.so) project (cloud or self-hosted). Code, branches, PRs and locks stay on GitHub.
+
+- **One work item per task**, shown `APP-42`. `/wa-code 42` or `/wa-code APP-42`.
+- **Same eight states**, created in the project (Draft is the default). Size is a Plane estimate, type a label, sprint a module, blockers native *blocked by* relations, priority the manual order.
+- **The same GitHub Action** moves items on push and merge, and completes a module once all its items are done. Plane must be reachable from GitHub.
+- **You're assigned** on the work item when you code it; the PR links back to it instead of `Closes #n`.
+
+Setup asks the project URL. Each dev exports their Plane API key as `WA_PLANE_TOKEN`; the Action gets one as a repo secret. No import from `files` or `github`: recreate open tasks with `/wa-draft`.
+
 ## Dependencies
 
-A task can be blocked by others. The board shows `⛔ #12`, `/wa-code` warns before starting. `/wa-autopilot` runs independent tasks in parallel and stacks a blocked task on its blocker's branch, without asking. Close the blocker first. With GitHub, they're the issue's native *blocked by* links.
+A task can be blocked by others. The board shows `⛔ #12`, `/wa-code` warns before starting. `/wa-autopilot` runs independent tasks in parallel and stacks a blocked task on its blocker's branch, without asking. Close the blocker first. With GitHub or Plane, they're native *blocked by* links.
 
 ## Types
 

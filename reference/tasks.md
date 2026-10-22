@@ -2,7 +2,7 @@
 
 The model every skill shares: config, paths, states, ids, sprints, types, blockers. Where tasks live → `store-<tasks.backend>.md`.
 
-`board` = any backend with a remote board (`github`). Skills say `board`, the store says how.
+`board` = any backend with a remote board (`github`, `plane`). Skills say `board`, the store says how.
 
 ## Config and paths
 

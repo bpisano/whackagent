@@ -1,0 +1,1050 @@
+#!/usr/bin/env python3
+"""whackagent Plane board helper — internal, called by the skills, never by the user.
+
+Tasks as work items of one Plane project (cloud or self-hosted, REST API v1), code and PRs on
+GitHub. Same verbs, JSON and exit codes as `github-board`. Stdlib only.
+
+Settings come from repository variables (shared with the board workflow), ids are cached per clone
+in <git-common-dir>/whackagent/plane-cache.json. Plane key: env WA_PLANE_TOKEN. Locks are git refs
+on the GitHub repo (`refs/wa-claims/<n>/<phase>`), as with `github-board`: Plane has no atomic write.
+
+Exit codes: 0 ok · 1 error · 2 usage · 3 claim taken · 4 wrong state for the operation.
+"""
+
+import argparse
+import concurrent.futures
+import datetime as dt
+import hashlib
+import html
+import json
+import os
+import re
+import socket
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+STATES = ["draft", "grilling", "todo", "coding", "to-test", "to-close", "done", "canceled"]
+DEFAULT_STATE_NAMES = {
+    "draft": "Draft",
+    "grilling": "Grilling",
+    "todo": "Todo",
+    "coding": "Coding",
+    "to-test": "To test",
+    "to-close": "To close",
+    "done": "Done",
+    "canceled": "Canceled",
+}
+# Plane requires a group per state; views, cycles and stats read it.
+STATE_GROUPS = {
+    "draft": "backlog",
+    "grilling": "backlog",
+    "todo": "unstarted",
+    "coding": "started",
+    "to-test": "started",
+    "to-close": "started",
+    "done": "completed",
+    "canceled": "cancelled",
+}
+STATE_COLORS = {
+    "draft": "#9ca3af",
+    "grilling": "#f97316",
+    "todo": "#3b82f6",
+    "coding": "#a855f7",
+    "to-test": "#eab308",
+    "to-close": "#ec4899",
+    "done": "#22c55e",
+    "canceled": "#ef4444",
+}
+STATE_DESCRIPTIONS = {
+    "draft": "Idea, not grilled yet",
+    "grilling": "Locked: someone is grilling it",
+    "todo": "Grilled, ready to code",
+    "coding": "Locked: an agent is coding it",
+    "to-test": "Coded, waiting for a human test",
+    "to-close": "Verified, retest then close",
+    "done": "PR merged",
+    "canceled": "Dropped",
+}
+HIDDEN = {"done", "canceled"}
+SIZES = ["quickwin", "medium", "large"]
+ESTIMATE_NAME = "Size"
+TYPES = ["feature", "improvement", "bug", "refactor"]
+TYPE_LABEL_COLORS = {"feature": "#0e8a16", "improvement": "#1d76db", "bug": "#d73a4a", "refactor": "#c5def5"}
+CLAIM_FROM = {"grilling": {"draft"}, "coding": {"todo", "to-test", "to-close"}}
+REVIEW_FROM = {"to-test", "to-close"}
+CLAIM_NAMESPACE = "wa-claims"
+IGNORE_LABEL = "wa-ignore"
+STEP = 10000  # sort_order gap, as Plane uses
+
+EXIT_ERROR, EXIT_USAGE, EXIT_TAKEN, EXIT_WRONG_STATE = 1, 2, 3, 4
+
+
+class Failure(Exception):
+    def __init__(self, message, code=EXIT_ERROR):
+        super().__init__(message)
+        self.code = code
+
+
+# ---------------------------------------------------------------- gh plumbing (code side)
+
+
+def gh(args, payload=None, check=True):
+    proc = subprocess.run(
+        ["gh", *args],
+        input=json.dumps(payload) if payload is not None else None,
+        capture_output=True,
+        text=True,
+    )
+    if check and proc.returncode != 0:
+        raise Failure(f"gh {' '.join(args[:3])}: {proc.stderr.strip() or proc.stdout.strip()}")
+    return proc
+
+
+def rest(method, path, body=None, check=True):
+    args = ["api", "-X", method, path]
+    if body is not None:
+        args += ["--input", "-"]
+    proc = gh(args, body, check=check)
+    out = proc.stdout.strip()
+    data = json.loads(out) if out else None
+    return (proc.returncode, data) if not check else data
+
+
+def git(*args):
+    return subprocess.run(["git", *args], capture_output=True, text=True, check=True).stdout.strip()
+
+
+def emit(value):
+    json.dump(value, sys.stdout, indent=2, ensure_ascii=False)
+    sys.stdout.write("\n")
+
+
+def note(message):
+    print(message, file=sys.stderr)
+
+
+# ---------------------------------------------------------------- Plane plumbing
+
+
+def token():
+    key = os.environ.get("WA_PLANE_TOKEN")
+    if not key:
+        raise Failure("WA_PLANE_TOKEN not set — Plane → Profile settings → Personal access tokens, then export it")
+    return key
+
+
+def plane(config_or_base, method, path, body=None, check=True):
+    """One call to the Plane API. Waits out the 60/min rate limit once."""
+    base = config_or_base["api"] if isinstance(config_or_base, dict) else config_or_base
+    url = base + path.lstrip("/")
+    data = json.dumps(body).encode() if body is not None else None
+    for attempt in range(2):
+        request = urllib.request.Request(url, data=data, method=method)
+        request.add_header("X-API-Key", token())
+        request.add_header("Accept", "application/json")
+        if data is not None:
+            request.add_header("Content-Type", "application/json")
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                raw = response.read().decode()
+                result = json.loads(raw) if raw.strip() else None
+                return (0, result) if not check else result
+        except urllib.error.HTTPError as error:
+            raw = error.read().decode(errors="replace")
+            if error.code == 429 and attempt == 0:
+                reset = error.headers.get("X-RateLimit-Reset")
+                time.sleep(min(60, max(1, int(reset) - int(time.time()))) if reset and reset.isdigit() else 30)
+                continue
+            try:
+                parsed = json.loads(raw)
+            except ValueError:
+                parsed = {"error": raw[:300]}
+            if not check:
+                return error.code, parsed
+            raise Failure(f"plane {method} {path}: {error.code} {json.dumps(parsed)[:300]}")
+        except urllib.error.URLError as error:
+            raise Failure(f"plane {base}: unreachable ({error.reason})")
+    raise Failure(f"plane {method} {path}: rate limited")
+
+
+def paged(config, path):
+    rows, cursor = [], None
+    while True:
+        sep = "&" if "?" in path else "?"
+        page = plane(config, "GET", f"{path}{sep}per_page=100" + (f"&cursor={cursor}" if cursor else ""))
+        if isinstance(page, list):
+            return page
+        rows += page.get("results", [])
+        if not page.get("next_page_results"):
+            return rows
+        cursor = page["next_cursor"]
+
+
+def parse_project_url(url):
+    """https://plane.acme.com/<workspace>/projects/<uuid>/… → web base, API base, workspace, project id."""
+    parts = urllib.parse.urlparse(url.strip())
+    match = re.match(r"^/([^/]+)/projects/([0-9a-f-]{36})", parts.path)
+    if parts.scheme not in ("http", "https") or not match:
+        raise Failure(f"not a Plane project URL: {url} (want https://<host>/<workspace>/projects/<id>/…)", EXIT_USAGE)
+    web = f"{parts.scheme}://{parts.netloc}"
+    # Plane Cloud serves the app and the API on different hosts; self-hosted serves both on one.
+    api_host = "https://api.plane.so" if parts.netloc == "app.plane.so" else web
+    return web, f"{api_host}/api/v1/", match.group(1), match.group(2)
+
+
+# ---------------------------------------------------------------- settings
+
+
+def cache_path():
+    return Path(git("rev-parse", "--path-format=absolute", "--git-common-dir")) / "whackagent" / "plane-cache.json"
+
+
+def current_repo():
+    return gh(["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"]).stdout.strip()
+
+
+def repo_variables(repo):
+    data = rest("GET", f"repos/{repo}/actions/variables?per_page=100")
+    return {v["name"]: v["value"] for v in data.get("variables", [])}
+
+
+def fingerprint(variables):
+    settings = {k: v for k, v in sorted(variables.items()) if k.startswith("WA_")}
+    return hashlib.sha256(json.dumps(settings).encode()).hexdigest()
+
+
+def project_root(web, api, slug, project_id):
+    return {"web": web, "api": api, "slug": slug, "project_id": project_id}
+
+
+def items_path(config):
+    return f"workspaces/{config['slug']}/projects/{config['project_id']}/{config['items']}/"
+
+
+def project_path(config, tail=""):
+    return f"workspaces/{config['slug']}/projects/{config['project_id']}/{tail}"
+
+
+def detect_items_route(root):
+    """`work-items/` on current Plane, `issues/` on older self-hosted instances."""
+    code, _ = plane(root, "GET", f"workspaces/{root['slug']}/projects/{root['project_id']}/work-items/?per_page=1", check=False)
+    return "work-items" if code == 0 else "issues"
+
+
+def load(refresh=False):
+    """Settings from repo variables, ids from Plane. Cache reused while the variables are unchanged."""
+    path = cache_path()
+    cached = json.loads(path.read_text()) if path.exists() else None
+    repo = cached["repo"] if cached else current_repo()
+    variables = repo_variables(repo)
+    if cached and not refresh and cached.get("fingerprint") == fingerprint(variables):
+        return cached
+    if "WA_PLANE_PROJECT_URL" not in variables:
+        raise Failure(f"{repo} has no WA_PLANE_PROJECT_URL variable — run /wa-setup (provision)")
+    web, api, slug, project_id = parse_project_url(variables["WA_PLANE_PROJECT_URL"])
+    root = project_root(web, api, slug, project_id)
+    project = plane(root, "GET", f"workspaces/{slug}/projects/{project_id}/")
+    custom = json.loads(variables.get("WA_STATES", "{}"))
+    custom_types = json.loads(variables.get("WA_TYPE_LABELS", "{}"))
+    state_names = {s: custom.get(s, DEFAULT_STATE_NAMES[s]) for s in STATES}
+    states = paged(root, f"workspaces/{slug}/projects/{project_id}/states/")
+    by_name = {s["name"]: s["id"] for s in states}
+    missing = [s for s, n in state_names.items() if n not in by_name]
+    if missing:
+        raise Failure(f"Plane states missing for {missing} — run provision again")
+    labels = paged(root, f"workspaces/{slug}/projects/{project_id}/labels/")
+    points = {}
+    code, estimate = plane(root, "GET", f"workspaces/{slug}/projects/{project_id}/estimates/", check=False)
+    if code == 0 and estimate and estimate.get("id"):
+        rows = plane(root, "GET", f"workspaces/{slug}/projects/{project_id}/estimates/{estimate['id']}/estimate-points/")
+        points = {p["value"]: p["id"] for p in (rows if isinstance(rows, list) else rows.get("results", []))}
+    me = plane(root, "GET", "users/me/")
+    config = {
+        **root,
+        "repo": repo,
+        "identifier": project["identifier"],
+        "items": detect_items_route(root),
+        "fingerprint": fingerprint(variables),
+        "me": me["id"],
+        "state_ids": {s: by_name[n] for s, n in state_names.items()},
+        "state_names": state_names,
+        "state_by_id": {s["id"]: s["name"] for s in states},
+        "labels": {l["name"]: l["id"] for l in labels},
+        "size_points": {s: points[s] for s in SIZES if s in points},
+        "tasks_path": variables.get("WA_TASKS_PATH", ".whackagent/tasks"),
+        "branch_prefix": variables.get("WA_BRANCH_PREFIX", "wa/"),
+        "stale_after_hours": int(variables.get("WA_STALE_AFTER_HOURS", "24")),
+        "type_labels": {t: custom_types.get(t, t) for t in TYPES},
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(config, indent=2))
+    return config
+
+
+# ---------------------------------------------------------------- tickets
+
+
+def summary_of(description):
+    text = re.sub(r"<br\s*/?>|</p>|</li>|</h\d>", "\n", description or "")
+    for line in html.unescape(re.sub(r"<[^>]+>", "", text)).splitlines():
+        if line.strip():
+            return line.strip()
+    return ""
+
+
+def to_html(text):
+    """Plain text (blank line = paragraph) → Plane description; bare URLs become links."""
+    def para(block):
+        escaped = html.escape(block.strip()).replace("\n", "<br>")
+        return "<p>" + re.sub(r"(https?://[^\s<]+)", r'<a href="\1">\1</a>', escaped) + "</p>"
+
+    return "".join(para(b) for b in re.split(r"\n\s*\n", text or "") if b.strip()) or "<p></p>"
+
+
+def key(config, number):
+    return f"{config['identifier']}-{number}"
+
+
+def item_url(config, item):
+    return f"{config['web']}/{config['slug']}/projects/{config['project_id']}/issues/{item['id']}"
+
+
+def all_items(config):
+    return paged(config, items_path(config))
+
+
+def module_map(config):
+    """Work item id → module name (first one), and module name → module."""
+    modules = paged(config, project_path(config, "modules/"))
+    by_item, by_name = {}, {}
+    for module in modules:
+        by_name[module["name"]] = module
+        for row in paged(config, project_path(config, f"modules/{module['id']}/module-issues/")):
+            by_item.setdefault(row.get("id") or row.get("issue"), module["name"])
+    return by_item, by_name
+
+
+def claims(config, number=None):
+    scope = f"{CLAIM_NAMESPACE}/{number}/" if number is not None else f"{CLAIM_NAMESPACE}/"
+    code, data = rest("GET", f"repos/{config['repo']}/git/matching-refs/{scope}", check=False)
+    found = {}
+    for ref in data or []:
+        _, _, held_by, phase = ref["ref"].split("/", 3)
+        found.setdefault(int(held_by), []).append({"phase": phase, "sha": ref["object"]["sha"]})
+    return found if number is None else found.get(number, [])
+
+
+def claim_owner(config, sha):
+    commit = rest("GET", f"repos/{config['repo']}/git/commits/{sha}")
+    fields = dict(line.split(": ", 1) for line in commit["message"].splitlines()[1:] if ": " in line)
+    return {"agent": fields.get("agent", "?"), "since": commit["committer"]["date"]}
+
+
+def to_ticket(config, item, claim_map, modules_by_item, with_owners=False, keep_sha=False):
+    by_state = {i: s for s, i in config["state_ids"].items()}
+    by_point = {i: s for s, i in config["size_points"].items()}
+    label_names = {i: n for n, i in config["labels"].items()}
+    by_label = {n: t for t, n in config["type_labels"].items()}
+    labels = [label_names.get(l) for l in item.get("labels") or []]
+    number = item["sequence_id"]
+    state_id = item.get("state")
+    held = claim_map.get(number, [])
+    if with_owners:
+        held = [{**c, **claim_owner(config, c["sha"])} for c in held]
+    state = by_state.get(state_id)
+    return {
+        "number": number,
+        "key": key(config, number),
+        "title": item["name"],
+        "summary": summary_of(item.get("description_html")),
+        "state": state,
+        "column": config["state_by_id"].get(state_id),
+        "size": by_point.get(item.get("estimate_point")),
+        "sprint": modules_by_item.get(item["id"]),
+        "closed": bool(item.get("archived_at")) or state in HIDDEN,
+        "type": next((by_label[l] for l in labels if l in by_label), None),
+        "ignored": IGNORE_LABEL in labels,
+        "assignees": item.get("assignees") or [],
+        "claims": [dict(c) if keep_sha else {k: v for k, v in c.items() if k != "sha"} for c in held],
+        "url": item_url(config, item),
+        "item_id": item["id"],
+    }
+
+
+def fetch(config, number):
+    code, item = plane(config, "GET", f"workspaces/{config['slug']}/{config['items']}/{key(config, number)}/", check=False)
+    if code != 0 or not item:
+        raise Failure(f"{key(config, number)} does not exist")
+    return item
+
+
+def find(config, number, with_owners=True):
+    item = fetch(config, number)
+    modules_by_item, _ = module_map(config)
+    ticket = to_ticket(config, item, {number: claims(config, number)}, modules_by_item, with_owners)
+    if ticket["column"] is None:  # state outside the cache: refresh once
+        config = load(refresh=True)
+        ticket = to_ticket(config, item, {number: claims(config, number)}, modules_by_item, with_owners)
+    return ticket
+
+
+def patch_item(config, item_id, fields):
+    return plane(config, "PATCH", f"{items_path(config)}{item_id}/", fields)
+
+
+def set_state_raw(config, ticket, state):
+    patch_item(config, ticket["item_id"], {"state": config["state_ids"][state]})
+
+
+def comment(config, item_id, text):
+    plane(config, "POST", f"{items_path(config)}{item_id}/comments/", {"comment_html": to_html(text)})
+
+
+def link(config, item_id, url, title):
+    code, data = plane(config, "POST", f"{items_path(config)}{item_id}/links/", {"url": url, "title": title}, check=False)
+    if code != 0 and "exist" not in json.dumps(data).lower():
+        raise Failure(f"link {url}: {json.dumps(data)[:200]}")
+
+
+def agent_id(explicit=None):
+    if explicit:
+        return explicit
+    if os.environ.get("WA_AGENT"):
+        return os.environ["WA_AGENT"]
+    try:
+        where = git("rev-parse", "--show-toplevel")
+    except subprocess.CalledProcessError:
+        where = os.getcwd()
+    return f"{socket.gethostname().split('.')[0]}:{where}"
+
+
+def claim_tree(config):
+    """One-file tree for claim commits; never a branch tree (workflow files need the `workflow` scope)."""
+    if not config.get("claim_blob_tree"):
+        tree = rest("POST", f"repos/{config['repo']}/git/trees", {
+            "tree": [{"path": "CLAIM", "mode": "100644", "type": "blob", "content": "whackagent claim\n"}],
+        })
+        config["claim_blob_tree"] = tree["sha"]
+        cache_path().write_text(json.dumps(config, indent=2))
+    return config["claim_blob_tree"]
+
+
+def remote_branch(config, number):
+    code, data = rest(
+        "GET", f"repos/{config['repo']}/git/matching-refs/heads/{config['branch_prefix']}{number}-", check=False
+    )
+    names = [r["ref"].removeprefix("refs/heads/") for r in data or []]
+    return names[0] if names else None
+
+
+def assign(config, item, add=False, everyone=False):
+    """Add or remove the key's owner, or drop every assignee. Never fails the operation."""
+    current = item.get("assignees") or []
+    if everyone:
+        wanted = []
+    elif add:
+        wanted = current + ([config["me"]] if config["me"] not in current else [])
+    else:
+        wanted = [a for a in current if a != config["me"]]
+    if wanted == current:
+        return
+    try:
+        patch_item(config, item["id"], {"assignees": wanted})
+    except Failure as error:
+        note(f"{key(config, item['sequence_id'])}: assignee not updated: {error}")
+
+
+def resolve(config, numbers):
+    return {n: fetch(config, n) for n in numbers}
+
+
+# ---------------------------------------------------------------- operations
+
+
+def op_config(args):
+    emit(load(refresh=args.refresh))
+
+
+def op_list(args):
+    config = load()
+    claim_map = claims(config)
+    modules_by_item, _ = module_map(config)
+    wanted = set(args.state.split(",")) if args.state else None
+    rows = []
+    for item in sorted(all_items(config), key=lambda i: i.get("sort_order") or 0):
+        ticket = to_ticket(config, item, claim_map, modules_by_item, keep_sha=args.owners)
+        if ticket["ignored"]:
+            continue
+        if wanted and ticket["state"] not in wanted:
+            continue
+        if not wanted and not args.all and (ticket["closed"] or ticket["state"] in HIDDEN):
+            continue
+        if args.sprint and ticket["sprint"] != args.sprint:
+            continue
+        if args.type and ticket["type"] != args.type:
+            continue
+        rows.append(ticket)
+    if args.owners:
+        claimed = [c for t in rows for c in t.get("claims", [])]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+            for claim, owner in zip(claimed, pool.map(lambda c: claim_owner(config, c["sha"]), claimed)):
+                claim.update(owner)
+    for t in rows:
+        for c in t.get("claims", []):
+            c.pop("sha", None)
+    emit(rows)
+
+
+def blocked_by(config, item):
+    code, data = plane(config, "GET", f"{items_path(config)}{item['id']}/relations/", check=False)
+    if code != 0:
+        return []
+    by_state = {i: s for s, i in config["state_ids"].items()}
+    rows = []
+    for rel in (data or {}).get("blocked_by", []):
+        other = plane(config, "GET", f"{items_path(config)}{rel['issue_id']}/")
+        rows.append({"number": other["sequence_id"], "key": key(config, other["sequence_id"]), "state": by_state.get(other["state"])})
+    return rows
+
+
+def op_get(args):
+    config = load()
+    ticket = find(config, args.number)
+    ticket["branch"] = remote_branch(config, args.number)
+    ticket["blocked_by"] = blocked_by(config, {"id": ticket["item_id"]})
+    emit(ticket)
+
+
+def bottom_order(config):
+    orders = [i.get("sort_order") or 0 for i in all_items(config)]
+    return (max(orders) if orders else 0) + STEP
+
+
+def op_create(args):
+    config = load()
+    body = args.summary + ("\n\n" + args.note if args.note else "")
+    fields = {
+        "name": args.title,
+        "description_html": to_html(body),
+        "state": config["state_ids"]["draft"],
+        "sort_order": bottom_order(config),
+    }
+    if args.type:
+        fields["labels"] = [label_id(config, config["type_labels"][args.type])]
+    if args.size:
+        fields["estimate_point"] = size_point(config, args.size)
+    item = plane(config, "POST", items_path(config), fields)
+    if args.sprint:
+        set_sprint(config, item, args.sprint)
+    number = item["sequence_id"]
+    emit({"number": number, "key": key(config, number), "url": item_url(config, item), "state": "draft"})
+
+
+def op_edit(args):
+    config = load()
+    fields = {}
+    if args.title is not None:
+        fields["name"] = args.title
+    if args.body is not None:
+        fields["description_html"] = to_html(args.body)
+    if not fields:
+        raise Failure("edit needs --title or --body", EXIT_USAGE)
+    patch_item(config, fetch(config, args.number)["id"], fields)
+    emit({"number": args.number, "title": args.title, "body": args.body})
+
+
+def op_develop(args):
+    """Task branch on GitHub, off <base>, linked from the work item."""
+    config = load()
+    item = fetch(config, args.number)
+    base = rest("GET", f"repos/{config['repo']}/git/ref/heads/{args.base}")["object"]["sha"]
+    code, data = rest("POST", f"repos/{config['repo']}/git/refs", {"ref": f"refs/heads/{args.name}", "sha": base}, check=False)
+    if code != 0 and (data or {}).get("message") != "Reference already exists":
+        raise Failure(f"could not create branch {args.name}: {(data or {}).get('message', 'unknown error')}")
+    link(config, item["id"], f"https://github.com/{config['repo']}/tree/{args.name}", f"Branch {args.name}")
+    emit({"number": args.number, "branch": args.name})
+
+
+def op_branch(args):
+    config = load()
+    emit({"number": args.number, "branch": remote_branch(config, args.number)})
+
+
+def op_claim(args):
+    phase = args.phase
+    if args.keep_state and phase != "coding":
+        raise Failure("--keep-state only applies to the coding lock", EXIT_USAGE)
+    config = load()
+    allowed = REVIEW_FROM if args.keep_state else CLAIM_FROM[phase]
+    item = fetch(config, args.number)
+    ticket = to_ticket(config, item, {}, {})
+    if ticket["closed"]:
+        raise Failure(f"{ticket['key']} is closed", EXIT_WRONG_STATE)
+    ref = f"refs/{CLAIM_NAMESPACE}/{args.number}/{phase}"
+    held = next((c for c in claims(config, args.number) if c["phase"] == phase), None)
+    if held:
+        taken(config, args.number, phase, held["sha"])
+    if ticket["state"] not in allowed:
+        where = ticket["state"] or f"in state {ticket['column']!r}"
+        raise Failure(f"{ticket['key']} is {where}, {phase} needs {sorted(allowed)}", EXIT_WRONG_STATE)
+    agent = agent_id(args.agent)
+    now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    commit = rest("POST", f"repos/{config['repo']}/git/commits", {
+        "message": f"wa-claim {phase} #{args.number}\n\nagent: {agent}\nclaimed: {now}\n",
+        "tree": claim_tree(config),
+        "parents": [],
+    })
+    code, data = rest("POST", f"repos/{config['repo']}/git/refs", {"ref": ref, "sha": commit["sha"]}, check=False)
+    if code != 0:
+        if (data or {}).get("message") != "Reference already exists":
+            raise Failure(f"could not create claim ref {ref}: {(data or {}).get('message', 'unknown error')}")
+        existing = rest("GET", f"repos/{config['repo']}/git/ref/{ref.removeprefix('refs/')}")
+        taken(config, args.number, phase, existing["object"]["sha"])
+    if not args.keep_state:
+        set_state_raw(config, ticket, phase)
+    if phase == "coding":
+        assign(config, item, add=True)
+    label = "review" if args.keep_state else phase
+    comment(config, item["id"], f"🔒 {label} — {agent} · {now}")
+    state = ticket["state"] if args.keep_state else phase
+    emit({"number": args.number, "key": ticket["key"], "phase": phase, "state": state, "taken": False, "agent": agent, "since": now})
+
+
+def taken(config, number, phase, sha):
+    owner = claim_owner(config, sha)
+    emit({"number": number, "key": key(config, number), "phase": phase, "taken": True, **owner})
+    raise Failure(f"{key(config, number)} {phase} already claimed by {owner['agent']} since {owner['since']}", EXIT_TAKEN)
+
+
+def op_release(args):
+    config = load()
+    item = fetch(config, args.number)
+    code, _ = rest("DELETE", f"repos/{config['repo']}/git/refs/{CLAIM_NAMESPACE}/{args.number}/{args.phase}", check=False)
+    if args.unassign:
+        assign(config, item, everyone=args.unassign == "all")
+    if args.reset_to:
+        patch_item(config, item["id"], {"state": config["state_ids"][args.reset_to]})
+    reason = f" — {args.reason}" if args.reason else ""
+    target = f", back to {args.reset_to}" if args.reset_to else ""
+    comment(config, item["id"], f"🔓 {args.phase} released{target}{reason}")
+    emit({"number": args.number, "phase": args.phase, "released": code == 0, "state": args.reset_to})
+
+
+def op_set_state(args):
+    config = load()
+    patch_item(config, fetch(config, args.number)["id"], {"state": config["state_ids"][args.state]})
+    emit({"number": args.number, "state": args.state})
+
+
+def op_cancel(args):
+    config = load()
+    item = fetch(config, args.number)
+    patch_item(config, item["id"], {"state": config["state_ids"]["canceled"]})
+    for claim in claims(config, args.number):
+        rest("DELETE", f"repos/{config['repo']}/git/refs/{CLAIM_NAMESPACE}/{args.number}/{claim['phase']}", check=False)
+    comment(config, item["id"], f"🚫 canceled — {args.reason}")
+    emit({"number": args.number, "state": "canceled"})
+
+
+def op_move(args):
+    """Priority = Plane manual order (sort_order). Lands between its new neighbours."""
+    config = load()
+    rows = sorted(all_items(config), key=lambda i: i.get("sort_order") or 0)
+    by_number = {i["sequence_id"]: i for i in rows}
+    for n in filter(lambda n: n is not None, [args.number, args.before, args.after]):
+        if n not in by_number:
+            raise Failure(f"{key(config, n)} is not in the project", EXIT_USAGE)
+    rest_rows = [i for i in rows if i["sequence_id"] != args.number]
+    orders = [i.get("sort_order") or 0 for i in rest_rows]
+    if not rest_rows:
+        order = STEP
+    elif args.top:
+        order = orders[0] - STEP
+    elif args.bottom:
+        order = orders[-1] + STEP
+    else:
+        anchor = [i["sequence_id"] for i in rest_rows].index(args.after if args.after is not None else args.before)
+        if args.after is not None:
+            order = (orders[anchor] + orders[anchor + 1]) / 2 if anchor + 1 < len(orders) else orders[anchor] + STEP
+        else:
+            order = (orders[anchor - 1] + orders[anchor]) / 2 if anchor > 0 else orders[anchor] - STEP
+    patch_item(config, by_number[args.number]["id"], {"sort_order": order})
+    emit({"number": args.number, "moved": True})
+
+
+def label_id(config, name):
+    if name not in config["labels"]:
+        config = load(refresh=True)
+    if name not in config["labels"]:
+        raise Failure(f"label {name!r} missing — run provision again")
+    return config["labels"][name]
+
+
+def size_point(config, size):
+    if size not in config["size_points"]:
+        raise Failure(f"estimate value {size!r} missing — run provision again")
+    return config["size_points"][size]
+
+
+def set_type(config, item, kind):
+    """Exactly one type label: drop the others, keep every other label."""
+    type_ids = {config["labels"].get(n) for n in config["type_labels"].values()} - {None}
+    kept = [l for l in item.get("labels") or [] if l not in type_ids]
+    patch_item(config, item["id"], {"labels": kept + [label_id(config, config["type_labels"][kind])]})
+
+
+def set_sprint(config, item, sprint):
+    """One module per work item. Created on first use, reopened if completed, never deleted."""
+    modules_by_item, by_name = module_map(config)
+    for name, module in by_name.items():
+        if name != sprint and modules_by_item.get(item["id"]) == name:
+            plane(config, "DELETE", project_path(config, f"modules/{module['id']}/module-issues/{item['id']}/"), check=False)
+    if not sprint:
+        return
+    module = by_name.get(sprint)
+    if not module:
+        module = plane(config, "POST", project_path(config, "modules/"), {"name": sprint, "status": "in-progress"})
+    elif module.get("status") in ("completed", "cancelled"):
+        plane(config, "PATCH", project_path(config, f"modules/{module['id']}/"), {"status": "in-progress"})
+    plane(config, "POST", project_path(config, f"modules/{module['id']}/module-issues/"), {"issues": [item["id"]]})
+
+
+def op_set_field(args):
+    config = load()
+    item = fetch(config, args.number)
+    if args.field == "size":
+        if args.value not in SIZES:
+            raise Failure(f"size must be one of {SIZES}", EXIT_USAGE)
+        patch_item(config, item["id"], {"estimate_point": size_point(config, args.value)})
+    elif args.field == "type":
+        if args.value not in TYPES:
+            raise Failure(f"type must be one of {TYPES}", EXIT_USAGE)
+        set_type(config, item, args.value)
+    else:
+        set_sprint(config, item, args.value)
+    emit({"number": args.number, args.field: args.value or None})
+
+
+def op_comment(args):
+    config = load()
+    comment(config, fetch(config, args.number)["id"], args.text)
+    emit({"number": args.number, "commented": True})
+
+
+def op_depend(args):
+    """<number> is blocked by each of --on (native relation). Idempotent."""
+    config = load()
+    item = fetch(config, args.number)
+    existing = {r["issue_id"] for r in (plane(config, "GET", f"{items_path(config)}{item['id']}/relations/") or {}).get("blocked_by", [])}
+    blockers = resolve(config, args.on)
+    added = [n for n, b in blockers.items() if b["id"] not in existing]
+    if added:
+        plane(config, "POST", f"{items_path(config)}{item['id']}/relations/", {
+            "relation_type": "blocked_by",
+            "issues": [blockers[n]["id"] for n in added],
+        })
+    emit({"number": args.number, "blocked_by_added": added, "blocked_by_existing": [n for n in args.on if n not in added]})
+
+
+def op_link_pr(args):
+    config = load()
+    item = fetch(config, args.number)
+    pr = rest("GET", f"repos/{config['repo']}/pulls/{args.pr}")
+    link(config, item["id"], pr["html_url"], f"PR #{args.pr}")
+    emit({"number": args.number, "pr": args.pr, "linked": True})
+
+
+def op_claims(args):
+    config = load()
+    now = dt.datetime.now(dt.timezone.utc)
+
+    def row(number, claim):
+        branch = remote_branch(config, number)
+        last_push = None
+        if branch:
+            head = rest("GET", f"repos/{config['repo']}/commits/{branch}")
+            last_push = head["commit"]["committer"]["date"]
+        owner = claim_owner(config, claim["sha"])
+        latest = max(filter(None, [owner["since"], last_push]))
+        age = now - dt.datetime.fromisoformat(latest.replace("Z", "+00:00"))
+        return {
+            "number": number,
+            "key": key(config, number),
+            "phase": claim["phase"],
+            **owner,
+            "branch": branch,
+            "last_activity": latest,
+            "stale": age.total_seconds() > config["stale_after_hours"] * 3600,
+        }
+
+    work = [(number, claim) for number, held in sorted(claims(config).items()) for claim in held]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        emit(list(pool.map(lambda job: row(*job), work)))
+
+
+def op_whoami(args):
+    emit({"agent": agent_id(args.agent)})
+
+
+# ---------------------------------------------------------------- provisioning
+
+
+def ensure_states(root, state_names, prune):
+    """Every state exists with its group, Draft is the default. Extras dropped only with `prune`,
+    and only when empty (Plane refuses otherwise). Returns (created, removed, extras left)."""
+    path = f"workspaces/{root['slug']}/projects/{root['project_id']}/states/"
+    states = paged(root, path)
+    by_name = {s["name"]: s for s in states}
+    created = []
+    for sequence, state in enumerate(STATES):
+        name = state_names[state]
+        if name not in by_name:
+            by_name[name] = plane(root, "POST", path, {
+                "name": name,
+                "color": STATE_COLORS[state],
+                "group": STATE_GROUPS[state],
+                "description": STATE_DESCRIPTIONS[state],
+                "sequence": (sequence + 1) * 1000,
+            })
+            created.append(name)
+    draft = by_name[state_names["draft"]]
+    if not draft.get("default"):
+        plane(root, "PATCH", f"{path}{draft['id']}/", {"default": True})
+    ours = set(state_names.values())
+    extra = [s for s in states if s["name"] not in ours and s.get("group") != "triage"]
+    removed, left = [], []
+    for s in extra:
+        if prune and plane(root, "DELETE", f"{path}{s['id']}/", check=False)[0] == 0:
+            removed.append(s["name"])
+        else:
+            left.append(s["name"])
+    return created, removed, left
+
+
+def ensure_estimate(root):
+    """Categories estimate quickwin / medium / large, active on the project."""
+    base = f"workspaces/{root['slug']}/projects/{root['project_id']}/"
+    code, estimate = plane(root, "GET", f"{base}estimates/", check=False)
+    created = False
+    if code != 0 or not estimate or not estimate.get("id"):
+        code, estimate = plane(root, "POST", f"{base}estimates/", {"name": ESTIMATE_NAME, "type": "categories"}, check=False)
+        if code == 409:
+            estimate = {"id": estimate["id"]}
+        elif code != 0:
+            raise Failure(f"estimates API unavailable ({code}): upgrade Plane, or create a Categories estimate by hand")
+        created = True
+    points_path = f"{base}estimates/{estimate['id']}/estimate-points/"
+    rows = plane(root, "GET", points_path)
+    values = {p["value"] for p in (rows if isinstance(rows, list) else rows.get("results", []))}
+    added = []
+    for index, size in enumerate(SIZES):
+        if size not in values:
+            plane(root, "POST", points_path, {"key": index + 1, "value": size})
+            added.append(size)
+    plane(root, "PATCH", base, {"estimate": estimate["id"]})
+    return created, added
+
+
+def op_provision(args):
+    repo = current_repo()
+    web, api, slug, project_id = parse_project_url(args.url)
+    root = project_root(web, api, slug, project_id)
+    project = plane(root, "GET", f"workspaces/{slug}/projects/{project_id}/")
+    state_names = dict(DEFAULT_STATE_NAMES)
+    for pair in args.state or []:
+        state, _, name = pair.partition("=")
+        if state not in STATES:
+            raise Failure(f"unknown state {state!r}, expected one of {STATES}", EXIT_USAGE)
+        state_names[state] = name
+    created_states, removed, extra = ensure_states(root, state_names, args.prune_states)
+    estimate_created, points_added = ensure_estimate(root)
+    type_labels = {t: t for t in TYPES}
+    for pair in args.type or []:
+        kind, _, name = pair.partition("=")
+        if kind not in TYPES:
+            raise Failure(f"unknown type {kind!r}, expected one of {TYPES}", EXIT_USAGE)
+        type_labels[kind] = name
+    labels_path = f"workspaces/{slug}/projects/{project_id}/labels/"
+    existing = {l["name"] for l in paged(root, labels_path)}
+    labels_created = []
+    for kind, name in type_labels.items():
+        if name not in existing:
+            plane(root, "POST", labels_path, {"name": name, "color": TYPE_LABEL_COLORS[kind]})
+            labels_created.append(name)
+    variables = {
+        "WA_PLANE_PROJECT_URL": f"{web}/{slug}/projects/{project_id}/issues",
+        "WA_STATES": json.dumps(state_names),
+        "WA_TASKS_PATH": args.tasks_path,
+        "WA_BRANCH_PREFIX": args.branch_prefix,
+        "WA_STALE_AFTER_HOURS": str(args.stale_after_hours),
+        "WA_TYPE_LABELS": json.dumps(type_labels),
+    }
+    for name, value in variables.items():
+        gh(["variable", "set", name, "--repo", repo, "--body", value])
+    config = load(refresh=True)
+    secret = gh(["secret", "list", "--repo", repo, "--json", "name", "--jq", ".[].name"], check=False).stdout.split()
+    emit({
+        "project_url": variables["WA_PLANE_PROJECT_URL"],
+        "identifier": project["identifier"],
+        "items_route": config["items"],
+        "states_created": created_states,
+        "states_removed": removed,
+        "states_extra": extra,
+        "estimate_created": estimate_created,
+        "estimate_values_added": points_added,
+        "type_labels": type_labels,
+        "type_labels_created": labels_created,
+        "variables": variables,
+        "secret_WA_PLANE_TOKEN": "WA_PLANE_TOKEN" in secret,
+    })
+
+
+# ---------------------------------------------------------------- cli
+
+
+def number_arg(value):
+    """`42`, `#42` or `APP-42` → 42."""
+    match = re.fullmatch(r"(?:[A-Za-z][A-Za-z0-9]*-|#)?(\d+)", value.strip())
+    if not match:
+        raise argparse.ArgumentTypeError(f"not a task id: {value}")
+    return int(match.group(1))
+
+
+def parser():
+    p = argparse.ArgumentParser(prog="plane-board", description="whackagent Plane board helper (internal)")
+    sub = p.add_subparsers(dest="op", required=True)
+
+    s = sub.add_parser("config", help="print resolved settings")
+    s.add_argument("--refresh", action="store_true", help="re-read repo variables and Plane ids")
+    s.set_defaults(func=op_config)
+
+    s = sub.add_parser("list", help="board rows in priority order")
+    s.add_argument("--state", help="comma-separated states")
+    s.add_argument("--sprint")
+    s.add_argument("--all", action="store_true", help="include done, canceled and archived")
+    s.add_argument("--type", choices=TYPES)
+    s.add_argument("--owners", action="store_true", help="resolve claim owners (one call per claim)")
+    s.set_defaults(func=op_list)
+
+    s = sub.add_parser("get")
+    s.add_argument("number", type=number_arg)
+    s.set_defaults(func=op_get)
+
+    s = sub.add_parser("create")
+    s.add_argument("--title", required=True)
+    s.add_argument("--summary", required=True)
+    s.add_argument("--size", choices=SIZES)
+    s.add_argument("--type", choices=TYPES)
+    s.add_argument("--sprint")
+    s.add_argument("--note")
+    s.set_defaults(func=op_create)
+
+    s = sub.add_parser("edit", help="work item title and/or description")
+    s.add_argument("number", type=number_arg)
+    s.add_argument("--title")
+    s.add_argument("--body")
+    s.set_defaults(func=op_edit)
+
+    s = sub.add_parser("develop", help="create the task branch on GitHub, linked from the work item")
+    s.add_argument("number", type=number_arg)
+    s.add_argument("--name", required=True)
+    s.add_argument("--base", required=True)
+    s.set_defaults(func=op_develop)
+
+    s = sub.add_parser("branch", help="remote branch carrying the ticket")
+    s.add_argument("number", type=number_arg)
+    s.set_defaults(func=op_branch)
+
+    s = sub.add_parser("claim", help="atomic lock; exit 3 when taken")
+    s.add_argument("number", type=number_arg)
+    s.add_argument("phase", choices=sorted(CLAIM_FROM))
+    s.add_argument("--agent")
+    s.add_argument("--keep-state", action="store_true", help="review round: lock, state unchanged")
+    s.set_defaults(func=op_claim)
+
+    s = sub.add_parser("release")
+    s.add_argument("number", type=number_arg)
+    s.add_argument("phase", choices=sorted(CLAIM_FROM))
+    s.add_argument("--reset-to", choices=STATES)
+    s.add_argument("--reason")
+    s.add_argument("--unassign", choices=["me", "all"], help="me: drop the key's owner · all: drop every assignee")
+    s.set_defaults(func=op_release)
+
+    s = sub.add_parser("set-state")
+    s.add_argument("number", type=number_arg)
+    s.add_argument("state", choices=STATES)
+    s.set_defaults(func=op_set_state)
+
+    s = sub.add_parser("cancel", help="Canceled state, claims dropped")
+    s.add_argument("number", type=number_arg)
+    s.add_argument("--reason", required=True)
+    s.set_defaults(func=op_cancel)
+
+    s = sub.add_parser("move")
+    s.add_argument("number", type=number_arg)
+    where = s.add_mutually_exclusive_group(required=True)
+    where.add_argument("--top", action="store_true")
+    where.add_argument("--bottom", action="store_true")
+    where.add_argument("--before", type=number_arg)
+    where.add_argument("--after", type=number_arg)
+    s.set_defaults(func=op_move)
+
+    s = sub.add_parser("set-field")
+    s.add_argument("number", type=number_arg)
+    s.add_argument("field", choices=["size", "sprint", "type"])
+    s.add_argument("value", help='size or type value, or sprint name ("" clears)')
+    s.set_defaults(func=op_set_field)
+
+    s = sub.add_parser("comment")
+    s.add_argument("number", type=number_arg)
+    s.add_argument("text")
+    s.set_defaults(func=op_comment)
+
+    s = sub.add_parser("depend", help="ticket is blocked by others (native relation)")
+    s.add_argument("number", type=number_arg)
+    s.add_argument("--on", required=True, type=lambda v: [number_arg(x) for x in v.split(",") if x], help="blocker ids, comma-separated")
+    s.set_defaults(func=op_depend)
+
+    s = sub.add_parser("link-pr", help="PR linked from the work item")
+    s.add_argument("number", type=number_arg)
+    s.add_argument("pr", type=int)
+    s.set_defaults(func=op_link_pr)
+
+    s = sub.add_parser("claims", help="every live claim, owner, last activity, stale flag")
+    s.set_defaults(func=op_claims)
+
+    s = sub.add_parser("whoami")
+    s.add_argument("--agent")
+    s.set_defaults(func=op_whoami)
+
+    s = sub.add_parser("provision", help="states, estimate, labels on the Plane project; repo variables")
+    s.add_argument("--url", required=True, help="Plane project URL")
+    s.add_argument("--state", action="append", metavar="STATE=NAME", help="map a state onto an existing Plane state")
+    s.add_argument("--type", action="append", metavar="TYPE=LABEL", help="map a type onto an existing label")
+    s.add_argument("--prune-states", action="store_true", help="delete empty Plane states no state maps to")
+    s.add_argument("--tasks-path", default=".whackagent/tasks")
+    s.add_argument("--branch-prefix", default="wa/")
+    s.add_argument("--stale-after-hours", type=int, default=24)
+    s.set_defaults(func=op_provision)
+    return p
+
+
+def main():
+    args = parser().parse_args()
+    try:
+        args.func(args)
+    except Failure as error:
+        note(f"plane-board: {error}")
+        sys.exit(error.code)
+    except subprocess.CalledProcessError as error:
+        note(f"plane-board: {' '.join(error.cmd)}: {error.stderr or error}")
+        sys.exit(EXIT_ERROR)
+
+
+if __name__ == "__main__":
+    main()
