@@ -59,7 +59,7 @@ Read: voice, pr, components, tasks, git, store
 9. **Log** — append to `## Feedback`: asked (user's words), triage, changes, review verdict (`deferred` if `on_validation`), verify verdict, rule captured, `inline` hunk tags.
    - Refresh `{reports}/<key>.md`.
    - `github` → `status: to-test`, commit (**git → Commits**), push, mergeable check (**store-github → Rounds**).
-   - Aborted before any push → `release <n> coding --reset-to <state claimed from>`.
+   - Aborted before any push → `release <n> coding --reset-to <state claimed from>` (+ `--unassign me` from `todo`).
    - Sprint task → rebuild + check out **git → Sprint test branch**.
 10. **Report** → **components → Report**, feedback variant: `· round <n>` + **Asked**.
 

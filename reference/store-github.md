@@ -14,8 +14,8 @@
 | read | `get <n>` (state, size, type, sprint, claims, `branch`, `blocked_by`) + `git show origin/<branch>:{tasks}/<n>-<slug>.md`. No branch (`draft`) → issue body = idea note |
 | create | `create --title … --summary … [--size] [--type] [--sprint] [--note …]` → `draft`, bottom |
 | write sections / status | edit the task file on the task branch; lands at next push |
-| lock | `claim <n> grilling\|coding` · review: `claim <n> coding --keep-state` |
-| release | `release <n> <phase> --reset-to <state>` |
+| lock | `claim <n> grilling\|coding` · review: `claim <n> coding --keep-state`. Coding claim assigns you (`@me`) |
+| release | `release <n> <phase> --reset-to <state> [--unassign me\|all]` |
 | cancel | `cancel <n> --reason …` → Canceled, issue closed not planned |
 | reorder | `move <n> --top\|--bottom\|--before m\|--after m` |
 | fields | `set-field <n> size <s>` · `set-field <n> type <t>` (one type label, others dropped) · `set-field <n> sprint "<Sprint>"` (milestone created on first use, never deleted; `""` clears) |
@@ -42,13 +42,13 @@
 
 - Branch created at the grill: `gh issue develop <n> --name <prefix><n>-<slug> --base <base>`. Never `git checkout -b` + push.
 - **Every round ends with commit + push** on the task branch (grill, code, feedback, validate, autopilot). That push releases the lock. **No push mid-round.**
-- First coding round opens a draft PR: `gh pr create --draft --base <base> --head <branch> --label <type>`, then `link-pr`. Title + body → **pr**.
+- First coding round opens a draft PR: `gh pr create --draft --base <base> --head <branch> --label <type> --assignee @me`, then `link-pr`. Title + body → **pr**.
 - Every later round → body rewritten (**pr → Body**), `gh pr edit <pr> --body-file`.
 - PR ready + new round → `gh pr ready --undo` first.
 - After the push, `get <n>` (up to ~1 min):
   - card still `Coding` or lock held → hook never ran. Cause from `gh run list --branch <branch> --workflow whackagent-board.yml --limit 1`: no run = workflow missing on the branch, failed = secret. Repair: `release <n> coding --reset-to <file status>`.
 - Then `gh pr view --json mergeable`. `CONFLICTING` → rebase on base, rebuild, `push --force-with-lease` (own task branch only). Design call needed → stop, name files.
-- Always `git fetch` + pull first: the last round may come from another machine.
+- Always `git fetch` + pull first.
 - Subagents get the task file path. They never read config or write the task.
 
 ## Locks
@@ -57,16 +57,16 @@
 - Review round → `--keep-state`: card stays put. Plain claim there = bug.
 - Exit 3 → `🔒 #42 grilling — alice@mbp 2h`, stop. Never retry, never steal.
 - Exit 4 → say the state, point to the right command.
-- Abort: grill → `--reset-to draft`; coding before any push → the state it came from; review → `release <n> coding` alone.
+- Abort: grill → `--reset-to draft`; coding before any push → the state it came from, + `--unassign me` if `todo`; review → `release <n> coding` alone.
 - No expiry. `claims` flags `stale` (no push past `WA_STALE_AFTER_HOURS`); `/wa-task release <n>` clears one, human only.
 
 ## Other
 
 - `gh` needs `project` scope. Missing → `! gh auth refresh -h github.com -s project`, stop. Never fall back to `files`.
-- Comments = trail only. Task content lives in the file, never in comments or issue body.
+- Comments = trail only. Task content lives in the file.
 - `{backlog}` unused. `{reports}`, `{wiki}`, `{conventions}` stay in the repo.
 - Every new issue lands as `draft`; label `wa-ignore` opts out. Project draft items → board lists them, suggests converting.
-- `list` lags 1–3 min; `get` / `claim` are current.
+- `list` lags 1–3 min.
 - PR closes issues: `Closes #<n>` + `link-pr` (base ≠ default branch → `Closes` alone links nothing). Sprint PR: one `Closes` per task + milestone.
 
 ## Legacy

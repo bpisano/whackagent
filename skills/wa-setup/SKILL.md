@@ -106,7 +106,7 @@ Team-visible. One **Plan** (auth, project, status, size, variables, hook, secret
    - Adopt → `--project <n>` (+ `--owner` if not repo owner). Columns kept, missing states added; `--state todo="Ready"` maps a team name.
    - `status_options_extra` → name, ask; recommend dropping GitHub defaults, keeping team ones. Yes → `--prune-status`. Cards on them → user moves them.
    - One board per repo. Never repurpose a team board unasked.
-3. **Hook** (mandatory): branch `wa-setup/board-hooks` off default → `${CLAUDE_PLUGIN_ROOT}/templates/github-board.yml` to `.github/workflows/whackagent-board.yml` → commit (**git → Commits**) → push → `gh pr create`.
+3. **Hook** (mandatory): branch `wa-setup/board-hooks` off default → `${CLAUDE_PLUGIN_ROOT}/templates/github-board.yml` to `.github/workflows/whackagent-board.yml` → commit (**git → Commits**) → push → `gh pr create --assignee @me`.
    - Custom prefix → edit its `branches:` filter.
    - Say: cards move once merged; older sprint branches lack it.
 4. **Secret** `WA_PROJECT_TOKEN`:

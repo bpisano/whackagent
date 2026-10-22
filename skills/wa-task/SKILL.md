@@ -74,7 +74,7 @@ Read: voice, components, tasks, store, git
 
 1. `github-board claims` → owner, since, last activity, `stale`. Not stale → recommend waiting or asking the owner, go on only on yes.
 2. `grilling` → `release <n> grilling --reset-to draft --reason "<why>"`.
-3. `coding` → recommend the task file's `status:` on its branch (`todo` / `to-test` / `to-close`), one line. Say the owner's unpushed work stays, just off the board.
+3. `coding` → recommend the task file's `status:` on its branch (`todo` / `to-test` / `to-close`), one line. Say the owner's unpushed work stays, just off the board. `--unassign all`.
 
 ## Sprints
 

@@ -99,6 +99,7 @@ The task file stays the source of truth. A GitHub Project shows it to the team.
 - **The spec lives on the task branch.** `/wa-task 42` creates `wa/42-add-apple-login` and commits `.whackagent/tasks/42-add-apple-login.md` there.
 - **The board follows the files.** A GitHub Action reads the task file on every push and moves the card. A merged PR moves it to Done and closes the issue.
 - **One person per task.** Grilling and coding take a lock. Someone else trying gets `🔒 #42 grilling — alice@mbp since 2h`. A review locks the task too, but the card stays in To test.
+- **You're assigned.** Coding a task assigns you on its issue, every PR whackagent opens too. You stay until merge. Abandoned before any push, or released with `/wa-task release`, the issue is unassigned.
 - **One draft PR per task.** Every round pushes to it and rewrites its body. `/wa-close` marks it ready. You merge.
 - **Same PR shape every time**: one sentence, `Changes` (`Add …`, `Change …`, `Fix …`, `Remove …`, `Improve …`), `Screenshots` (UI only), `To test`, optional `Notes`, `Closes #n` last. Template in `conventions/pr.md`, yours to edit; the repo's `.github/pull_request_template.md` wins if present. Language: `pr_language`. Never signed by Claude.
 

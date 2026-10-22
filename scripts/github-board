@@ -505,6 +505,8 @@ def op_claim(args):
         taken(config, args.number, phase, existing["object"]["sha"])
     if not args.keep_state:
         set_state_raw(config, ticket, phase)
+    if phase == "coding":
+        assign(config, args.number, add=True)
     label = "review" if args.keep_state else phase
     comment(config, args.number, f"🔒 **{label}** — `{agent}` · {now}")
     state = ticket["state"] if args.keep_state else phase
@@ -517,10 +519,26 @@ def taken(config, number, phase, sha):
     raise Failure(f"#{number} {phase} already claimed by {owner['agent']} since {owner['since']}", EXIT_TAKEN)
 
 
+def assign(config, number, add=False, everyone=False):
+    """Add or remove the gh user (`@me`), or remove every assignee. Never fails the operation."""
+    if everyone:
+        _, issue = rest("GET", f"repos/{config['repo']}/issues/{number}", check=False)
+        logins = [a["login"] for a in (issue or {}).get("assignees", [])]
+        if logins:
+            rest("DELETE", f"repos/{config['repo']}/issues/{number}/assignees", {"assignees": logins}, check=False)
+        return
+    flag = "--add-assignee" if add else "--remove-assignee"
+    proc = gh(["issue", "edit", str(number), "--repo", config["repo"], flag, "@me"], check=False)
+    if proc.returncode != 0:
+        note(f"#{number}: assignee not updated: {proc.stderr.strip()}")
+
+
 def op_release(args):
     config = load()
     ref = f"{CLAIM_NAMESPACE}/{args.number}/{args.phase}"
     code, _ = rest("DELETE", f"repos/{config['repo']}/git/refs/{ref}", check=False)
+    if args.unassign:
+        assign(config, args.number, everyone=args.unassign == "all")
     if args.reset_to:
         set_state_raw(config, find(config, args.number, with_owners=False), args.reset_to)
     reason = f" — {args.reason}" if args.reason else ""
@@ -907,6 +925,7 @@ def parser():
     s.add_argument("phase", choices=sorted(CLAIM_FROM))
     s.add_argument("--reset-to", choices=STATES)
     s.add_argument("--reason")
+    s.add_argument("--unassign", choices=["me", "all"], help="me: drop the gh user · all: drop every assignee")
     s.set_defaults(func=op_release)
 
     s = sub.add_parser("set-state")

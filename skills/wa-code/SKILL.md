@@ -35,7 +35,7 @@ Read: voice, pr, components, tasks, git, store
    - `on_validation` (default) → skip, echo `review: → /wa-validate`.
 8. **Deliver** — state `to-test`.
    - `github` → round end per **store-github → Rounds**: file `status: to-test` + sections, commit (**git → Commits**), push, draft PR + `link-pr` on first delivery, mergeable check.
-   - Aborted before any push → `release <n> coding --reset-to <state claimed from>`, say why.
+   - Aborted before any push → `release <n> coding --reset-to <state claimed from>` (+ `--unassign me` from `todo`), say why.
 9. **End on the coded branch** — before any report.
    - Sprint task → build the **git → Sprint test branch**, check it out.
    - Else → task branch; moved off it → check it back out.

@@ -75,7 +75,7 @@ Branch + draft PR exist since `/wa-code`. `close.strategy`, `close.delete_branch
 3. **Push** — `--force-with-lease` only after a rebase, own branch only. Push releases the lock.
    - Autopilot worktree → remove after push. Dirty → stop, ask.
 4. **PR ready** — refresh title + body (**pr**), `gh pr edit`, `gh pr ready`.
-   - No PR (pre-0.13) → `gh pr create --base <base>` non-draft + `link-pr <n> <pr>`.
+   - No PR (pre-0.13) → `gh pr create --base <base> --assignee @me` non-draft + `link-pr <n> <pr>`.
 5. **Stop.** User merges on GitHub; the hook does the rest.
 
 Failure before the push → lock still held: say so. User leaves it → `release <n> coding --reason "<what failed>"`.
@@ -89,7 +89,7 @@ Failure before the push → lock still held: say so. User leaves it → `release
   - Conflict → stop, leave merge in progress, name files, task stays `to-close`.
 - **Standalone** → `close.strategy`:
   - `nothing` (default) → stop after commit. **Landing** `⚠️`: branch kept, PR is yours.
-  - `pr` → push, `gh pr create --base <close.target>`, title, body, screenshots per **pr** (To test from `## Acceptance criteria`). Print URL.
+  - `pr` → push, `gh pr create --base <close.target> --assignee @me`, title, body, screenshots per **pr** (To test from `## Acceptance criteria`). Print URL.
     - `gh` missing or unauthenticated → say so, fall back to `nothing`, branch stays pushed.
   - `merge` → merge into `close.target` locally, no push.
     - Target checked out elsewhere or dirty → say so, stop.

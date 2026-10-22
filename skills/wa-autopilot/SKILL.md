@@ -36,7 +36,7 @@ Read: voice, pr, components, tasks, git, store
    - `github` → `claim <n> coding` (**store → Locks**). Exit 3 → skipped, `🔒` owner. Exit 4 → skipped, say state. A lost claim never stalls the wave.
    - Worktree at `../.wa-worktrees/<key>`:
      - `github` → task branch from `get <n>`: `git fetch origin <branch>`, `git worktree add ../.wa-worktrees/<key> <branch>`. Base already set.
-       - Branch checked out elsewhere → skipped, say where, `release <n> coding --reset-to todo`.
+       - Branch checked out elsewhere → skipped, say where, `release <n> coding --reset-to todo --unassign me`.
      - `files` → always a new branch, whatever `branch.per_task`: `git worktree add ../.wa-worktrees/<key> -b <branch.prefix><key> <fork point>` (**git → Task branch**).
        - Sprint branch missing → create it once per run, in the main checkout, before the wave. Later waves reuse it.
        - Same-wave sprint tasks fork off it as at wave start.
@@ -61,7 +61,7 @@ Read: voice, pr, components, tasks, git, store
    - No report-and-iterate phase.
 8. **Blocked** — `BLOCKED:`, failed runtime check, any ambiguity:
    - Task back to `todo`, `blocked` note, open question in `## Implementation`.
-   - `github` → commit + push: the push frees the lock, card → `Todo`. Nothing to push → `release <n> coding --reset-to todo --reason "BLOCKED: <question>"`.
+   - `github` → commit + push: the push frees the lock, card → `Todo`. Nothing to push → `release <n> coding --reset-to todo --unassign me --reason "BLOCKED: <question>"`.
    - Keep its worktree. Move on: the wave keeps going.
 9. **Build the test branch** → **Test branch**.
 10. **Report** — **Batch report**, printed and saved to `{reports}/autopilot-<date>.md`.
