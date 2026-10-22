@@ -26,3 +26,4 @@ node_modules/
 tmp/
 *.tmp
 .whackagent/cache/
+__pycache__/
