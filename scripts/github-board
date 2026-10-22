@@ -727,6 +727,22 @@ def op_branch(args):
     emit({"number": args.number, "branch": remote_branch(config, args.number)})
 
 
+def op_develop(args):
+    """Task branch linked to the issue (Development), created on the remote."""
+    config = load()
+    gh(["issue", "develop", str(args.number), "--repo", config["repo"], "--name", args.name, "--base", args.base])
+    emit({"number": args.number, "branch": args.name})
+
+
+def op_edit(args):
+    config = load()
+    fields = {k: v for k, v in (("title", args.title), ("body", args.body)) if v is not None}
+    if not fields:
+        raise Failure("edit needs --title or --body", EXIT_USAGE)
+    rest("PATCH", f"repos/{config['repo']}/issues/{args.number}", fields)
+    emit({"number": args.number, **fields})
+
+
 # ---------------------------------------------------------------- provisioning
 
 
@@ -978,6 +994,18 @@ def parser():
     s = sub.add_parser("branch", help="remote branch carrying the ticket")
     s.add_argument("number", type=int)
     s.set_defaults(func=op_branch)
+
+    s = sub.add_parser("develop", help="create the task branch, linked to the issue")
+    s.add_argument("number", type=int)
+    s.add_argument("--name", required=True)
+    s.add_argument("--base", required=True)
+    s.set_defaults(func=op_develop)
+
+    s = sub.add_parser("edit", help="issue title and/or body")
+    s.add_argument("number", type=int)
+    s.add_argument("--title")
+    s.add_argument("--body")
+    s.set_defaults(func=op_edit)
 
     s = sub.add_parser("provision", help="create or adopt the project, fields, repo variables")
     target = s.add_mutually_exclusive_group(required=True)

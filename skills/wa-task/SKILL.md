@@ -16,9 +16,9 @@ Read: voice, components, tasks, store, git
    - Task id → resolve and echo (**tasks → Ids**). `draft` → grill it, no new task.
      - `grilling` → step 4 lock rules.
      - `todo` or later → already grilled; scope change once coded = `/wa-feedback`. Stop.
-   - `github` issue with no Status / off board → **adopt**:
-     - `github-board get <n>` → on board as `draft`. Grill seeded with title + body.
-     - Rewrite title (**voice → Titles**): `gh issue edit <n> --title`.
+   - `board` item with no state / off board → **adopt**:
+     - `get <n>` → on board as `draft`. Grill seeded with title + body.
+     - Rewrite title (**voice → Titles**): `edit <n> --title`.
      - Original body → `>` quote at top of `## Context / Decisions`.
      - Echo the rename as a **Warning**: old title → new.
    - `release <id>` → **Release**, nothing else.
@@ -27,8 +27,8 @@ Read: voice, components, tasks, store, git
 2. **Read context** — config (**tasks → Config and paths**) + `{wiki}/index.md`.
 3. **Title first** — verb + thing (**voice → Titles**), clear to someone who never saw this chat. Slug from it.
 4. **Lock.**
-   - `github`: free text → `create` first, `--note` = raw idea. Then `claim <n> grilling` before the first question (**store → Locks**).
-     - Exit 3, own lock (`agent` = `github-board whoami`) → resume grill.
+   - `board`: free text → `create` first, `--note` = raw idea. Then `claim <n> grilling` before the first question (**store → Locks**).
+     - Exit 3, own lock (`agent` = `whoami`) → resume grill.
    - `files`: task file from template + backlog line now, `status: grilling`.
 5. **Grill** — invoke **grill-me**, one **Question** at a time, down the design tree.
    - YAGNI on scope: push back on speculative.
@@ -39,12 +39,12 @@ Read: voice, components, tasks, store, git
    - Concept, screen, part or flow named → collect rows, one **Glossary rows** at grill end (**voice → Learning**).
    - UI project → settle meaning-carrying copy (destructive confirms, errors, empty states) against `{conventions}/wording.md`. Never the full string list.
    - **Park** — user says "note it, grill later" or stop:
-     - `github` → `release <n> grilling --reset-to draft`. `files` → `status: draft`.
+     - `board` → `release <n> grilling --reset-to draft`. `files` → `status: draft`.
      - Echo `/wa-task <id>` to grill later.
    - Left silently → lock stays. `/wa-task <id>` resumes, `/wa-task release <id>` frees.
 6. **Write the task** from `${CLAUDE_PLUGIN_ROOT}/templates/task.md`:
    - `files` → `{tasks}/<slug>.md`: `title`, `status: todo`, `created` today, `blocked_by:` slugs.
-   - `github` → `{tasks}/<n>-<slug>.md` on the task branch (**GitHub landing**). Frontmatter `issue`, `status: todo`, `wiki`, `note`, `created` only. Issue gets title, summary (`gh issue edit <n> --title … --body …`), `set-field` (size, type), `depend`.
+   - `board` → `{tasks}/<n>-<slug>.md` on the task branch (**Board landing**). Frontmatter `issue`, `status: todo`, `wiki`, `note`, `created` only. Board item gets title, summary (`edit <n> --title … --body …`), `set-field` (size, type), `depend`.
    - `summary` → **voice → Titles**.
    - `size` from the grill: `quickwin` ≤ 1h · `medium` · `large` multi-session, likely split.
    - `type` → **tasks → Types**, required. In the recap; ambiguous → **Question**.
@@ -54,15 +54,15 @@ Read: voice, components, tasks, store, git
    - `## Acceptance criteria` → observable checks (on screen, input → output), concrete, YAGNI: they drive `wa-verifier`. None only with no runnable surface.
 7. **Place it** — under Todo, next to its sprint siblings, else bottom. Always below its blockers.
    - `files` → backlog line to Todo, link relative to the backlog's folder, `· <Sprint>`.
-   - `github` → `github-board move`.
+   - `board` → `move`.
 8. **Prioritize** — always, never ask. Several tasks → one pass at the end.
 
-## GitHub landing
+## Board landing
 
-`github` only. Ends the grill.
+`board` only. Ends the grill.
 
 1. **Base** — sprint → sprint branch (**git → Sprint branch**); absent on remote → create from `branch.base`, push. Else `branch.base`.
-2. **Branch** — `gh issue develop` (**store → Rounds**).
+2. **Branch** — `develop` (**store → Helper**).
 3. **Worktree** — `git fetch origin <branch>`, `git worktree add ../.wa-worktrees/<n>-<slug> <branch>`.
 4. **Write** the task file there, `git add` it alone, commit `Grill #<n> <title>` (**git → Commits**), push.
 5. **Remove** the worktree. Branch stays on remote for `/wa-code`.
@@ -70,9 +70,9 @@ Read: voice, components, tasks, store, git
 
 ## Release
 
-`/wa-task release <id>`, human only, `github` only. `files` → no lock: fix `status:` by hand.
+`/wa-task release <id>`, human only, `board` only. `files` → no lock: fix `status:` by hand.
 
-1. `github-board claims` → owner, since, last activity, `stale`. Not stale → recommend waiting or asking the owner, go on only on yes.
+1. `claims` → owner, since, last activity, `stale`. Not stale → recommend waiting or asking the owner, go on only on yes.
 2. `grilling` → `release <n> grilling --reset-to draft --reason "<why>"`.
 3. `coding` → recommend the task file's `status:` on its branch (`todo` / `to-test` / `to-close`), one line. Say the owner's unpushed work stays, just off the board. `--unassign all`.
 
@@ -85,16 +85,16 @@ When to set `sprint:` (rules → **tasks → Sprints**):
 - Fits an in-flight sprint (same feature/screen) → propose as a **Question**, joining it recommended.
 - Else empty. Sprint of one = noise; `quickwin` almost never.
 - New name = body of work, not first task.
-- `github` → `set-field <n> sprint "<Sprint>"` creates the milestone.
+- `board` → `set-field <n> sprint "<Sprint>"` creates it.
 
 ## Prioritization
 
 New task(s) = focus, rest of todo = context.
 
 1. **List** `todo` + `draft` with blockers (**store**).
-2. **YAGNI each** — keep · defer (push down) · cancel (`files`: `status: canceled` + why · `github`: `cancel <n> --reason`).
+2. **YAGNI each** — keep · defer (push down) · cancel (`files`: `status: canceled` + why · `board`: `cancel <n> --reason`).
 3. **Split** a task too big for one feature:
-   - Children: titles per **voice → Titles**, `draft`, linked via `note:` (`github`: `#<n>`).
+   - Children: titles per **voice → Titles**, `draft`, linked via `note:` (`board`: store id).
    - Parent → canceled or umbrella; tell the user.
    - Child building on a sibling → blocked by it.
    - Children inherit the parent's sprint. None → name one after the body of work, set on all, say so in the split proposal. Umbrella keeps it too.

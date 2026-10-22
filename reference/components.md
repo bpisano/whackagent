@@ -18,7 +18,7 @@ A task inside a sentence: `#42 Add Apple login` (`files`: `3 Add Apple login`).
   - `· 🔒 <owner> <age>` — lock held; stale → `🔒⏳`
   - `· ⇡ #42` — stacked on #42 (+ `⛔ #42` while open)
   - `— <outcome>` — only in **Batch report**
-- Id: `files` → `3 ·` (never `3.`), `github` → `#42 ·`.
+- Id: `files` → `3 ·` (never `3.`), `board` → store id `#42 ·`.
 - Size: 🟢 quickwin · 🟡 medium · 🔴 large.
 
 ## Task list

@@ -38,11 +38,7 @@ Project vs this plugin version. Runs after migrations: they read keys sync would
    - Glossary `## Rules` ≠ template's → replace that section only. Rows never touched.
    - UI project, no `wording.md` → ask **wa-setup → Questions** 11, copy per **wa-setup → Scaffold**.
    - `apple.md` / `wording.md` never without their folder.
-3. **GitHub** (`github` only), helper → **store-github → Helper**:
-   - Hook on default branch, `template version:` < `${CLAUDE_PLUGIN_ROOT}/templates/github-board.yml` → update PR per **wa-setup → GitHub scaffold** 3.
-   - `WA_PROJECT_TOKEN` not in `gh secret list` → **wa-setup → GitHub scaffold** 4.
-   - `github-board config --refresh` differs → refresh.
-   - `provision --project <n>`: missing states → add. Extras → name, ask, `--prune-status` on yes.
+3. **Board** (`board` only) → **store → Upkeep**.
 
 ## Never
 

@@ -18,10 +18,10 @@ Read: voice, pr, components, tasks, git, store
 2. **Get on the right branch** (**git → Task branch**).
    - Code on `<branch.prefix><key>`, you're elsewhere → say which, switch only on yes.
    - On the sprint test branch, clean tree → switch, no ask (**git → Sprint test branch → Leaving it**). Values tweaked there → carry over, they're feedback.
-   - `github` → `git fetch` + pull first.
+   - `board` → `git fetch` + pull first.
    - `stacked on:` line, blocker moved → rebase own commits onto its new tip, update the line (**git → Stacking**).
    - Task is a blocker with stacked dependents → say they go stale until their next round.
-3. **Lock** — `github` → `claim <n> coding` (**store-github → Locks**).
+3. **Lock** — `board` → `claim <n> coding` (**store → Locks**).
    - PR ready → `gh pr ready --undo` before touching code.
 4. **Triage** each note, one line each, bucket said out loud:
    - **defect** — misses criteria → fix, criteria unchanged.
@@ -58,7 +58,7 @@ Read: voice, pr, components, tasks, git, store
    - `autopilot` / `off` → append `round <n>: manual validation — not run by agent`, `run: yours`.
 9. **Log** — append to `## Feedback`: asked (user's words), triage, changes, review verdict (`deferred` if `on_validation`), verify verdict, rule captured, `inline` hunk tags.
    - Refresh `{reports}/<key>.md`.
-   - `github` → `status: to-test`, commit (**git → Commits**), push, mergeable check (**store-github → Rounds**).
+   - `board` → `status: to-test`, commit (**git → Commits**), push, mergeable check (**store → Rounds**).
    - Aborted before any push → `release <n> coding --reset-to <state claimed from>` (+ `--unassign me` from `todo`).
    - Sprint task → rebuild + check out **git → Sprint test branch**.
 10. **Report** → **components → Report**, feedback variant: `· round <n>` + **Asked**.
@@ -91,7 +91,7 @@ Mid-fix needs a third file, a new type, or a layer call → stop, hand the whole
 - Never code new scope disguised as feedback.
 - Never apply feedback on a branch without the code, never on a test branch.
 - Never claim a check nobody ran.
-- Never set `done`, never close. Never commit, except `github` round end. Never mark the PR ready, never merge.
+- Never set `done`, never close. Never commit, except `board` round end. Never mark the PR ready, never merge.
 - Never push mid-round.
 
 ## Ask

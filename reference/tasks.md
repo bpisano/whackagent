@@ -2,6 +2,8 @@
 
 The model every skill shares: config, paths, states, ids, sprints, types, blockers. Where tasks live → `store-<tasks.backend>.md`.
 
+`board` = any backend with a remote board (`github`). Skills say `board`, the store says how.
+
 ## Config and paths
 
 - Read `.whackagent/config.md` first. Missing → `→ next: /wa-setup`, stop.
@@ -31,14 +33,14 @@ Each state says what's left to do.
 - `coding` = code being written, nothing else. Set by `/wa-code`, `/wa-feedback`.
 - Review rounds (`/wa-validate`, `/wa-close`) lock without moving the state.
 - "Review" = the verifier's pass, never a state.
-- Locks: `github` → atomic claim (**store-github → Locks**). `files` → plain status.
+- Locks: `board` → atomic claim (**store → Locks**). `files` → plain status.
 
 ## Ids
 
-| | `files` | `github` |
+| | `files` | `board` |
 |---|---|---|
-| input | display index `3`, slug | issue number `42`, `#42`, slug |
-| shown | `3 ·` | `#42 ·` |
+| input | display index `3`, slug | number `42`, store id (`#42`), slug |
+| shown | `3 ·` | store id `#42 ·` |
 | key (branch, worktree, report) | `<slug>` | `<n>-<slug>` |
 
 - Lists and ranges work: `2,4,5`, `2-5`.
@@ -52,10 +54,10 @@ Each state says what's left to do.
 
 Optional `sprint:` on a task. Groups one body of work. Naming → **voice → Titles**.
 
-- No sprint file, no command. Exists once a task names it (`github`: a milestone).
+- No sprint file, no command. Exists once a task names it (`board`: per store).
 - Not a state. Sections stay per state; a sprint's tasks stay adjacent inside each.
 - Resolve an arg: exact, then case-insensitive / kebab match. None → list known sprints (no live task = complete, not a typo). Ambiguous → list, stop.
-- Assign to a task: reuse a live name verbatim (`sprint:` values / open milestones). No match → new sprint.
+- Assign to a task: reuse a live name verbatim (`sprint:` values / open board sprints). No match → new sprint.
 - **Complete** when no task left in `draft`…`to-close`. Never `done`. `/wa-close` then offers to land it.
 - Sprint args: `/wa-board`, `/wa-autopilot`, `/wa-task`. Other commands stay per task. `/wa-board` also takes a type.
 - Branches → **git → Sprint branch**.
@@ -73,13 +75,13 @@ One per task. Test: user sees a difference? No → `refactor`. Yes: worked befor
 
 - Set by `/wa-draft` from the title verb (unclear → none), required before `todo` (`/wa-task`). `/wa-pitch` split → `feature`.
 - Title verb contradicts type → fix the title, not the type.
-- `files` → `type:`. `github` → label (**store-github → Helper**).
+- `files` → `type:`. `board` → **store → Helper**.
 
 ## Blockers
 
 Task blocked by another = needs its code landed first.
 
-- `files` → `blocked_by: [slug, …]`. `github` → issue *blocked by* link.
+- `files` → `blocked_by: [slug, …]`. `board` → `depend` (**store → Helper**).
 - Set by `/wa-task`, `/wa-draft`, the grill, a split (child blocked by the sibling it builds on).
 - **Open** = blocker not `done`. `canceled` blocker → no longer blocks, say so once.
 - Effects:

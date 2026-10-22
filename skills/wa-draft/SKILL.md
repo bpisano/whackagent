@@ -24,7 +24,7 @@ Read: voice, components, tasks, store
    - blockers → named only (`after Apple login`) → **tasks → Blockers**.
 5. **Create** per **store → create**:
    - `files` → template, `status: draft`, `created` = today, raw idea in `note:`. Backlog line bottom of Draft.
-   - `github` → `create … --note "<raw idea>"`, then `depend` if blockers named. No branch, no task file.
+   - `board` → `create … --note "<raw idea>"`, then `depend` if blockers named. No branch, no task file.
 6. **Echo** the new tasks as a **Task list**.
 
 ## Never

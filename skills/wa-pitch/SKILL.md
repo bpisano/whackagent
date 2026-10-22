@@ -32,7 +32,7 @@ Read: voice, components, tasks, store
    - One yes for all. Edits → apply, show again.
 8. **Create tasks** — each `draft`, per **store → create**, plan order = priority.
    - `files` → `created` today, `sprint`, `size`, `type: feature`, `blocked_by`, `wiki: [[pitch]]`.
-   - `github` → `create --title … --summary … --size … --type feature --sprint … --note …`, then `depend <n> --on …`. No branch, no task file.
+   - `board` → `create --title … --summary … --size … --type feature --sprint … --note …`, then `depend <n> --on …`. No branch, no task file.
    - `note` = what the pitch decided for it, 1–3 lines (screen, data, cut). Seeds its grill.
    - Re-pitch → only tasks no live task covers (title + summary).
    - Backlog not empty → land below existing drafts, say `/wa-task` reorders.
@@ -99,7 +99,7 @@ Naming → **voice → Titles**. Sprints, blockers → **tasks → Sprints**, **
 - Never create a sprint file or section.
 - Never touch a task past `draft`. Never duplicate one.
 - Never code, scaffold or install. Convention modules (wording, glossary) are fine.
-- Never commit. Files stay in the tree; `github` → say how many issues were created.
+- Never commit. Files stay in the tree; `board` → say how many tasks were created.
 
 ## Ask
 

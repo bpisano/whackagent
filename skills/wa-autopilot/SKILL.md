@@ -33,9 +33,9 @@ Read: voice, pr, components, tasks, git, store
    - Dependent → first wave after its last blocker's. Same-blocker dependents share a wave when independent. Earliest wave possible otherwise.
    - Echo the waves as **Plan** batch lines, then start. No `ok?`.
 4. **Set up each task**, just before its wave:
-   - `github` → `claim <n> coding` (**store → Locks**). Exit 3 → skipped, `🔒` owner. Exit 4 → skipped, say state. A lost claim never stalls the wave.
+   - `board` → `claim <n> coding` (**store → Locks**). Exit 3 → skipped, `🔒` owner. Exit 4 → skipped, say state. A lost claim never stalls the wave.
    - Worktree at `../.wa-worktrees/<key>`:
-     - `github` → task branch from `get <n>`: `git fetch origin <branch>`, `git worktree add ../.wa-worktrees/<key> <branch>`. Base already set.
+     - `board` → task branch from `get <n>`: `git fetch origin <branch>`, `git worktree add ../.wa-worktrees/<key> <branch>`. Base already set.
        - Branch checked out elsewhere → skipped, say where, `release <n> coding --reset-to todo --unassign me`.
      - `files` → always a new branch, whatever `branch.per_task`: `git worktree add ../.wa-worktrees/<key> -b <branch.prefix><key> <fork point>` (**git → Task branch**).
        - Sprint branch missing → create it once per run, in the main checkout, before the wave. Later waves reuse it.
@@ -55,13 +55,13 @@ Read: voice, pr, components, tasks, git, store
 7. **Deliver each task.**
    - State `to-test`, notes in `## Implementation` / `## Verification` (**store**).
    - Commit in its worktree, on its branch, task file included (**git → Commits**).
-   - `github` → round end (**store → Rounds**). Stacked: PR `--base <blocker branch>`. Conflict needing a design call → blocker (step 8).
+   - `board` → round end (**store → Rounds**). Stacked: PR `--base <blocker branch>`. Conflict needing a design call → blocker (step 8).
    - Remove the worktree. Branch stays.
    - Save the task's **Report** to `{reports}/<key>.md`, in the main checkout.
    - No report-and-iterate phase.
 8. **Blocked** — `BLOCKED:`, failed runtime check, any ambiguity:
    - Task back to `todo`, `blocked` note, open question in `## Implementation`.
-   - `github` → commit + push: the push frees the lock, card → `Todo`. Nothing to push → `release <n> coding --reset-to todo --unassign me --reason "BLOCKED: <question>"`.
+   - `board` → commit + push: the push frees the lock, card → `Todo`. Nothing to push → `release <n> coding --reset-to todo --unassign me --reason "BLOCKED: <question>"`.
    - Keep its worktree. Move on: the wave keeps going.
 9. **Build the test branch** → **Test branch**.
 10. **Report** — **Batch report**, printed and saved to `{reports}/autopilot-<date>.md`.
@@ -80,8 +80,8 @@ Mandatory. User launches once, every feature coded this run is there. After the 
   - Commits found on it → leave it, build the run test branch.
 - Else → **run test branch** `<branch.prefix>autopilot-<YYYY-MM-DD>-test`:
   ```
-  git checkout -B <run test branch> <branch.base>   # github: origin/<branch.base>, fetched
-  git merge --no-ff --no-edit <task branch>         # github: origin/<task branch>
+  git checkout -B <run test branch> <branch.base>   # board: origin/<branch.base>, fetched
+  git merge --no-ff --no-edit <task branch>         # board: origin/<task branch>
   ```
 
   - Every task delivered this run, board order, blocker before stacked.

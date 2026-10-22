@@ -15,10 +15,10 @@ Read: voice, pr, components, tasks, git, store
    - `to-test` → **Warning**: not reviewed yet, review first (step 2).
    - `draft` / `grilling` / `todo` / `coding` → not coded, stop.
    - `done` / `canceled` → say what branch did, stop.
-   - `github` → `claim <n> coding --keep-state` (**store-github → Locks**).
+   - `board` → `claim <n> coding --keep-state` (**store → Locks**).
    - Stacked (`stacked on:` in `## Implementation`) → maintain it per **git → Stacking**:
      - blocker not landed → **Warning** `⛔`, **Next** `/wa-close <blocker>`, stop
-     - blocker landed → rebase own commits onto real base before review; `github`: `gh pr edit <pr> --base <base>`
+     - blocker landed → rebase own commits onto real base before review; `board`: `gh pr edit <pr> --base <base>`
    - **Be on the task branch**:
      - not on it, clean tree → switch, say so. Dirty → **git → Dirty tree**
      - sprint test branch → **git → Sprint test branch → Leaving it**
@@ -29,13 +29,13 @@ Read: voice, pr, components, tasks, git, store
 6. **Go on, no yes.** Code changed since the user's test → **Landing** `⚠️` line, in user terms.
    - Only `files` + `close.strategy: merge` (no PR gate) → **Warning** + `ok?`, wait.
      - No → stop. Task stays `to-close`, review recorded, wiki pages left in tree, say so.
-7. **Commit** — `files`: when `commit.auto_commit_after_validation`; `github`: always. Author → **git → Commits**.
+7. **Commit** — `files`: when `commit.auto_commit_after_validation`; `board`: always. Author → **git → Commits**.
    - Clean tree → skip.
    - Nothing committed + dirty tree → stop before any branch move.
-8. **Land** — `github` → *GitHub landing*. `files` → *Land*.
+8. **Land** — `board` → *Board landing*. `files` → *Land*.
 9. **Clean up** — `files` only → *Cleanup*.
-10. **Set `done`** — `files` only, per **store** (backlog line keeps `· <Sprint>`). `github`: never, the hook does.
-11. **Sprint complete?** Last task of a sprint closed (`github`: merged) → *Sprint landing*.
+10. **Set `done`** — `files` only, per **store** (backlog line keeps `· <Sprint>`). `board`: never, the hook does.
+11. **Sprint complete?** Last task of a sprint closed (`board`: merged) → *Sprint landing*.
 12. **Next branch** — `files`, when `branch.per_task` + `commit.auto_commit_after_validation` + `branch.checkout_next`:
     - top unblocked `todo` → its branch per **git → Task branch** (**git → Dirty tree**)
     - show its **Branch line**, **Next** `/wa-code <n>`
@@ -53,7 +53,7 @@ Outcomes:
 - Clean, autofix changed nothing → silent.
 - Clean, autofix changed code → step 6 `⚠️` line, in user terms. Never bury it.
 - Findings open → **Findings** with picks. Nothing lands, task back to `to-test`.
-  - `github` → commit + push the round, task file `status: to-test` (moves the card), lock released.
+  - `board` → commit + push the round, task file `status: to-test` (moves the card), lock released.
 
 ## Wiki
 
@@ -63,7 +63,7 @@ Outcomes:
 - nothing to change → silent
 - unsure which page → **Question**
 
-## GitHub landing
+## Board landing
 
 Branch + draft PR exist since `/wa-code`. `close.strategy`, `close.delete_branch` ignored.
 
@@ -108,13 +108,13 @@ Failure before the push → lock still held: say so. User leaves it → `release
 
 Sprint complete per **tasks → Sprints**.
 
-- `github` → completes when the last task PR merges. This close can't see it: 🏁 line (**components → Task list**). Next `/wa-close` or `/wa-board` finding it complete proposes the sprint PR.
+- `board` → completes when the last task PR merges. This close can't see it: 🏁 line (**components → Task list**). Next `/wa-close` or `/wa-board` finding it complete proposes the sprint PR.
 
 Then:
 
 1. Show its 🏁 line (**components → Task list**).
 2. **Question**: apply `close.strategy` to the sprint branch onto `close.target`; alt = keep the branch, user ships it.
-   - `github` → always a PR onto `branch.base`, `--milestone "<Sprint>"`.
+   - `board` → always a PR onto `branch.base` (**store → Other**).
    - Sprint PR title + body → **pr** (sums up the sprint).
 3. **Only on yes.** No → branch stays, nothing lost.
 4. Sprint branch merged or PR'd → `close.delete_branch` applies as for a task branch.
@@ -124,7 +124,7 @@ Then:
 
 - Never land a task the verifier never saw, or with open findings.
 - Never close from the sprint test branch, never merge from it.
-- `github`: never `gh pr merge`, never set `done`, never close the issue, never delete the branch.
+- `board`: never `gh pr merge`, never set `done`, never close the issue, never delete the branch.
 - Never guess a conflict resolution, never `--abort` it behind the user's back.
 - Never force-push except own task branch after a rebase. Never rewrite a shared branch.
 - Never touch another task's or sprint's branch.
@@ -138,4 +138,4 @@ Then:
 ## Next
 
 - `files` → `→ next: /wa-board`.
-- `github` → `→ next: merge <PR URL>`.
+- `board` → `→ next: merge <PR URL>`.

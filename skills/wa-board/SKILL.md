@@ -18,9 +18,9 @@ Read: voice, components, tasks, store
 2. **List** every task per **store**: title, summary, size, type, sprint, status, blockers, locks.
    - Legacy task → `→ next: /wa-update`, stop.
 3. **Show** a **Task list**.
-   - `github` → one line after it for open issues not on the board.
+   - `board` → one line after it for open tasks not on the board.
 4. **Pick one next**, first match wins (sprint view → inside that sprint):
-   1. `github` sprint complete, branch not merged, no PR → offer the sprint PR (**wa-close → Sprint landing**). Ask, never open it here.
+   1. `board` sprint complete, branch not merged, no PR → offer the sprint PR (**wa-close → Sprint landing**). Ask, never open it here.
    2. `to-close` → `/wa-close <id>` (retest found something → `/wa-feedback`)
    3. `to-test` → `/wa-feedback <id> <notes>`, or `/wa-validate <id>`
    4. `coding` → `/wa-code <id>` resumes

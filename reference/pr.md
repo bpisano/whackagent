@@ -38,7 +38,7 @@ One change a line, glossary terms, sorted by type:
 
 ## Screenshots
 
-`pr_screenshots.mode: auto` + `verify.platform` set + a PR in the flow (`github`, or `close.strategy: pr`). Else none, section dropped.
+`pr_screenshots.mode: auto` + `verify.platform` set + a PR in the flow (`board`, or `close.strategy: pr`). Else none, section dropped.
 
 - Independent of `verify.mode`: `autopilot` / `off` gate runtime checks, never shots.
 

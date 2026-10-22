@@ -17,9 +17,9 @@ Read: voice, pr, components, tasks, git, store
    - Open blocker → **Warning** `⛔ blocked by #12 …`, recommend `/wa-code 12` first. Go on only on explicit yes.
 2. **Take it.**
    - `files` → state `coding`.
-   - `github` → `claim <n> coding` (**store-github → Locks**). File `status:` stays until round end.
-3. **Branch** per **git → Task branch** (fork point, `github` name, echo) and **git → Sprint branch** (create or check up to date). Main checkout, never a worktree. Dirty tree → **git → Dirty tree**.
-   - `github` → pull after checkout.
+   - `board` → `claim <n> coding` (**store → Locks**). File `status:` stays until round end.
+3. **Branch** per **git → Task branch** (fork point, `board` name, echo) and **git → Sprint branch** (create or check up to date). Main checkout, never a worktree. Dirty tree → **git → Dirty tree**.
+   - `board` → pull after checkout.
    - Sprint branch just created → say so.
 4. **Plan** → **Brief**.
 5. **Code** — one `wa-implementer` for the whole task, bricks one at a time (parallel builds collide).
@@ -34,7 +34,7 @@ Read: voice, pr, components, tasks, git, store
 7. **Verify** — only `review.when: each_round` → **Verify**.
    - `on_validation` (default) → skip, echo `review: → /wa-validate`.
 8. **Deliver** — state `to-test`.
-   - `github` → round end per **store-github → Rounds**: file `status: to-test` + sections, commit (**git → Commits**), push, draft PR + `link-pr` on first delivery, mergeable check.
+   - `board` → round end per **store → Rounds**: file `status: to-test` + sections, commit (**git → Commits**), push, draft PR + `link-pr` on first delivery, mergeable check.
    - Aborted before any push → `release <n> coding --reset-to <state claimed from>` (+ `--unassign me` from `todo`), say why.
 9. **End on the coded branch** — before any report.
    - Sprint task → build the **git → Sprint test branch**, check it out.
@@ -42,7 +42,7 @@ Read: voice, pr, components, tasks, git, store
    - `branch.per_task: false` → stay.
    - Dirty tree blocks the build or switch → never stash or discard. Say what's dirty → **components → Branch line** (`not built` / `couldn't switch`).
 10. **Report** — run `git branch --show-current` first, never assume: the **Branch line** shows what it returns.
-   - Show a **Report** (`github`: + PR URL). Save it to `{reports}/<key>.md` + full file/folder list, key decisions, findings.
+   - Show a **Report** (`board`: + PR URL). Save it to `{reports}/<key>.md` + full file/folder list, key decisions, findings.
 
 ## Brief
 
@@ -91,7 +91,7 @@ Resume, rounds 2+ — `SendMessage`, never respawn:
 
 - Never write code, not even a one-liner. Iteration → `/wa-feedback`.
 - Never respawn an implementer or verifier you can resume (**Verify** → Resume).
-- Never commit (`files`). `github` → round-end commit + push only, never mid-round.
+- Never commit (`files`). `board` → round-end commit + push only, never mid-round.
 - Never mark the PR ready, merge, or land. That's `/wa-close`.
 - Never set `done`. "ok that's it" = spec approval, not close.
 - Never merge into a sprint branch or base. Never push the test branch.

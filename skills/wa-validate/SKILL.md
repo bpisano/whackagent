@@ -18,7 +18,7 @@ Read: voice, pr, components, tasks, git, store
 2. **Be on the right branch.**
    - Task branch (`branch.per_task` or `/wa-autopilot` delivery) → work there. Not on it → name it, switch only on yes.
    - On the sprint test branch → **git → Sprint test branch → Leaving it**.
-   - `github` → fetch + pull, then `claim <n> coding --keep-state` (**store-github → Locks**). Exit 3 or 4 → say it, stop.
+   - `board` → fetch + pull, then `claim <n> coding --keep-state` (**store → Locks**). Exit 3 or 4 → say it, stop.
 3. **State what you take as validated** — `## Acceptance criteria` back, one block.
    - User knows one is unmet → they want `/wa-feedback`, say so, stop.
 4. **Verify** — one `wa-verifier`, per **wa-code → Verify** (hunks, lenses, resume by agentId, fix loop).
@@ -36,9 +36,9 @@ Read: voice, pr, components, tasks, git, store
    - Else, code moved → say plainly it changed since the user's test, name files.
 7. **Set state** `to-close` per **store**.
    - Findings still open → stay `to-test`: not closable.
-   - Clean → screenshots per **pr → Screenshots**, whatever `verify.mode`: one `wa-screenshot`. `github` → uploaded in this round's PR edit. `files` → kept for `/wa-close`.
-   - `github` → round end per **store-github → Rounds**: file `status:` + `## Review`, commit (**git → Commits**), push. Hook moves the card.
-   - `github`, aborted before any push → `release <n> coding` alone.
+   - Clean → screenshots per **pr → Screenshots**, whatever `verify.mode`: one `wa-screenshot`. `board` → uploaded in this round's PR edit. `files` → kept for `/wa-close`.
+   - `board` → round end per **store → Rounds**: file `status:` + `## Review`, commit (**git → Commits**), push. Hook moves the card.
+   - `board`, aborted before any push → `release <n> coding` alone.
    - Sprint task + autofix changed code → rebuild the sprint test branch (**git → Sprint test branch**). Nothing changed → no rebuild.
 8. **Report** — **components → Report**, Review as **components → Findings**. One of:
    - Clean, nothing changed → nothing to retest.
@@ -51,7 +51,7 @@ Read: voice, pr, components, tasks, git, store
 - Never set `done`. That's `/wa-close`, after the retest.
 - Never review without the user's yes on the spec.
 - Never land: no merge into sprint or base, no PR opened or marked ready, no branch deleted. Sprint test branch rebuild is the one merge.
-- Never commit or push in `files`. `github` → round end only.
+- Never commit or push in `files`. `board` → round end only.
 - Never write code. Findings go to the implementer.
 - Never hand off to `/wa-close` with findings open.
 - `/wa-feedback` on a `to-close` task sends it back to `to-test`: never close on a review older than the last edit.
