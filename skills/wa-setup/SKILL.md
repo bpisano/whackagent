@@ -59,9 +59,8 @@ One **Question** each, detected value as default. 7–13 total, rest = template 
      - Sprint task merges into its sprint branch first; this sets the sprint's end.
      - `pr` needs `gh`, asks before each PR. `close.delete_branch` stays `auto`.
 8. **Task store** — GitHub remote only, else `files` → `tasks.backend`. Recommend `github` for a team, `plane` if the team runs Plane, `files` alone.
-   - Explain `github`: issue per task on a Project (column = state, order = priority, sprint = milestone); task file on `wa/<n>-<slug>`, a hook moves cards; locks; each round pushes, one draft PR per task.
-   - `plane`: same flow, work item per task on a Plane project (state, estimate, label, module). Asks the project URL. Plane reachable from GitHub Actions.
-   - Costs one secret per repo (PAT, or Plane key).
+   - Explain `github`: issue per task on a Project (column = state, order = priority, sprint = milestone); task file on `wa/<n>-<slug>`, the plugin moves cards from your pushes and merges (no GitHub Actions); locks; each round pushes, one draft PR per task.
+   - `plane`: same flow, work item per task on a Plane project (state, estimate, label, module). Asks the project URL. Plane reachable from each machine.
 9. **Paths** → `paths.*`, recommend `.whackagent/`. One question, per path only on "some of them". `board` → no backlog.
    - Shared wiki/backlog → committed folder (`docs/`). `paths.reports` stays local.
    - Absolute OK. `.whackagent/config.md` never moves.
@@ -98,7 +97,7 @@ One **Question** each, detected value as default. 7–13 total, rest = template 
 
 ## GitHub scaffold
 
-Team-visible. One **Plan** (auth, project, status, size, variables, hook, secret, config, import). Helper → **store-github → Helper**.
+Team-visible. One **Plan** (auth, project, status, size, variables, merge workflow, config, import). Helper → **store-github → Helper**.
 
 1. **Auth** — needs `project` scope. Missing → user runs `! gh auth refresh -h github.com -s project`, re-check.
 2. **Provision** — always `--tasks-path {tasks} --branch-prefix <prefix>`. Adds `Size`, type labels (**tasks → Types**), links repo, sets `WA_*` variables.
@@ -107,31 +106,24 @@ Team-visible. One **Plan** (auth, project, status, size, variables, hook, secret
    - Adopt → `--project <n>` (+ `--owner` if not repo owner). Columns kept, missing states added; `--state todo="Ready"` maps a team name.
    - `status_options_extra` → name, ask; recommend dropping GitHub defaults, keeping team ones. Yes → `--prune-status`. Cards on them → user moves them.
    - One board per repo. Never repurpose a team board unasked.
-3. **Hook** (mandatory): branch `wa-setup/board-hooks` off default → `${CLAUDE_PLUGIN_ROOT}/templates/github-board.yml` to `.github/workflows/whackagent-board.yml` → commit (**git → Commits**) → push → `gh pr create --assignee @me`.
-   - Custom prefix → edit its `branches:` filter.
-   - Say: cards move once merged; older sprint branches lack it.
-4. **Secret** `WA_PROJECT_TOKEN`:
-   - User makes a classic PAT: `https://github.com/settings/tokens/new?scopes=project,repo&description=whackagent-board`.
-   - User runs `! pbpaste | gh secret set WA_PROJECT_TOKEN -R <owner>/<repo>`.
-   - `provision --project <n>` → `secret_WA_PROJECT_TOKEN: true`. Missing → hook fails: setup not done.
-5. **Config**: `tasks.backend: github`, `tasks.project: <owner>/<number>`, `branch.per_task: true`.
-6. `.md` tasks exist → **Import to GitHub**, same **Plan**.
-7. **Offer smoke test** (recommend yes): `create` → `claim <n> grilling` → `release <n> grilling --reset-to draft` → `cancel <n> --reason "smoke test"`.
+3. **Merge workflow** — no API: user opens `<project_url>/workflows`, turns on **Pull request merged** → Done. Recommend yes: a web merge shows Done before anyone's next session.
+   - Say: cards follow pushes from Claude sessions (**store-github → Reconcile**), no GitHub Actions, no secret.
+4. **Config**: `tasks.backend: github`, `tasks.project: <owner>/<number>`, `branch.per_task: true`.
+5. `.md` tasks exist → **Import to GitHub**, same **Plan**.
+6. **Offer smoke test** (recommend yes): `create` → `claim <n> grilling` → `release <n> grilling --reset-to draft` → `cancel <n> --reason "smoke test"`.
 
 ## Plane scaffold
 
-Team-visible. One **Plan** (token, project, states, estimate, labels, variables, hook, secret, config). Helper → **store-plane → Helper**.
+Team-visible. One **Plan** (token, project, states, estimate, labels, variables, config). Helper → **store-plane → Helper**.
 
 1. **Token** — env `WA_PLANE_TOKEN` set? Missing → user creates a key (Plane → Profile settings → Personal access tokens), adds `export WA_PLANE_TOKEN=…` to the shell profile, restarts Claude. Re-check.
 2. **Provision** — ask the project URL (`https://<host>/<workspace>/projects/<id>/…`). `provision --url <url> --tasks-path {tasks} --branch-prefix <prefix>`. Creates the eight states (Draft default), estimate `quickwin` / `medium` / `large`, type labels; sets `WA_*` variables.
    - `--state todo="Ready"` maps a team state, `--type improvement=enhancement` a label.
    - `states_extra` → name, ask; recommend dropping Plane defaults (Backlog, In Progress…). Yes → `--prune-states`. Items on them → user moves them first.
    - Unreachable or API error → say it, stop.
-3. **Hook** — as **GitHub scaffold** 3, from `${CLAUDE_PLUGIN_ROOT}/templates/plane-board.yml`.
-4. **Secret** `WA_PLANE_TOKEN` — a Plane key (bot account if any): user runs `! pbpaste | gh secret set WA_PLANE_TOKEN -R <owner>/<repo>`. `provision` again → `secret_WA_PLANE_TOKEN: true`.
-5. **Config**: `tasks.backend: plane`, `tasks.project: <url>`, `branch.per_task: true`.
-6. `.md` tasks exist → no import: say open tasks are recreated with `/wa-draft`.
-7. **Smoke test** — as **GitHub scaffold** 7.
+3. **Config**: `tasks.backend: plane`, `tasks.project: <url>`, `branch.per_task: true`.
+4. `.md` tasks exist → no import: say open tasks are recreated with `/wa-draft`.
+5. **Smoke test** — as **GitHub scaffold** 6.
 
 ## Re-run
 
@@ -140,7 +132,7 @@ Team-visible. One **Plan** (token, project, states, estimate, labels, variables,
 3. **Apply** what changed, each effect behind its **Plan**:
    - Config key by key, never re-copy the template. Rest byte-for-byte.
    - Path changed → move files: list, `git mv` (or move); dirty tree → say so first. Target not empty → stop: merge, other path, abort. Fix links (backlog → tasks relative to its folder, `[[page]]`, `wiki:`). Wiki left `.whackagent/` → recommend `compress_wiki: false`.
-   - `files` → `github` → **GitHub scaffold** + **Import to GitHub**. → `plane` → **Plane scaffold** (6).
+   - `files` → `github` → **GitHub scaffold** + **Import to GitHub**. → `plane` → **Plane scaffold** (4).
    - Module newly picked (Apple, wording, architecture swap) → copy per **Scaffold**. Never overwrite one present.
    - Folder deleted (key unchanged) → recreate empty, mention.
    - No wiki seeding, no compression.
@@ -160,7 +152,6 @@ Team-visible. One **Plan** (token, project, states, estimate, labels, variables,
 - Never overwrite a user-edited value, module, or file.
 - Never continue `github` without `project` scope.
 - Never ask for or paste the token in chat.
-- Never push the hook to the default branch directly.
 - Never migrate `github` / `plane` → `files`, or between them: unsupported, recommend staying.
 - Never continue `plane` without `WA_PLANE_TOKEN`.
 

@@ -45,7 +45,7 @@ Project vs this plugin version. Runs after migrations: they read keys sync would
 - Never change a config value: keys added or removed only.
 - Never overwrite a user-edited module or file without diff + yes.
 - Never run a migration whose `## Detect` doesn't match.
-- Never commit, except where a migration or the hook PR says so.
+- Never commit, except where a migration says so.
 - Never ask setup questions beyond a new module: that's `/wa-setup`.
 
 ## Ask

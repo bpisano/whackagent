@@ -17,6 +17,7 @@ Read: voice, components, tasks, store
    - Sprint name → only its tasks, 🏁 line on top (**tasks → Sprints** to resolve).
 2. **List** every task per **store**: title, summary, size, type, sprint, status, blockers, locks.
    - Legacy task → `→ next: /wa-update`, stop.
+   - `board` + `reconcile.log` (**store → Reconcile**) → **Warning** `⚠️ board out of sync — <its line>` first.
 3. **Show** a **Task list**.
    - `board` → one line after it for open tasks not on the board.
 4. **Pick one next**, first match wins (sprint view → inside that sprint):

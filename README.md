@@ -97,13 +97,13 @@ The task file stays the source of truth. A GitHub Project shows it to the team.
 
 - **One issue per task.** The issue holds the title, summary, size, type (label), sprint (milestone) and blockers.
 - **The spec lives on the task branch.** `/wa-task 42` creates `wa/42-add-apple-login` and commits `.whackagent/tasks/42-add-apple-login.md` there.
-- **The board follows the files.** A GitHub Action reads the task file on every push and moves the card. A merged PR moves it to Done and closes the issue.
+- **The board follows the files.** After each push or merge from Claude, the plugin reads the task file and moves the card; each session start catches up on the rest (merges on the web, pushes from a terminal). A merged PR moves it to Done and closes the issue. No GitHub Action: no Actions minutes, no secret. Turn on the Project's built-in *Pull request merged* workflow and web merges show Done right away.
 - **One person per task.** Grilling and coding take a lock. Someone else trying gets `🔒 #42 grilling — alice@mbp since 2h`. A review locks the task too, but the card stays in To test.
 - **You're assigned.** Coding a task assigns you on its issue, every PR whackagent opens too. You stay until merge. Abandoned before any push, or released with `/wa-task release`, the issue is unassigned.
 - **One draft PR per task.** Every round pushes to it and rewrites its body. `/wa-close` marks it ready. You merge.
 - **Same PR shape every time**: one sentence, `Changes` (`Add …`, `Change …`, `Fix …`, `Remove …`, `Improve …`), `Screenshots` (UI only), `To test`, optional `Notes`, `Closes #n` last. Template in `conventions/pr.md`, yours to edit; the repo's `.github/pull_request_template.md` wins if present. Language: `pr_language`. Never signed by Claude.
 
-Setup needs `gh` with the `project` scope and a token for the Action (`WA_PROJECT_TOKEN`). `/wa-setup` walks you through both.
+Setup needs `gh` with the `project` scope. `/wa-setup` walks you through it.
 
 ### `plane`
 
@@ -111,10 +111,10 @@ Same flow as `github`, with the board on a [Plane](https://plane.so) project (cl
 
 - **One work item per task**, shown `APP-42`. `/wa-code 42` or `/wa-code APP-42`.
 - **Same eight states**, created in the project (Draft is the default). Size is a Plane estimate, type a label, sprint a module, blockers native *blocked by* relations, priority the manual order.
-- **The same GitHub Action** moves items on push and merge, and completes a module once all its items are done. Plane must be reachable from GitHub.
+- **The same sync** moves items on push and merge, and completes a module once all its items are done. Plane must be reachable from your machine.
 - **You're assigned** on the work item when you code it; the PR links back to it instead of `Closes #n`.
 
-Setup asks the project URL. Each dev exports their Plane API key as `WA_PLANE_TOKEN`; the Action gets one as a repo secret. No import from `files` or `github`: recreate open tasks with `/wa-draft`.
+Setup asks the project URL. Each dev exports their Plane API key as `WA_PLANE_TOKEN`. No import from `files` or `github`: recreate open tasks with `/wa-draft`.
 
 ## Dependencies
 

@@ -3,7 +3,7 @@
 
 Tasks on a GitHub Project v2 on top of `gh`. Stdlib only. Verbs documented in
 skills/wa-board/SKILL.md → Task store. Settings come from repository variables (shared
-with the board workflow), IDs are cached per clone in <git-common-dir>/whackagent/github-cache.json.
+by every clone), IDs are cached per clone in <git-common-dir>/whackagent/github-cache.json.
 
 Ported from the rlatapy-luna/whackagent fork (wa-backlog), adapted to whackagent's lifecycle.
 
@@ -11,11 +11,13 @@ Exit codes: 0 ok · 1 error · 2 usage · 3 claim taken · 4 wrong state for the
 """
 
 import argparse
+import base64
 import concurrent.futures
 import hashlib
 import datetime as dt
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -743,6 +745,220 @@ def op_edit(args):
     emit({"number": args.number, **fields})
 
 
+# ---------------------------------------------------------------- reconcile
+
+# `status:` values a task file may move the card to. `coding` is a lock, set by claim only.
+FROM_FILE = ["todo", "to-test", "to-close"]
+SETTLED = {"done", "canceled"}
+
+
+def when(stamp):
+    return dt.datetime.fromisoformat(stamp.replace("Z", "+00:00")) if stamp else None
+
+
+def number_of(config, branch):
+    match = re.match(rf"^{re.escape(config['branch_prefix'])}(\d+)-", branch or "")
+    return int(match.group(1)) if match else None
+
+
+def task_branches(config):
+    """Ticket number → {branch, sha} for every remote task branch."""
+    code, data = rest("GET", f"repos/{config['repo']}/git/matching-refs/heads/{config['branch_prefix']}", check=False)
+    found = {}
+    for ref in data or []:
+        name = ref["ref"].removeprefix("refs/heads/")
+        number = number_of(config, name)
+        if number is not None:
+            found.setdefault(number, {"branch": name, "sha": ref["object"]["sha"]})
+    return found
+
+
+def task_prs(config, branches=None):
+    """Ticket number → its latest same-repo PR. `branches` given → only theirs, else the last 100 updated."""
+    if branches:
+        owner = config["repo"].split("/")[0]
+        rows = [
+            p for b in branches
+            for p in rest("GET", f"repos/{config['repo']}/pulls?state=all&head={urllib.parse.quote(f'{owner}:{b}')}")
+        ]
+    else:
+        rows = rest("GET", f"repos/{config['repo']}/pulls?state=all&sort=updated&direction=desc&per_page=100")
+    found = {}
+    for pr in rows:
+        number = number_of(config, pr["head"]["ref"])
+        if number is None or (pr["head"].get("repo") or {}).get("full_name") != config["repo"]:
+            continue
+        if number not in found or pr["created_at"] > found[number]["created_at"]:
+            found[number] = pr
+    return found
+
+
+def task_file(config, number, sha):
+    """The task file for #number at sha: path and `status:`, or None when absent, not this issue's,
+    or not grilled yet (empty acceptance criteria)."""
+    code, listing = rest("GET", f"repos/{config['repo']}/contents/{config['tasks_path']}?ref={sha}", check=False)
+    if code != 0 or not isinstance(listing, list):
+        return None
+    entry = next((f for f in listing if re.match(rf"^{number}-.*\.md$", f["name"])), None)
+    if not entry:
+        return None
+    data = rest("GET", f"repos/{config['repo']}/contents/{entry['path']}?ref={sha}")
+    text = base64.b64decode(data["content"]).decode()
+    if not re.search(rf"^issue:\s*#?{number}\s*$", text, re.M):
+        return None
+    section = re.split(r"^## Acceptance criteria\s*$", text, flags=re.M)
+    criteria = re.sub(r"<!--[\s\S]*?-->", "", re.split(r"^## ", section[1], flags=re.M)[0]).strip() if len(section) > 1 else ""
+    if not criteria:
+        return None
+    status = re.search(r"^status:\s*([a-z-]+)", text, re.M)
+    return {"path": entry["path"], "status": status.group(1) if status else None}
+
+
+def target(config, ticket, branch, pr, held):
+    """What the board should say for one ticket, from what happened last on GitHub.
+
+    Events: the branch head (push, carries the file `status:`), the PR merged or closed. The latest
+    one wins; merged always does. A claim newer than it = a round running: hands off.
+    Returns (state, phases to release, event) or None."""
+    if pr and pr.get("merged_at"):
+        return "done", ["grilling", "coding"], {"kind": "merged", "pr": pr}
+    events = []
+    if branch:
+        head = rest("GET", f"repos/{config['repo']}/commits/{branch['sha']}")
+        file = task_file(config, ticket["number"], branch["sha"])
+        if file and file["status"] in FROM_FILE:
+            events.append((when(head["commit"]["committer"]["date"]), file["status"], ["grilling", "coding"],
+                           {"kind": "push", "file": file, **branch}))
+    if pr and pr.get("closed_at"):
+        events.append((when(pr["closed_at"]), "todo", ["coding"], {"kind": "closed", "pr": pr}))
+    if not events:
+        return None
+    at, state, phases, event = max(events, key=lambda e: e[0])
+    if any(when(claim_owner(config, c["sha"])["since"]) > at for c in held):
+        return None
+    return state, phases, event
+
+
+def event_line(config, state, event):
+    if event["kind"] == "merged":
+        return f"🎉 **done** — #{event['pr']['number']} merged into `{event['pr']['base']['ref']}`"
+    if event["kind"] == "closed":
+        return f"↩️ **todo** — #{event['pr']['number']} closed unmerged, spec kept on `{event['pr']['head']['ref']}`"
+    # sha permalink: the branch is deleted on merge, the commit stays
+    url = f"https://github.com/{config['repo']}/blob/{event['sha']}/{event['file']['path']}"
+    name = event["file"]["path"].split("/")[-1]
+    return {
+        "todo": f"✅ **grilled** — spec [`{name}`]({url}) on `{event['branch']}`",
+        "to-test": f"🧪 **to test** — [`{name}`]({url})",
+        "to-close": "🏁 **to close** — verifier passed, retest then close",
+    }[state]
+
+
+def last_comment(config, number):
+    owner, name = config["repo"].split("/")
+    nodes = graphql(
+        "query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){issue(number:$n){comments(last:1){nodes{body}}}}}",
+        o=owner, r=name, n=number,
+    )["repository"]["issue"]["comments"]["nodes"]
+    return nodes[0]["body"] if nodes else None
+
+
+def settle(config, number, event):
+    """Merged: issue closed, sprint milestone closed once empty."""
+    issue = rest("GET", f"repos/{config['repo']}/issues/{number}")
+    if issue["state"] == "open":
+        rest("PATCH", f"repos/{config['repo']}/issues/{number}", {"state": "closed", "state_reason": "completed"})
+    milestone = issue.get("milestone")
+    if milestone:
+        m = rest("GET", f"repos/{config['repo']}/milestones/{milestone['number']}")
+        if m["state"] == "open" and m["open_issues"] == 0:
+            rest("PATCH", f"repos/{config['repo']}/milestones/{m['number']}", {"state": "closed"})
+
+
+def unboarded(config):
+    """Open issues not on the board yet (the board lists only what was added)."""
+    owner, name = config["repo"].split("/")
+    query = """query($o:String!,$r:String!,$after:String){repository(owner:$o,name:$r){
+        issues(states:OPEN,first:100,after:$after){pageInfo{hasNextPage endCursor}
+        nodes{number labels(first:20){nodes{name}} projectItems(first:20){nodes{project{id}}}}}}}"""
+    after, found = None, []
+    while True:
+        page = graphql(query, o=owner, r=name, after=after)["repository"]["issues"]
+        for issue in page["nodes"]:
+            if IGNORE_LABEL in [l["name"] for l in issue["labels"]["nodes"]]:
+                continue
+            if all(p["project"]["id"] != config["project_id"] for p in issue["projectItems"]["nodes"]):
+                found.append(issue["number"])
+        if not page["pageInfo"]["hasNextPage"]:
+            return found
+        after = page["pageInfo"]["endCursor"]
+
+
+def op_reconcile(args):
+    """Bring the board in line with GitHub: task files on branches, PRs merged or closed, locks.
+    No target → every open card. Idempotent: run it as often as you like."""
+    config = load()
+    heads = set(args.branch or [])
+    heads |= {rest("GET", f"repos/{config['repo']}/pulls/{pr}")["head"]["ref"] for pr in args.pr or []}
+    numbers = set(args.number or []) | {number_of(config, b) for b in heads}
+    numbers.discard(None)
+    targeted = bool(args.number or args.branch or args.pr)
+    if targeted and not numbers:
+        emit([])
+        return
+    claim_map = claims(config)
+    branches = task_branches(config)
+    added = []
+    if targeted:
+        tickets = [find(config, n, with_owners=False) for n in sorted(numbers)]
+        # A merged branch may be deleted already: its name still finds the PR.
+        heads |= {branches[n]["branch"] for n in numbers if n in branches}
+        prs = task_prs(config, sorted(h for h in heads if number_of(config, h) in numbers))
+    else:
+        for number in unboarded(config):
+            if not args.dry_run:
+                find(config, number, with_owners=False)  # adds the card, in Draft
+            added.append({"number": number, "from": None, "to": "draft"})
+        tickets = [to_ticket(config, node, claim_map) for node in items(config)]
+        prs = task_prs(config)
+
+    def plan(ticket):
+        if ticket.get("draft") or ticket["ignored"] or ticket["state"] in SETTLED:
+            return None
+        if ticket["column"] and not ticket["state"]:  # a column whackagent doesn't own (Blocked, …)
+            return None
+        number = ticket["number"]
+        held = claim_map.get(number, [])
+        decided = target(config, ticket, branches.get(number), prs.get(number), held)
+        if not decided:
+            return None
+        state, phases, event = decided
+        release = [c["phase"] for c in held if c["phase"] in phases]
+        if state == ticket["state"] and not release:
+            return None
+        return ticket, state, release, event
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        plans = [p for p in pool.map(plan, tickets) if p]
+    changes = list(added)
+    for ticket, state, release, event in plans:
+        number = ticket["number"]
+        moved = state != ticket["state"]
+        changes.append({"number": number, "from": ticket["state"], "to": state, "released": release})
+        if args.dry_run:
+            continue
+        if moved:
+            set_state_raw(config, ticket, state)
+        for phase in release:
+            rest("DELETE", f"repos/{config['repo']}/git/refs/{CLAIM_NAMESPACE}/{number}/{phase}", check=False)
+        if event["kind"] == "merged":
+            settle(config, number, event)
+        line = event_line(config, state, event)
+        if moved and last_comment(config, number) != line:  # two reconciles racing post it once
+            comment(config, number, line)
+    emit(changes)
+
+
 # ---------------------------------------------------------------- provisioning
 
 
@@ -878,7 +1094,6 @@ def op_provision(args):
     for name, value in variables.items():
         gh(["variable", "set", name, "--repo", repo, "--body", value])
     config = load(refresh=True)
-    secret = gh(["secret", "list", "--repo", repo, "--json", "name", "--jq", ".[].name"], check=False).stdout.split()
     emit(
         {
             "project_url": url,
@@ -891,7 +1106,6 @@ def op_provision(args):
             "type_labels": type_labels,
             "type_labels_created": labels_created,
             "variables": variables,
-            "secret_WA_PROJECT_TOKEN": "WA_PROJECT_TOKEN" in secret,
             "state_options": config["state_options"],
         }
     )
@@ -1006,6 +1220,13 @@ def parser():
     s.add_argument("--title")
     s.add_argument("--body")
     s.set_defaults(func=op_edit)
+
+    s = sub.add_parser("reconcile", help="board follows task files, PRs and locks; no target = every open card")
+    s.add_argument("number", type=int, nargs="*")
+    s.add_argument("--branch", action="append", help="ticket of this task branch")
+    s.add_argument("--pr", type=int, action="append", help="ticket of this PR's head branch")
+    s.add_argument("--dry-run", action="store_true", help="print the changes, write nothing")
+    s.set_defaults(func=op_reconcile)
 
     s = sub.add_parser("provision", help="create or adopt the project, fields, repo variables")
     target = s.add_mutually_exclusive_group(required=True)

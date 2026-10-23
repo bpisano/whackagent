@@ -37,7 +37,7 @@ Read: voice, pr, components, tasks, git, store
 7. **Set state** `to-close` per **store**.
    - Findings still open → stay `to-test`: not closable.
    - Clean → screenshots per **pr → Screenshots**, whatever `verify.mode`: one `wa-screenshot`. `board` → uploaded in this round's PR edit. `files` → kept for `/wa-close`.
-   - `board` → round end per **store → Rounds**: file `status:` + `## Review`, commit (**git → Commits**), push. Hook moves the card.
+   - `board` → round end per **store → Rounds**: file `status:` + `## Review`, commit (**git → Commits**), push. Card follows (**store → Reconcile**).
    - `board`, aborted before any push → `release <n> coding` alone.
    - Sprint task + autofix changed code → rebuild the sprint test branch (**git → Sprint test branch**). Nothing changed → no rebuild.
 8. **Report** — **components → Report**, Review as **components → Findings**. One of:

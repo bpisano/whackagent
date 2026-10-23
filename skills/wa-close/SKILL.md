@@ -34,7 +34,7 @@ Read: voice, pr, components, tasks, git, store
    - Nothing committed + dirty tree → stop before any branch move.
 8. **Land** — `board` → *Board landing*. `files` → *Land*.
 9. **Clean up** — `files` only → *Cleanup*.
-10. **Set `done`** — `files` only, per **store** (backlog line keeps `· <Sprint>`). `board`: never, the hook does.
+10. **Set `done`** — `files` only, per **store** (backlog line keeps `· <Sprint>`). `board`: never, **store → Reconcile** does.
 11. **Sprint complete?** Last task of a sprint closed (`board`: merged) → *Sprint landing*.
 12. **Next branch** — `files`, when `branch.per_task` + `commit.auto_commit_after_validation` + `branch.checkout_next`:
     - top unblocked `todo` → its branch per **git → Task branch** (**git → Dirty tree**)
@@ -76,7 +76,7 @@ Branch + draft PR exist since `/wa-code`. `close.strategy`, `close.delete_branch
    - Autopilot worktree → remove after push. Dirty → stop, ask.
 4. **PR ready** — refresh title + body (**pr**), `gh pr edit`, `gh pr ready`.
    - No PR (pre-0.13) → `gh pr create --base <base> --assignee @me` non-draft + `link-pr <n> <pr>`.
-5. **Stop.** User merges on GitHub; the hook does the rest.
+5. **Stop.** User merges on GitHub; **store → Reconcile** does the rest.
 
 Failure before the push → lock still held: say so. User leaves it → `release <n> coding --reason "<what failed>"`.
 

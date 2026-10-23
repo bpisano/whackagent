@@ -26,19 +26,23 @@
 
 `set-state` = setup and repair only.
 
-## Hook
+## Reconcile
 
-`.github/workflows/whackagent-board.yml` moves every other card:
+Plugin hooks run `board reconcile`, no GitHub Actions:
+- after `git push`, `gh pr merge|close` → that ticket, synchronously
+- session start → every open card, background
 
-| event | card |
+| what happened last | card |
 |---|---|
-| issue opened | `draft` |
 | push to `wa/<n>-…` with a task file (`issue: <n>`, criteria filled) | file `status:`, locks released |
 | PR merged (any base) | `done`, issue closed, empty milestone closed |
 | PR closed unmerged | `todo` |
+| open issue not on the board | `draft` |
 
+- Claim newer than last push = round running: untouched.
 - **Never set `todo` / `to-test` / `to-close` / `done` yourself.** Write `status:`, push.
-- Needs secret `WA_PROJECT_TOKEN` (classic PAT, `project` + `repo`), workflow on default and base branches. Set by `/wa-setup`.
+- Failure → `<git-common-dir>/whackagent/reconcile.log`, deleted by the next good run. Read it, never guess.
+- Web merge → Done at the next session, or at once with the Project workflow **Pull request merged**.
 
 ## Rounds
 
@@ -46,8 +50,7 @@
 - First coding round opens a draft PR: `gh pr create --draft --base <base> --head <branch> --label <type> --assignee @me`, then `link-pr`. Title + body → **pr**.
 - Every later round → body rewritten (**pr → Body**), `gh pr edit <pr> --body-file`.
 - PR ready + new round → `gh pr ready --undo` first.
-- After the push, `get <n>` (up to ~1 min):
-  - still `Coding` or locked → hook never ran. `gh run list --branch <branch> --workflow whackagent-board.yml --limit 1`: none = workflow missing on branch, failed = secret. Repair: `release <n> coding --reset-to <file status>`.
+- After the push, card still `Coding` or locked → `reconcile.log` says why. Fixed → `board reconcile <n>`.
 - Then `gh pr view --json mergeable`. `CONFLICTING` → rebase on base, rebuild, `push --force-with-lease` (own task branch only). Design call needed → stop, name files.
 - Always `git fetch` + pull first.
 - Subagents get the task file path only.
@@ -64,8 +67,6 @@
 ## Upkeep
 
 `/wa-update`:
-- Hook on default branch, `template version:` < `${CLAUDE_PLUGIN_ROOT}/templates/github-board.yml` → PR per **wa-setup → GitHub scaffold** 3.
-- `WA_PROJECT_TOKEN` not in `gh secret list` → **wa-setup → GitHub scaffold** 4.
 - `config --refresh` differs → refresh.
 - `provision --project <n>`: missing states → add. Extras → name, ask, `--prune-status` on yes.
 

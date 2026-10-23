@@ -62,7 +62,7 @@ N tasks. Never a table.
 
 ```
 project : whackagent board (new)
-hook    : .github/workflows/whackagent-board.yml
+size    : field added
 ok? [y/n]
 ```
 

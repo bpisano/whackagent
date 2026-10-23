@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+"""whackagent Claude Code hook — keeps the board in line, no GitHub Actions.
+
+  board-hook post-tool   PostToolUse on Bash: after `git push` / `gh pr merge|close`, reconciles
+                         the ticket of that branch or PR, synchronously (1–2 s).
+  board-hook session     SessionStart: reconciles every open card, in the background.
+
+Calls `<backend>-board reconcile`. Never fails the tool call, never prints: an error lands in
+<git-common-dir>/whackagent/reconcile.log, read by /wa-board; the next good run deletes it.
+Projects without `tasks.backend: github | plane` exit at once.
+"""
+
+import datetime as dt
+import json
+import os
+import re
+import shlex
+import subprocess
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+PUSH = re.compile(r"(^|[;&|(]\s*)git\s+push\b")
+PR = re.compile(r"\bgh\s+pr\s+(merge|close)\b(.*)")
+
+
+def git(cwd, *args):
+    proc = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+    return proc.stdout.strip() if proc.returncode == 0 else None
+
+
+def backend(root):
+    config = Path(root) / ".whackagent" / "config.md"
+    if not config.exists():
+        return None
+    match = re.search(r"^\s+backend:\s*([a-z]+)", config.read_text(), re.M)
+    return match.group(1) if match and match.group(1) in ("github", "plane") else None
+
+
+def pushed_branches(command, current):
+    """Branches a `git push` sends: its refspecs' destinations, else the current branch."""
+    try:
+        words = shlex.split(PUSH.split(command, maxsplit=1)[-1])
+    except ValueError:
+        return [current] if current else []
+    words = words[: next((i for i, w in enumerate(words) if w in ("&&", "||", ";", "|")), len(words))]
+    specs = [w for w in words if not w.startswith("-")][1:]  # first one is the remote
+    names = [s.lstrip("+").split(":")[-1].removeprefix("refs/heads/") for s in specs]
+    return [n for n in names if n and n != "HEAD"] or ([current] if current else [])
+
+
+def targets(command, current):
+    args = []
+    if PUSH.search(command):
+        for branch in pushed_branches(command, current):
+            args += ["--branch", branch]
+    match = PR.search(command)
+    if match:
+        rest = [w for w in match.group(2).split() if not w.startswith("-")]
+        ref = rest[0] if rest and rest[0] not in ("&&", "||", ";", "|") else None
+        if ref and ref.lstrip("#").isdigit():
+            args += ["--pr", ref.lstrip("#")]
+        elif ref:
+            args += ["--branch", ref]
+        elif current:
+            args += ["--branch", current]
+    return args
+
+
+def run(root, kind, args):
+    log = Path(git(root, "rev-parse", "--path-format=absolute", "--git-common-dir")) / "whackagent" / "reconcile.log"
+    try:
+        proc = subprocess.run(
+            [str(HERE / f"{kind}-board"), "reconcile", *args], cwd=root, capture_output=True, text=True, timeout=120
+        )
+        error = proc.stderr.strip().splitlines()[-1] if proc.returncode != 0 and proc.stderr.strip() else None
+        if proc.returncode != 0 and not error:
+            error = f"reconcile exited {proc.returncode}"
+    except subprocess.TimeoutExpired:
+        error = "reconcile timed out after 120 s"
+    if error:
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text(f"{dt.datetime.now().astimezone().isoformat(timespec='seconds')} {error}\n")
+    elif log.exists():
+        log.unlink()
+
+
+def main():
+    mode = sys.argv[1] if len(sys.argv) > 1 else ""
+    try:
+        event = json.load(sys.stdin) if not sys.stdin.isatty() else {}
+    except ValueError:
+        event = {}
+    cwd = event.get("cwd") or os.getcwd()
+    if mode == "post-tool":
+        command = (event.get("tool_input") or {}).get("command") or ""
+        if not (PUSH.search(command) or PR.search(command)):
+            return
+        root = git(cwd, "rev-parse", "--show-toplevel")
+        kind = root and backend(root)
+        if not kind:
+            return
+        args = targets(command, git(root, "branch", "--show-current"))
+        if args:
+            run(root, kind, args)
+    elif mode == "session":
+        root = git(cwd, "rev-parse", "--show-toplevel")
+        if root and backend(root):
+            subprocess.Popen(
+                [sys.executable, __file__, "sweep", root],
+                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+    elif mode == "sweep":
+        root = sys.argv[2]
+        run(root, backend(root), [])
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception:  # a hook never breaks the session
+        pass

@@ -18,24 +18,20 @@ Read `store-github.md` too: this file overrides it.
 | cancel | state Canceled, claims dropped |
 | lock | `claim <n> coding` assigns the key's owner |
 
-## Hook
+## Reconcile
 
-`.github/workflows/whackagent-board.yml` from `${CLAUDE_PLUGIN_ROOT}/templates/plane-board.yml`:
+**store-github → Reconcile**, same triggers and log. Differences:
 
-| event | item |
+| what happened last | item |
 |---|---|
 | created in Plane | `draft` (project default state) |
-| push to `wa/<n>-…` with a task file (`issue: <n>`, criteria filled) | file `status:`, locks released |
 | PR merged (any base) | `done`, module completed when nothing left in it |
-| PR closed unmerged | `todo` |
 
-- **Never set `todo` / `to-test` / `to-close` / `done` yourself.** Write `status:`, push.
-- Needs secret `WA_PLANE_TOKEN` (a Plane API key) and variable `WA_PLANE_PROJECT_URL`, workflow on default and base branches. Set by `/wa-setup`.
-- Plane must be reachable from GitHub Actions.
+- Runs on your machine: Plane reachable from it, no GitHub Actions.
 
 ## Rounds
 
-**store-github → Rounds**, with `--label <type>` dropped from `gh pr create`. Hook check: `get <n>` still `coding` → same `gh run list` diagnosis, failed = `WA_PLANE_TOKEN` or Plane unreachable.
+**store-github → Rounds**, with `--label <type>` dropped from `gh pr create`.
 
 ## Locks
 
@@ -44,8 +40,6 @@ Read `store-github.md` too: this file overrides it.
 ## Upkeep
 
 `/wa-update`:
-- Hook on default branch, `template version:` < `${CLAUDE_PLUGIN_ROOT}/templates/plane-board.yml` → PR per **wa-setup → Plane scaffold** 3.
-- `WA_PLANE_TOKEN` not in `gh secret list` → **wa-setup → Plane scaffold** 4.
 - `config --refresh` differs → refresh.
 - `provision --url <tasks.project>`: missing states, estimate values, labels → added. `states_extra` → name, ask, `--prune-states` on yes.
 

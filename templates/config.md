@@ -33,14 +33,14 @@ tasks:                         # WHERE tasks live. See wa-board → Task store.
   backend: files               # files  — one .md per task in {tasks}, order in {backlog}. Default.
                                # github — one issue per task on a GitHub Project board. Task file
                                #   {tasks}/<n>-<slug>.md lives on the task branch (truth); the issue
-                               #   holds title, summary, size, sprint, blockers. A workflow hook moves
-                               #   cards from pushes and merges. Locks stop two people grilling or
-                               #   coding one task. Every round commits + pushes; one draft PR per task.
-                               #   {backlog} unused. Needs `gh` with `project` scope + WA_PROJECT_TOKEN
-                               #   secret. See wa-board → Task store.
+                               #   holds title, summary, size, sprint, blockers. The plugin moves
+                               #   cards from pushes and merges, no GitHub Actions. Locks stop two
+                               #   people grilling or coding one task. Every round commits + pushes;
+                               #   one draft PR per task. {backlog} unused. Needs `gh` with `project`
+                               #   scope. See wa-board → Task store.
                                # plane  — same flow, one work item per task on a Plane project (cloud
                                #   or self-hosted). Code, branches, PRs stay on GitHub. Needs env
-                               #   WA_PLANE_TOKEN (Plane API key) + WA_PLANE_TOKEN repo secret.
+                               #   WA_PLANE_TOKEN (Plane API key).
   project: ""                  # github: <owner>/<number> of the board · plane: project URL. Set by /wa-setup.
                                #   One board per repo, owned by whackagent.
 

@@ -1,0 +1,21 @@
+{
+  "description": "whackagent board sync: task files, PRs and locks reconciled locally, no GitHub Actions",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/board-hook\" post-tool", "timeout": 150 }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/board-hook\" session", "timeout": 10 }
+        ]
+      }
+    ]
+  }
+}
