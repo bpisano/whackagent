@@ -15,12 +15,18 @@ no_default_export: true   # named exports only
 
 1. **Public documentation** (`public_doc`) — every exported function/type/const carries `/** TSDoc */`.
 2. **Comment discipline** (`comment_discipline`) — no comment restates code; only non-obvious *why*.
-3. **Strict types** (`strict_types`) — no `any`; use `unknown` + narrowing, discriminated unions, `as const`. No non-null `!` unless justified.
+3. **Strict types** (`strict_types`) — no `any`; use `unknown` + narrowing, discriminated unions, `as const`. No non-null `!`.
+   lint: @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion, @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/consistent-type-imports
 4. **Idiomatic** — `const` over `let`, immutability, `map`/`filter`/`reduce`, optional chaining / nullish coalescing, early return.
+   lint: prefer-const, no-var, @typescript-eslint/prefer-nullish-coalescing, @typescript-eslint/prefer-optional-chain
 5. **Modules** (`no_default_export`) — named exports; one main concept per file.
+   lint: no-restricted-syntax
 6. **Async** — `async`/`await`, never floating promises; handle rejections.
+   lint: @typescript-eslint/no-floating-promises, @typescript-eslint/no-misused-promises, @typescript-eslint/require-await
 7. **Testing** — colocated `*.test.ts`, one `describe` per unit, clear test names.
-8. **YAGNI · SOLID · DRY** — no speculative generality (YAGNI); single responsibility, depend on abstractions (interfaces/types) not concretions, small composable units (SOLID); no duplicated logic — factor it, reuse what exists (DRY).
+8. **Logging** — project logger, never `console.*`. No `TODO` / `FIXME` left: do it now, or ask.
+   lint: no-console, no-warning-comments
+9. **YAGNI · SOLID · DRY** — no speculative generality (YAGNI); single responsibility, depend on abstractions (interfaces/types) not concretions, small composable units (SOLID); no duplicated logic — factor it, reuse what exists (DRY).
 
 ## Architecture (review category: architecture)
 
@@ -31,4 +37,4 @@ no_default_export: true   # named exports only
 
 ## Build proof
 
-Implementer must show typecheck + tests passing (`tsc --noEmit`, then project's test runner) before reporting done.
+Implementer must show lint + typecheck + tests passing (`eslint . --max-warnings 0`, `tsc --noEmit`, then project's test runner) before reporting done.

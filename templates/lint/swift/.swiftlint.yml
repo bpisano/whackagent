@@ -1,0 +1,147 @@
+# whackagent — SwiftLint, every violation is a build error.
+# Built from the convention modules: each rule cites the module section it enforces.
+# Edit freely: /wa-update proposes new plugin rules, never overwrites yours.
+# Agents never edit this file, the baseline, or add `swiftlint:disable`.
+
+strict: true
+baseline: .swiftlint.baseline   # legacy violations, frozen at setup. Clear it, never grow it.
+
+excluded:
+  - .build
+  - DerivedData
+  - "**/.build"
+  - Package.swift
+
+# default rules the modules rely on: todo, force_try, force_cast, trailing_comma
+
+disabled_rules:
+  - line_length                 # multi-line rules carry the layout
+  - redundant_type_annotation   # its fix drops the type: clashes with explicit_type_interface
+
+opt_in_rules:
+  # style → One type per file
+  - one_declaration_per_file
+  - file_name
+  # style → Explicit types
+  - explicit_type_interface
+  # style → Member order
+  - type_contents_order
+  # style → File header
+  - file_header
+  # style → Multi-line declarations
+  - multiline_parameters
+  - multiline_parameters_brackets
+  - multiline_arguments
+  - multiline_arguments_brackets
+  # style → Pattern matching
+  - pattern_matching_keywords
+  # style → Comments (review.public_doc: true only)
+  - missing_docs
+  # elegance → Optionals over sentinels, no crash
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - discouraged_optional_boolean
+  - fatal_error_message
+  - shorthand_optional_binding
+  # elegance → Functional transforms
+  - first_where
+  - last_where
+  - contains_over_filter_count
+  - contains_over_first_not_nil
+  - empty_count
+  - sorted_first_last
+  - toggle_bool
+  # leftovers agents forget
+  - unused_closure_parameter
+  - private_over_fileprivate
+  - implicit_optional_initialization
+  - unneeded_synthesized_initializer
+
+trailing_comma:
+  mandatory_comma: false       # style → Multi-line declarations: no trailing commas
+
+file_name:
+  suffix_pattern: "Extension"   # architecture → Extensions: <Type>Extension.swift
+
+type_contents_order:
+  order:
+    - [case]
+    - [type_alias, associated_type]
+    - [subtype]
+    - [type_property]
+    - [instance_property, initializer, deinitializer]   # computed `body` may follow init
+    - [type_method]
+    - [view_life_cycle_method, ib_action, ib_segue_action, other_method]
+    - [subscript]
+
+file_header:
+  required_pattern: |
+                    \/\/
+                    \/\/  SWIFTLINT_CURRENT_FILENAME
+                    \/\/  .+
+                    \/\/
+                    \/\/  Created by .+ on \d{2}\/\d{2}\/\d{4}\.
+                    \/\/
+
+custom_rules:
+  # style → .init()
+  init_shorthand:
+    regex: ':\s*([A-Z][\w.]*)\s*=\s*\1\s*\('
+    excluded_match_kinds: [comment, doccomment, string]
+    message: "Type already on the left: use `.init(…)`."
+  # style → Multi-line declarations
+  multiline_condition_break:
+    regex: '\b(if|guard)[ \t]+[^\n{]*,[ \t]*\n'
+    excluded_match_kinds: [comment, doccomment, string]
+    message: "Multi-line condition: break after `if` / `guard`, one clause per line."
+  # elegance → Concurrency
+  no_combine:
+    regex: '(\bimport\s+Combine\b|\bAnyCancellable\b|\b(CurrentValueSubject|PassthroughSubject)\b|\.sink\s*[({]|@Published\b)'
+    excluded_match_kinds: [comment, doccomment, string]
+    message: "No Combine: async/await, AsyncStream, Observations, @Observable."
+  no_completion_handler:
+    regex: '\b\w*(completion|handler|callback)\w*\s*:\s*@escaping'
+    excluded_match_kinds: [comment, doccomment, string]
+    message: "No completion handler: make it `async`."
+  no_gcd:
+    regex: '\b(DispatchQueue|DispatchGroup|DispatchSemaphore)\b'
+    match_kinds: [identifier, typeidentifier]
+    message: "Swift concurrency only: Task, actor, @MainActor."
+  no_lock:
+    regex: '\b(NSLock|NSRecursiveLock|os_unfair_lock)\b'
+    match_kinds: [identifier, typeidentifier]
+    message: "Use `Mutex` (Synchronization)."
+  # logging
+  no_print:
+    regex: '\b(print|debugPrint|dump|NSLog|os_log)\s*\('
+    match_kinds: [identifier]
+    message: "Log through `Logger` (OSLog)."
+  # testing → Testing
+  no_xctest:
+    regex: '\bimport\s+XCTest\b'
+    excluded: 'UITests/'
+    excluded_match_kinds: [comment, doccomment, string]
+    message: "Swift Testing only: `import Testing`."
+  test_attribute_own_line:
+    regex: '@(Test|Suite)\b[^\n]*\b(func|struct|class|final)\s'
+    message: "`@Test` / `@Suite` on their own line."
+  suite_is_struct:
+    regex: '@Suite\b[^\n]*\n\s*(final\s+)?class\b'
+    excluded_match_kinds: [comment, doccomment, string]
+    message: "`@Suite struct`, never a class."
+  test_name_backticks:
+    regex: '(@Test\s*\(\s*"|@Test[^\n]*\n\s*func\s+[A-Za-z_])'
+    message: "Name the test with backticks (`func `loads users`()`), no name string."
+  # swiftui → Custom styles expose a static accessor
+  style_dotted_accessor:
+    regex: '\.\w+Style\s*\(\s*[A-Z]\w*\s*\('
+    excluded_match_kinds: [comment, doccomment, string]
+    message: "Use the style's static accessor: `.buttonStyle(.primary)`."
+  # swiftui → Accessibility identifiers
+  accessibility_id_constant:
+    regex: '\.accessibilityIdentifier\s*\(\s*"'
+    message: "Identifier from a constant, never a literal."
+  # swiftui → Previews
+  view_has_preview:
+    regex: '\A(?![\s\S]*#Preview)[\s\S]*?\bstruct\s+\w+(<[^>]*>)?\s*:\s*([\w.]+\s*,\s*)*View\b'
+    message: "Every View has a `#Preview` in its file."

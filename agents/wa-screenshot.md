@@ -39,7 +39,7 @@ Captures the screens a task changed, for its PR (**pr → Screenshots**).
 
 ## Driving
 
-- Drivers, build order → as **wa-implementer → Runtime proof** and its step 3: XcodeBuildMCP for iOS, mobile-mcp for Android.
+- Drivers, build order → as **wa-implementer → Runtime proof** and its step 3: XcodeBuildMCP for iOS (`-skipPackagePluginValidation`), mobile-mcp for Android.
 - UI tree first, accessibility ids before coordinates.
 - Wait for the screen to settle: no spinner, no transition mid-shot.
 - Unreachable state (real login, server data, system permission) → `SKIPPED`, never fake data.

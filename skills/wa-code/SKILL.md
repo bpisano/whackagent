@@ -23,7 +23,7 @@ Read: voice, pr, components, tasks, git, store
    - Sprint branch just created → say so.
 4. **Plan** → **Brief**.
 5. **Code** — one `wa-implementer` for the whole task, bricks one at a time (parallel builds collide).
-   - Brick 1 → spawn, note `agentId`. Pass task ref, BRIEF, brick + target files, `{conventions}`, test plan, `build.command` / `build.test_command` when set, `verify` block with `mode` stated plainly, `autopilot: false`. It never reads config.
+   - Brick 1 → spawn, note `agentId`. Pass task ref, BRIEF, brick + target files, `{conventions}`, test plan, `build.command` / `build.test_command` / `lint.fix_command` when set, `verify` block with `mode` stated plainly, `autopilot: false`. It never reads config.
    - Bricks 2..n → `SendMessage` the brick alone.
    - `RESULT: done` → files + build/test/run proof in `## Implementation`.
    - `RESULT: blocked` → ask its question (**Ask**). Dispatch nothing until answered.

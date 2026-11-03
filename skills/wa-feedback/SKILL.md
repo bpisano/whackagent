@@ -39,7 +39,7 @@ Read: voice, pr, components, tasks, git, store
    - **Inline** → **Micro-fix** steps.
    - **Implementer** → `wa-implementer` fix mode, one dispatch per coherent batch, sequential (builds collide).
      - Resume by `agentId` when you have one (**wa-code → Verify** resume rules): notes verbatim + triage, nothing else.
-     - Else fresh, note the id: task ref, conventions dir, notes + triage, changed files from `## Implementation`, `build.command` / `build.test_command` if set, `autopilot: false`.
+     - Else fresh, note the id: task ref, conventions dir, notes + triage, changed files from `## Implementation`, `build.command` / `build.test_command` / `lint.fix_command` if set, `autopilot: false`.
      - No id is normal (new session, `/wa-autopilot` run).
      - Tell it: fix only what's named, minimal diff, no explanatory comments, re-run build + tests.
      - Criteria moved → tell it, so the runtime check uses the new ones.

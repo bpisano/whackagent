@@ -4,6 +4,8 @@
 
 ## One type per file
 
+lint: one_declaration_per_file, file_name
+
 One `class` / `struct` / `enum` / `protocol` per file. Filename match top-level type (`UserStore.swift` hold `UserStore`).
 
 Only exception: `private extension` nesting helper types of main type may share file.
@@ -20,6 +22,8 @@ private extension Badge {
 ```
 
 ## Explicit types
+
+lint: explicit_type_interface
 
 Annotate type every declaration, even when compiler infer.
 
@@ -39,6 +43,8 @@ if let coordinate { center(on: coordinate) } // ✅
 
 ## `.init()`
 
+lint: init_shorthand
+
 Use `.init()` on right when type explicit on left — never repeat type name.
 
 ```swift
@@ -47,6 +53,8 @@ let store: UserStore = UserStore()  // ❌ redundant
 ```
 
 ## Member order
+
+lint: type_contents_order
 
 Members fixed order. Within each section, order by access: `public` → internal (no keyword) → `private`, separate access subgroups one blank line.
 
@@ -72,11 +80,29 @@ final class UserStore {
 
 ## Comments
 
+lint: missing_docs, todo
+
 - No comments for obvious code.
 - No comments when editing code after user feedback.
+- No `TODO` / `FIXME` left behind: do it now, or ask.
 - Add `///` doc comments for all public API (structs, classes, methods, properties, enums, protocols). Include `- Parameters:`, `- Returns:` and `- Throws:` sections when applicable. *(Disable via `public_doc` toggle for teams not requiring it.)*
 
+## Logging
+
+lint: no_print
+
+Log through `Logger` (OSLog), one per type, `static let`. Never `print`, `debugPrint`, `dump`, `NSLog`, `os_log`.
+
+```swift
+private static let logger: Logger = .init(subsystem: "app", category: "sync")
+
+Self.logger.error("Sync failed: \(error)")   // ✅
+print("Sync failed")                          // ❌
+```
+
 ## File header
+
+lint: file_header
 
 Keep default Xcode header: filename, project name, blank line, then `Created by` + author + date (`DD/MM/YYYY`). Nothing else.
 
@@ -90,6 +116,8 @@ Keep default Xcode header: filename, project name, blank line, then `Created by`
 ```
 
 ## Multi-line declarations
+
+lint: multiline_parameters, multiline_parameters_brackets, multiline_arguments, multiline_arguments_brackets, multiline_condition_break, trailing_comma
 
 When single function call or declaration span multiple lines, break after opening parenthesis and before closing parenthesis. Indent inner lines one tab (4 spaces). No trailing commas.
 
@@ -121,6 +149,8 @@ if
 ```
 
 ## Pattern matching
+
+lint: pattern_matching_keywords
 
 Bind with `case let` once on left, not `let` on each value.
 

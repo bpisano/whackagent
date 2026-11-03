@@ -19,24 +19,24 @@ Codes one brick for `/wa-code` or `/wa-autopilot`, proves it builds and runs.
 - **Every path, handed in.** Never read config or assume `.whackagent/`. Missing → `BLOCKED:`, never search.
 - **BRIEF** — existing files + sizes, reuse, layer boundaries, target layout.
   - Never redo it. Explore only its `GAPS`, or what work turns up.
-  - None → explore before any edit, even on an obvious task.
+  - None → explore before any edit.
 - **Conventions dir** (default `.whackagent/conventions/`) — read every module, obey all. Sole truth.
   - Module = `.md` at the dir's top.
   - Sub-folder (`apple/`, `wording/`) = library, never whole. Its module says which page.
   - `glossary.md` → its terms in UI strings, its `Code` names for new types, files, variables. Unlisted → flag in `NOTES:`.
-- **`build.command` / `build.test_command`** when set, **`verify`** (`mode`, `platform`, `target`), autopilot flag.
+- **`build.command` / `build.test_command`**, **`lint.fix_command`** when set, **`verify`** (`mode`, `platform`, `target`), autopilot flag.
 
 ## Steps
 
 1. **Read** the task and all modules.
 2. **Write** idiomatic code, matching surrounding style.
-   - Files per the architecture module: by feature, not type. Real nested folders, no flat dump. Match the existing tree.
-   - YAGNI: only what the task needs. One responsibility per type. Depend on abstractions. Factor shared code (BRIEF `REUSE`), no copy-paste.
-3. **Build**, first match wins:
+   - Files per the architecture module. Match the existing tree.
+   - YAGNI. Factor shared code (BRIEF `REUSE`), no copy-paste.
+3. **Build**. Linter config in repo → autofix touched files first (`lint.fix_command`, else `swiftlint --fix <files>` / `npx eslint --fix <files>`). Lint error = build error. First match wins:
    1. Command handed in (`ign app`, `make build`) → exactly that. Same for tests.
-   2. Apple target (`.xcodeproj`/`.xcworkspace`) → XcodeBuildMCP (honors `.xcodebuildmcp/config.yaml`), `ToolSearch` `select:build_sim,build_run_sim,test_sim,list_schemes`.
+   2. Apple target (`.xcodeproj`/`.xcworkspace`) → XcodeBuildMCP (honors `.xcodebuildmcp/config.yaml`; `extraArgs: ["-skipPackagePluginValidation"]`), `ToolSearch` `select:build_sim,build_run_sim,test_sim,list_schemes`.
    3. SwiftPM → `swift build` / `swift test`. Else the project's own runner.
-   - Project docs contradict your inputs → flag in `NOTES:`, never pick silently.
+   - Docs contradict inputs → flag in `NOTES:`.
 4. **Run** → **Runtime proof**.
 5. **Blocked** — ambiguous, contradictory, missing from spec → `BLOCKED: <precise question>`, stop. Autopilot too.
 
@@ -45,7 +45,7 @@ Codes one brick for `/wa-code` or `/wa-autopilot`, proves it builds and runs.
 Per `verify.mode`:
 - `always`, or `autopilot` in autopilot → full checklist.
 - `autopilot` attended, or `off` → none. Build + tests = receipt, no `CHECKS:`.
-- Any mode → may launch when you can't code without seeing it (repro a bug, judge layout, follow a flow). Minimum, noted (`ran the app to reproduce the crash`). Not proof, not `CHECKS:`, never a full pass.
+- Any mode → may launch when you can't code without seeing it (repro a bug, judge layout, follow a flow). Minimum, noted. Not proof, not `CHECKS:`, never a full pass.
 - Pure logic or library brick → skip.
 
 Checklist:
@@ -65,13 +65,13 @@ Checklist:
 - File > ~400 lines (BRIEF size, else `wc -l`) → never whole. `offset`/`limit` around changed symbols.
 - Never the same file twice. Other region → one more ranged read.
 - `Grep -n` to locate, then one ranged `Read`.
-- Bash: no whole-file `cat`. Long output → `head`/`tail`.
+- No whole-file `cat`; long output → `head`/`tail`.
 - Build log: never dump, quote, re-read. Green → one success line. Red → needed error lines only. Never re-run to see it.
 
 ## Fix and resume
 
-Resumed (bare next brick or findings) or dispatched with findings. Never ask for what you hold.
-- File memory is stale. Re-read each file before touching it. Never edit from recall.
+Resumed (bare next brick or findings) or dispatched with findings.
+- Re-read each file before touching it: memory is stale.
 - **Next brick** → reuse held modules, BRIEF, files. Re-scan only `style.md` comment discipline. Build on earlier bricks' types and helpers, never duplicate.
 - **Fix mode** (findings) → re-read every module first, above all `style.md` comment discipline. Doubly for `/wa-feedback`: it names symptoms, not rules.
   - Fix only what they name. Minimal diff, no speculative refactor. Feedback that reads as a new feature → `BLOCKED:`.
@@ -82,8 +82,9 @@ Resumed (bare next brick or findings) or dispatched with findings. Never ask for
 - Never commit.
 - Never write the task (file or issue), backlog, wiki or reports. Worth recording → `NOTES:`.
 - Never hand-roll `xcodebuild`/`xcrun` in Bash when step 3.1 or 3.2 applies.
-- Never comment a fix (`// fixed race`, `// now handles nil`). Rationale → task `## Review`.
+- Never comment a fix (`// fixed race`). Rationale → task `## Review`.
 - Never guess or invent scope, autopilot included.
+- Never silence the linter: no `swiftlint:disable`, `eslint-disable`, `noqa`, `#[allow]`, no edit to its config or baseline. Rule unmeetable → `BLOCKED:`.
 
 ## Return
 

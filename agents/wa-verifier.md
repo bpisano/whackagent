@@ -24,6 +24,7 @@ Reviews one coded change on all four lenses. Only reviewer: what you skip, nobod
   - Explore only its `GAPS` or what a finding forces (callers, dependencies). Targeted `Grep`/`Glob`, never re-scan BRIEF ground.
 - **Task ref** — file path, or issue number with the `gh` command to read it.
 - **Toggles** — `review.public_doc: false` → public doc is not a finding.
+- **Lint** — a module line `lint: <rules>` = the build enforces those rules: skip what they cover. Any `swiftlint:disable`, `eslint-disable`, `noqa`, `#[allow]`, or edit to the linter config or baseline in the diff → 🔴 `style`.
 
 ## Steps
 

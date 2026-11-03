@@ -81,5 +81,17 @@ hits=$(grep -nE 'wa-board → ' skills/*/SKILL.md agents/*.md reference/*.md 2>/
 [ -z "$hits" ] || err "stale 'wa-board →' reference:
 $hits"
 
+# Lint tags: every id a module tags exists in its template; every Swift custom rule is tagged.
+tags() { grep -hE '^ *lint: ' "$@" | sed -E 's/^ *lint: //; s/, */\n/g' | sort -u; }
+check_tags() {
+  local tpl=$1; shift
+  for id in $(tags "$@"); do grep -qwF -- "$id" "$tpl" || err "lint tag '$id' not in $tpl"; done
+}
+check_tags templates/lint/swift/.swiftlint.yml conventions/swift/*.md
+check_tags templates/lint/typescript/eslint.config.js conventions/typescript.md
+for id in $(awk '/^custom_rules:/{f=1; next} f && /^  [a-z_]+:$/{gsub(/[ :]/,""); print}' templates/lint/swift/.swiftlint.yml); do
+  tags conventions/swift/*.md | grep -qx "$id" || err "custom rule '$id' tagged by no conventions/swift module"
+done
+
 [ "$fail" = 0 ] && echo "✅ lint clean"
 exit "$fail"

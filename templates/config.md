@@ -84,6 +84,12 @@ build:                         # how THIS project build — project win over plu
                                # for Apple targets, `swift build` for SwiftPM, project runner otherwise.
   test_command: ""             # e.g. "make test". Empty → language default (`swift test`, …).
 
+lint:                          # strict linter wired into the build: violation = build error
+  tool: none                   # swiftlint | eslint | ruff | golangci-lint | clippy | detekt | none
+                               # set by /wa-setup. Rules: project's linter config (from the
+                               # plugin templates, yours to edit). Agents never disable a rule.
+  fix_command: ""              # autofix before build, e.g. "make lint-fix". Empty → tool default.
+
 verify:                        # runtime check — implementer drive app it just built
   mode: autopilot              # WHO exercise app after green build:
                                #   autopilot — agent drive it in /wa-autopilot only (nobody there

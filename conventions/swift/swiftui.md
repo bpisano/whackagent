@@ -74,6 +74,8 @@ extension ProfileView {
 
 ## Custom styles expose a static accessor
 
+lint: style_dotted_accessor
+
 Every custom style type (`ButtonStyle`, `LabelStyle`, `ToggleStyle`, …) **must** ship convenience extension on its protocol constrained to `Self == TheStyle`, so call sites use dotted form. Style without this extension = incomplete.
 
 ```swift
@@ -99,6 +101,8 @@ Button("Save") { save() }
 
 ## Accessibility identifiers (targetable UI)
 
+lint: accessibility_id_constant
+
 Every **interactive** or **asserted** element carries a stable `.accessibilityIdentifier(_:)` — buttons, text fields, toggles, tappable rows, and any view a test or the runtime check must find or assert on. `wa-implementer` drives the built app by the accessibility tree; without identifiers it falls back to raw coordinates — brittle, breaks on layout change. Missing identifier on an interactive element = style finding.
 
 Rules:
@@ -116,6 +120,8 @@ TextField("Email", text: $email)
 ```
 
 ## Previews
+
+lint: view_has_preview
 
 Every View has `#Preview` in its file. Multiple states → one preview per state.
 
