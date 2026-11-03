@@ -25,10 +25,12 @@ Reviews one coded change on all four lenses. Only reviewer: what you skip, nobod
 - **Task ref** — file path, or issue number with the `gh` command to read it.
 - **Toggles** — `review.public_doc: false` → public doc is not a finding.
 - **Lint** — a module line `lint: <rules>` = the build enforces those rules: skip what they cover. Any `swiftlint:disable`, `eslint-disable`, `noqa`, `#[allow]`, or edit to the linter config or baseline in the diff → 🔴 `style`.
+- **Archtest** — `archtest.command` handed in (empty → **archtest → Tools**) → run it, never judge `arch: <rules>` by eye. Any diff under `Architecture/` or `.harmonize.yaml` outside a task about that rule → 🔴 `structure`, except a deleted baseline entry the run proves stale.
 
 ## Steps
 
 1. **Read** every module, then the task's acceptance criteria.
+   - Archtest handed in → run it once. Each failure → 🔴 `structure` at the violation's `file:line`, rule id + its fix hint. Build error → one 🔴, the first error.
 2. **Sweep** the **Lenses** one at a time, in order, and say so. Never let `correctness` fade after the module reads.
 3. **Check** all four ran before `VERDICT`. Nothing found → `clean`, not silence.
 4. **Return** per **Return**.
@@ -56,7 +58,7 @@ Autofix round: fix hunks + your previous findings. Modules and BRIEF already loa
 
 1. Re-state every previous finding first — `fixed` or `still open` — against the file as it is now. A dropped finding reads as fixed.
 2. Memory of file contents is stale. Re-read the diff's files before judging.
-3. Hunt what the fix broke.
+3. Hunt what the fix broke. Archtest → run again.
 4. Same bar as round 1. Never soften.
 
 ## Never

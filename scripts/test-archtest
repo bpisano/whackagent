@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Proves templates/archtest per language: good fixture green, bad fixture fails every
+# rule, bad fixture + its baseline green. Run before any commit touching templates/archtest/.
+# First run builds swift-syntax (~20 s); later runs reuse ARCHTEST_CACHE (~5 s each).
+set -uo pipefail
+cd "$(dirname "$0")/.."
+
+T=templates/archtest/swift
+F=scripts/archtest-fixtures/swift
+cache=${ARCHTEST_CACHE:-$HOME/Library/Caches/whackagent-archtest}
+work=$cache/project   # one stable package path: swift-syntax builds once, then reused
+fail=0
+err() { echo "❌ $1"; fail=1; }
+
+# setup <fixture> <kind> [baseline] → $work/<fixture>, rules copied as /wa-setup does.
+setup() {
+  local dst=$work tests build=$cache/.build
+  [ -d "$dst/Architecture/.build" ] && mv "$dst/Architecture/.build" "$build"
+  rm -rf "$dst"; mkdir -p "$cache"
+  cp -R "$F/$1" "$dst"
+  cp "$T/.harmonize.yaml" "$dst/"
+  tests=$dst/Architecture/Tests/ArchitectureTests
+  mkdir -p "$tests"
+  cp "$T/Package.swift" "$dst/Architecture/"
+  cp -R "$T/Support" "$T/global/." "$T/$2/." "$tests/"
+  # baseline = what setup writes: the entries dictionary only
+  [ -z "${3:-}" ] || perl -0pi -e 'BEGIN { local $/; open my $b, "<", shift @ARGV; $e = <$b>; chomp $e } s/= \[:\]/= $e/' \
+    "$F/$1.baseline" "$tests/Support/ArchBaseline.swift"
+  [ -d "$build" ] && mv "$build" "$dst/Architecture/.build"
+  echo "$dst"
+}
+
+run() { swift test --package-path "$1/Architecture" 2>&1 | sed 's/\x1b\[[0-9;]*m//g'; }
+
+for kind in app package; do
+  ids=$(grep -rhoE 'func `[a-z_]+`' "$T/global" "$T/$kind" | sed 's/func `//; s/`//' | sort -u)
+
+  out=$(run "$(setup "$kind-good" "$kind")") && echo "✅ $kind-good green" \
+    || err "$kind-good red:
+$(echo "$out" | grep -E 'recorded an issue|error:' | head -20)"
+
+  out=$(run "$(setup "$kind-bad" "$kind")") && err "$kind-bad green: rules don't bite"
+  for id in $ids; do
+    echo "$out" | grep -qE "Test $id\(\) (recorded an issue|failed)" || err "$kind-bad: $id never failed"
+  done
+  [ "$fail" = 0 ] && echo "✅ $kind-bad fails all $(echo "$ids" | wc -l | tr -d ' ') rules"
+
+  out=$(run "$(setup "$kind-bad" "$kind" .baselined)") && echo "✅ $kind-bad + baseline green" \
+    || err "$kind-bad + baseline red:
+$(echo "$out" | grep -E 'recorded an issue|error:' | head -20)"
+done
+
+# stale entries: one per assertion style (single collection, split across collections)
+printf '[\n        "no_class_inheritance": ["Ghost"],\n        "store_main_actor_observable": ["Ghost"]\n    ]\n' > "$cache/ghost.baseline"
+cp "$cache/ghost.baseline" "$F/app-good.baseline"
+out=$(run "$(setup app-good app .ghost)")
+rm "$F/app-good.baseline"
+for id in no_class_inheritance store_main_actor_observable; do
+  echo "$out" | grep -qE "Test $id\(\) (recorded an issue|failed)" || err "stale baseline entry for $id not caught"
+done
+[ "$fail" = 0 ] && echo "✅ stale baseline entries fail the run"
+
+[ "$fail" = 0 ] && echo "✅ archtest templates proven"
+exit "$fail"

@@ -6,6 +6,8 @@ No Coordinator-Store mandate here (app-only). Surviving discipline:
 
 ## Rules (file tree / modules)
 
+arch: no_type_bucket, no_flat_target, tests_mirror_sources, extension_folder
+
 - **Group by feature/domain, never by type.** No top-level `Models/`, `Services/`, `Extensions/`, `Helpers/` buckets holding whole codebase. Feature/domain folder own own types.
 - **No flat tree.** More than ~5–7 files in folder → add sub-folders. Pile of files directly under `Sources/<Target>/` = finding. Nest as area grow.
 - **Targets = independent responsibilities.** Split into multiple SwiftPM targets when concerns genuinely independent (e.g. `Core`, `Networking`, `FeatureX`). Dependencies point one direction; no cycles.

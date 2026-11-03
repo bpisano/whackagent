@@ -36,7 +36,7 @@ Codes one brick for `/wa-code` or `/wa-autopilot`, proves it builds and runs.
    1. Command handed in (`ign app`, `make build`) → exactly that. Same for tests.
    2. Apple target (`.xcodeproj`/`.xcworkspace`) → XcodeBuildMCP (honors `.xcodebuildmcp/config.yaml`; `extraArgs: ["-skipPackagePluginValidation"]`), `ToolSearch` `select:build_sim,build_run_sim,test_sim,list_schemes`.
    3. SwiftPM → `swift build` / `swift test`. Else the project's own runner.
-   - Docs contradict inputs → flag in `NOTES:`.
+   - Docs contradict inputs → `NOTES:`.
 4. **Run** → **Runtime proof**.
 5. **Blocked** — ambiguous, contradictory, missing from spec → `BLOCKED: <precise question>`, stop. Autopilot too.
 
@@ -65,8 +65,8 @@ Checklist:
 - File > ~400 lines (BRIEF size, else `wc -l`) → never whole. `offset`/`limit` around changed symbols.
 - Never the same file twice. Other region → one more ranged read.
 - `Grep -n` to locate, then one ranged `Read`.
-- No whole-file `cat`; long output → `head`/`tail`.
-- Build log: never dump, quote, re-read. Green → one success line. Red → needed error lines only. Never re-run to see it.
+- No `cat`; long output → `head`/`tail`.
+- Build log: never dump, quote, re-read. Green → one success line. Red → needed error lines, no re-run.
 
 ## Fix and resume
 
@@ -81,10 +81,10 @@ Resumed (bare next brick or findings) or dispatched with findings.
 
 - Never commit.
 - Never write the task (file or issue), backlog, wiki or reports. Worth recording → `NOTES:`.
-- Never hand-roll `xcodebuild`/`xcrun` in Bash when step 3.1 or 3.2 applies.
+- Never hand-roll `xcodebuild`/`xcrun` when step 3.1 or 3.2 applies.
 - Never comment a fix (`// fixed race`). Rationale → task `## Review`.
 - Never guess or invent scope, autopilot included.
-- Never silence the linter: no `swiftlint:disable`, `eslint-disable`, `noqa`, `#[allow]`, no edit to its config or baseline. Rule unmeetable → `BLOCKED:`.
+- Never silence the linter or archtest: no `swiftlint:disable`, `eslint-disable`, `noqa`, `#[allow]`, no edit to their config, baseline, or `Architecture/` (stale archtest entry: delete). Rule unmeetable → `BLOCKED:`.
 
 ## Return
 

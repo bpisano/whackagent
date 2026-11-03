@@ -90,6 +90,11 @@ lint:                          # strict linter wired into the build: violation =
                                # plugin templates, yours to edit). Agents never disable a rule.
   fix_command: ""              # autofix before build, e.g. "make lint-fix". Empty → tool default.
 
+archtest:                      # architecture rules as unit tests: violation = red test
+  tool: none                   # harmonize | none. Set by /wa-setup. Rules: Architecture/ package
+                               # (from the plugin templates, yours to edit). Agents never touch it.
+  command: ""                  # e.g. "make archtest". Empty → swift test --package-path Architecture
+
 verify:                        # runtime check — implementer drive app it just built
   mode: autopilot              # WHO exercise app after green build:
                                #   autopilot — agent drive it in /wa-autopilot only (nobody there

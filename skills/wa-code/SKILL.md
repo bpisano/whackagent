@@ -71,7 +71,7 @@ GAPS: <unresolved — the only thing subagents explore>
 
 All bricks green → one `wa-verifier`, note `agentId`.
 
-1. **Hand it the change, not the repo**: `review.modules` paths, changed files with diff hunks inline, BRIEF, task ref, toggles.
+1. **Hand it the change, not the repo**: `review.modules` paths, changed files with diff hunks inline, BRIEF, task ref, toggles, `archtest.command` (`archtest.tool` ≠ `none`).
 2. **Check `LENSES:`** — `style`, `elegance`, `structure`, `correctness` all ✓. One missing → send it back for that lens alone, before using findings.
 3. **Order** by severity, keep lens tags.
 4. **Autofix** (`review.autofix: true`) → `SendMessage` the implementer the findings alone, re-verify.

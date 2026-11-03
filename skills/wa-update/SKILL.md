@@ -7,7 +7,7 @@ description: Brings a project up to the installed plugin version: runs pending m
 
 Run after a plugin update. Migrates old formats, syncs what the plugin ships. Safe to re-run.
 
-Read: voice, components, tasks, git, lint, store
+Read: voice, components, tasks, git, lint, archtest, store
 
 ## Steps
 
@@ -39,7 +39,8 @@ Project vs this plugin version. Runs after migrations: they read keys sync would
    - UI project, no `wording.md` → ask **wa-setup → Questions** 11, copy per **wa-setup → Scaffold**.
    - `apple.md` / `wording.md` never without their folder.
 3. **Lint** (`lint.tool` ≠ `none`) — project linter config vs `${CLAUDE_PLUGIN_ROOT}/templates/lint/<tool>/`: rules in template, not project → one row, offer them, never remove the user's. Yes → their violations join the baseline (**lint → Rules**).
-4. **Board** (`board` only) → **store → Upkeep**.
+4. **Archtest** (`archtest.tool` ≠ `none`) — project `Architecture/Tests/` vs `${CLAUDE_PLUGIN_ROOT}/templates/archtest/<lang>/`: rule id in template, not project → one row, offer it, never remove the user's. Yes → copy its file, its violations join the baseline (**archtest → Rules**).
+5. **Board** (`board` only) → **store → Upkeep**.
 
 ## Never
 

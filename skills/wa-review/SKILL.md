@@ -24,7 +24,7 @@ Read: voice, components, tasks, store
      - Say it ran on defaults, suggest `/wa-setup`.
 3. **Verify** — only dispatch, payload and resume of **wa-code → Verify** apply. No BRIEF, no task ref. Never autofix from `review.autofix`.
    - One **wa-verifier**, note `agentId`.
-   - Pass module paths, target files, toggles. Diff scope → diff hunks too.
+   - Pass module paths, target files, toggles, `archtest.command` (archtest on). Diff scope → diff hunks too.
    - `LENSES:` needs `style`, `elegance`, `structure`, `correctness` ✓. Missing one → send it back for that lens alone.
 4. **Show** **Findings**, severity first, grouped by lens tag.
 5. **Fix** — only with `--fix`:

@@ -4,6 +4,8 @@
 
 ## Layers
 
+arch: view_model_is_protocol, ui_view_model_conforms, ui_view_model_observable, view_model_has_mock, store_main_actor_observable, view_generic_over_view_model, view_no_store_access, coordinator_is_view
+
 Strict four-layer architecture:
 
 ```
@@ -16,6 +18,8 @@ Coordinator (View struct: navigation + composition + child injection)
 No Combine. Store→view-model propagation use `Observations` / `AsyncStream`.
 
 ## File tree — group by feature, never by type
+
+arch: no_type_bucket, extension_folder
 
 Each feature own folder hold all it need (coordinator/view, its `ViewModels/` trio, `Components/`, own `Models/`). **Never** collect in global `Models/`, `Networking/`, or `Persistence/` bucket.
 

@@ -1,0 +1,8 @@
+[
+        "no_class_inheritance": ["SyncClient"],
+        "error_is_enum": ["SyncError"],
+        "extension_folder": ["StringExtension.swift"],
+        "no_type_bucket": ["Invoice.swift"],
+        "no_flat_target": ["A.swift", "B.swift", "C.swift", "D.swift", "E.swift", "F.swift", "G.swift", "H.swift"],
+        "tests_mirror_sources": ["OfflineTests.swift"]
+    ]

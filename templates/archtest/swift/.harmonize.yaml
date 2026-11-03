@@ -1,0 +1,7 @@
+# whackagent — root of the architecture tests (Architecture/).
+# Harmonize scans every .swift below this folder, minus these. A name matches any
+# path component ending with it. Test folders (…Tests) are already out of production code.
+excludes:
+  - Architecture
+  - Package.swift
+  - DerivedData

@@ -1,0 +1,14 @@
+[
+        "no_class_inheritance": ["ProfileStore"],
+        "error_is_enum": ["LoginError"],
+        "extension_folder": ["DateExtension.swift"],
+        "view_model_is_protocol": ["ProfileViewModel"],
+        "ui_view_model_conforms": ["UISettingsViewModel"],
+        "ui_view_model_observable": ["UISettingsViewModel"],
+        "view_model_has_mock": ["SettingsViewModel"],
+        "store_main_actor_observable": ["BaseStore", "ProfileStore"],
+        "view_generic_over_view_model": ["ProfileView"],
+        "view_no_store_access": ["ProfileView"],
+        "coordinator_is_view": ["ProfileCoordinator"],
+        "no_type_bucket": ["User.swift"]
+    ]

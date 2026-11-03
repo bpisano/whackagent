@@ -27,3 +27,6 @@ tmp/
 *.tmp
 .whackagent/cache/
 __pycache__/
+.build/
+.swiftpm/
+Package.resolved

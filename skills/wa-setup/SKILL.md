@@ -7,12 +7,12 @@ description: Configures whackagent in a project, or re-asks its questions to cha
 
 Sets up whackagent. Re-run = same questions, current answers as defaults. Plugin updates → `/wa-update`.
 
-Read: voice, components, tasks, git, lint, store-files, store-github, store-plane
+Read: voice, components, tasks, git, lint, archtest, store-files, store-github, store-plane
 
 ## Steps
 
 1. **Pick the run.** No `.whackagent/config.md` → **First setup**. Else **Re-run**.
-   - Arg (`tasks`, `paths`, `review`, `build`, `branch`, `commit`, `verify`, `pr`, `languages`, `lint`) → that section's **Questions** only. First setup + arg → say it's ignored.
+   - Arg (`tasks`, `paths`, `review`, `build`, `branch`, `commit`, `verify`, `pr`, `languages`, `lint`, `archtest`) → that section's **Questions** only. First setup + arg → say it's ignored.
 2. **Run the block.**
 
 ## First setup
@@ -30,7 +30,7 @@ Read: voice, components, tasks, git, lint, store-files, store-github, store-plan
    - Glossary candidates (**voice → Learning**):
      - recurring domain nouns in code, strings, README → **Concepts**
      - UI: screen types (`*View`, `*Screen`, routes) → **Screens**; views on 2+ screens → **Parts**; navigation (`NavigationStack`, coordinators, router) → **Flows**
-   - Linter → **lint → Tools**.
+   - Linter → **lint → Tools**. Archtest → **archtest → Tools**.
    - Build wrapper: `cli/`, `bin/`, `scripts/`, `Makefile` target. Project `CLAUDE.md` / README "ALWAYS use X to build" → strongest, binds the implementer.
 2. **Ask** **Questions**.
 3. **Scaffold** → **Scaffold**; `github` → **GitHub scaffold**, `plane` → **Plane scaffold** too.
@@ -39,7 +39,7 @@ Read: voice, components, tasks, git, lint, store-files, store-github, store-plan
 
 ## Questions
 
-One **Question** each, detected value as default. 8–14 total, rest = template default. Ask 8 before 7.
+One **Question** each, detected value as default. 8–15 total, rest = template default. Ask 8 before 7.
 
 1. **Languages** — discussion: detected from the user. `pr_language` (`board` or `close.strategy: pr`): language of the last 10 merged PRs (`gh pr list --state merged`), else discussion.
 2. **Language + kind** — confirm (`app` / `package` / `cli` / `server`); kind picks the architecture module.
@@ -80,6 +80,8 @@ One **Question** each, detected value as default. 8–14 total, rest = template 
     - `gh` < 2.102 (no `--attach`) → say to upgrade.
 14. **Lint** — strict linter on the build? → `lint.tool`, recommend yes (`none` on no).
     - Say: violation = build error, for agents and CI; old code frozen in a baseline, a task drafted to clear it. Rules from your conventions; yours to edit.
+15. **Archtest** — detected tool only. Architecture rules as unit tests? → `archtest.tool`, recommend yes.
+    - Say: layers, naming, file tree checked by tests (`Architecture/`); agents run them each build, never edit them; old code baselined, a task drafted.
 
 ## Scaffold
 
@@ -94,6 +96,7 @@ One **Question** each, detected value as default. 8–14 total, rest = template 
   - PR: `${CLAUDE_PLUGIN_ROOT}/templates/pr.md` → `{conventions}/pr.md`, unless `.github/pull_request_template.md` exists. Not in `review.modules`.
   - `review.modules` = exactly what was copied, `wording.md` + `glossary.md` included.
 - **Lint** (`tool` ≠ `none`) → **lint → Setup**, after modules: `public_doc` is set.
+- **Archtest** (`tool` ≠ `none`) → **archtest → Setup**, after modules.
 - **Xcode** → `.xcodebuildmcp/config.yaml` at repo root, unless present: `schemaVersion: 1`, `incrementalBuildsEnabled: true`.
 - Templates below = `${CLAUDE_PLUGIN_ROOT}/templates/`. `files` → `{backlog}` from `BACKLOG.md`, empty `{tasks}/`.
 - `{wiki}/index.md` from `wiki-index.md`, glossary link relative to `{wiki}`; empty `{reports}/`.
@@ -137,7 +140,7 @@ Team-visible. One **Plan** (token, project, states, estimate, labels, variables,
    - Config key by key, never re-copy the template. Rest byte-for-byte.
    - Path changed → move files: list, `git mv` (or move); dirty tree → say so first. Target not empty → stop: merge, other path, abort. Fix links (backlog → tasks relative to its folder, `[[page]]`, `wiki:`). Wiki left `.whackagent/` → recommend `compress_wiki: false`.
    - `files` → `github` → **GitHub scaffold** + **Import to GitHub**. → `plane` → **Plane scaffold** (4).
-   - Module newly picked (Apple, wording, architecture swap) → copy per **Scaffold**. Lint turned on → **lint → Setup**. Never overwrite one present.
+   - Module newly picked (Apple, wording, architecture swap) → copy per **Scaffold**. Lint / archtest turned on → its **Setup**. Never overwrite one present.
    - Folder deleted (key unchanged) → recreate empty, mention.
    - No wiki seeding, no compression.
 4. **Report**: keys before → after, files moved, modules added. Nothing changed → say so.

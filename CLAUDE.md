@@ -103,4 +103,5 @@ A change to what's stored in a user project → a migration, same commit.
 - Bump `version` in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`.
 - Behavior change → update `README.md`.
 - Stored format changed → migration added (**Migrations**).
+- `templates/archtest/` changed → `scripts/test-archtest` green (good fixture green, bad fails every rule, bad + baseline green).
 - Commit `feat:` / `fix:` / `refactor:` + summary + `vX.Y.Z`. Push on `main`.
