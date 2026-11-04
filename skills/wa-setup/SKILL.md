@@ -7,7 +7,7 @@ description: Configures whackagent in a project, or re-asks its questions to cha
 
 Sets up whackagent. Re-run = same questions, current answers as defaults. Plugin updates → `/wa-update`.
 
-Read: voice, components, tasks, git, lint, archtest, store-files, store-github, store-plane
+Read: voice, components, tasks, git, lint, archtest, shots, store-files, store-github, store-plane
 
 ## Steps
 
@@ -45,7 +45,7 @@ One **Question** each, detected value as default. 8–15 total, rest = template 
 2. **Language + kind** — confirm (`app` / `package` / `cli` / `server`); kind picks the architecture module.
 3. **Review timing** → `review.when`, recommend `on_validation`.
    - `each_round`: drift caught early, verifier round per note.
-   - `on_validation`: whole diff once; fast iteration.
+   - `on_validation`: whole diff once.
    - Either way `/wa-close` refuses an unreviewed task.
 4. **Review toggles** — ask `review.public_doc` (`///` on public API). Offer the others.
 5. **Build** — wrapper detected only: `<X>`, or XcodeBuildMCP / default? → `build.command` (+ `build.test_command` if tests). Project path wins.
@@ -65,7 +65,7 @@ One **Question** each, detected value as default. 8–15 total, rest = template 
 9. **Paths** → `paths.*`, recommend `.whackagent/`. One question, per path only on "some of them". `board` → no backlog.
    - Shared wiki/backlog → committed folder (`docs/`). `paths.reports` stays local.
    - Absolute OK. `.whackagent/config.md` never moves.
-10. **Apple references** — detected only. Copy into `{conventions}/apple/`? Recommend yes (agents open one topic page). Say: Apple text lands in your repo (public: your call); `/wa-update` refreshes.
+10. **Apple references** — detected only. Copy into `{conventions}/apple/`? Recommend yes. Say: Apple text lands in your repo (public: your call); `/wa-update` refreshes.
 11. **Wording** — UI only → **Project voice** in `{conventions}/wording.md`. Up to 3, `AskUserQuestion`, user's language:
     - **Base tone** — 4 likeliest of `neutral`, `sober`, `complice`, `premium`, `energetic` (`${CLAUDE_PLUGIN_ROOT}/conventions/wording/tones.md`). Other → `base: custom`, text in **Voice**.
     - **Person** — languages with it only (tu/vous/impersonal, du/Sie, tú/usted).
@@ -78,6 +78,7 @@ One **Question** each, detected value as default. 8–15 total, rest = template 
 13. **PR screenshots** — kind `app` + a PR in the flow (`board` or `close.strategy: pr`) → `pr_screenshots.mode`, recommend `auto`. `width` not asked.
     - Say: shot once at validation; new screen → shots, changed screen → before/after (base built aside). **pr → Screenshots**.
     - `gh` < 2.102 (no `--attach`) → say to upgrade.
+    - `auto` + iOS → screenshot UI test target? → `replay`, recommend yes. Say: one test per task, replayed before/after, never committed.
 14. **Lint** — strict linter on the build? → `lint.tool`, recommend yes (`none` on no).
     - Say: violation = build error, for agents and CI; old code frozen in a baseline, a task drafted to clear it. Rules from your conventions; yours to edit.
 15. **Archtest** — detected tool only. Architecture rules as unit tests? → `archtest.tool`, recommend yes.
@@ -97,6 +98,7 @@ One **Question** each, detected value as default. 8–15 total, rest = template 
   - `review.modules` = exactly what was copied, `wording.md` + `glossary.md` included.
 - **Lint** (`tool` ≠ `none`) → **lint → Setup**, after modules: `public_doc` is set.
 - **Archtest** (`tool` ≠ `none`) → **archtest → Setup**, after modules.
+- **Shots** (`replay: on`) → **shots → Setup**.
 - **Xcode** → `.xcodebuildmcp/config.yaml` at repo root, unless present: `schemaVersion: 1`, `incrementalBuildsEnabled: true`.
 - Templates below = `${CLAUDE_PLUGIN_ROOT}/templates/`. `files` → `{backlog}` from `BACKLOG.md`, empty `{tasks}/`.
 - `{wiki}/index.md` from `wiki-index.md`, glossary link relative to `{wiki}`; empty `{reports}/`.
@@ -140,7 +142,7 @@ Team-visible. One **Plan** (token, project, states, estimate, labels, variables,
    - Config key by key, never re-copy the template. Rest byte-for-byte.
    - Path changed → move files: list, `git mv` (or move); dirty tree → say so first. Target not empty → stop: merge, other path, abort. Fix links (backlog → tasks relative to its folder, `[[page]]`, `wiki:`). Wiki left `.whackagent/` → recommend `compress_wiki: false`.
    - `files` → `github` → **GitHub scaffold** + **Import to GitHub**. → `plane` → **Plane scaffold** (4).
-   - Module newly picked (Apple, wording, architecture swap) → copy per **Scaffold**. Lint / archtest turned on → its **Setup**. Never overwrite one present.
+   - Module newly picked (Apple, wording, architecture swap) → copy per **Scaffold**. Lint / archtest / replay turned on → its **Setup**. Never overwrite one present.
    - Folder deleted (key unchanged) → recreate empty, mention.
    - No wiki seeding, no compression.
 4. **Report**: keys before → after, files moved, modules added. Nothing changed → say so.

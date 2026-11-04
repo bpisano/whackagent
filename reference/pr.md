@@ -42,8 +42,8 @@ One change a line, glossary terms, sorted by type:
 
 - Independent of `verify.mode`: `autopilot` / `off` gate runtime checks, never shots.
 
-- **Capture** — task review clean → one `wa-screenshot`. Inputs: task file, diff, `merge-base`, `verify.platform`, glossary **Screens** / **Parts**, out dir `{reports}/<key>/shots/`.
-  - Cached with its sha. Later delta touches a shot screen → re-shoot that screen only.
+- **Capture** — task review clean → one `wa-screenshot`. Inputs: task file, diff, `merge-base`, `verify.platform`, `pr_screenshots.replay`, glossary **Screens** / **Parts**, out dir `{reports}/<key>/shots/`.
+  - Cached with its sha, `ShotsTests.swift` too. Later delta touches a shot screen → re-shoot that screen only.
   - No screen touched → none.
 - **Section** `## Screenshots`, after `## Changes`, even if the template lacks it. Caption = glossary screen name.
   - New screen → images in a row.

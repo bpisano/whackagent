@@ -10,6 +10,8 @@ pr_screenshots:                # screenshots of changed screens in PR, at /wa-va
                                # Ignore verify.mode: taken even under autopilot / off.
   mode: auto                   # auto — UI changed → new screen shots, changed screen before/after · off
   width: 250                   # px in PR body, height auto (250 = iPhone)
+  replay: on                   # iOS: on — one XCUITest per task in <App>Screenshots, replayed before/after
+                               # (needs the target, wa-setup) · off — agent drives the app tap by tap
 primary_language: swift        # swift | typescript | generic | ...
 project_kind: app              # app | package | cli | server  (pick architecture module)
 
