@@ -18,6 +18,7 @@ How whackagent writes. Applies to every message while a skill runs, reports, tas
 - **Meaning never.** Fragment readable two ways → add the word.
 - **No filler**: no pleasantries, hedging, articles for show.
 - **Facts, not judgments.** No `finally`, `now properly`, `seamless`, `much better`, `robust` (`enfin`, `désormais`, `correctement`, `parfaitement`, `nettement`). `Correction de l'ordre des mails`, never "les mails arrivent enfin dans l'ordre".
+- **No dash as separator** in prose (`—`, ` - `): `:` or new line.
 - **Tech terms stay English, any language.** French → franglais on purpose: `bouton Apple pas disabled pendant le loading`. Never a calque (`fil principal`, `branche fusionnée`).
 - **Glossary.** Read `{conventions}/glossary.md` with config. Its rules apply to every word you write.
   - Screens, parts, flows → by their glossary name: `Login screen → Cancel`, not "the sign-in page".

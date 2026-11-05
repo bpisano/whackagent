@@ -14,7 +14,7 @@ Every PR whackagent opens or edits. Read by teammates who never saw the task. **
 
 ## Body
 
-- Template = `.github/pull_request_template.md` if the repo has one, else `{conventions}/pr.md`. Fill it as-is: sections, order, `Closes` last (`plane`: **store → Other**). ≤ 20 lines.
+- Template = `.github/pull_request_template.md` if the repo has one, else `{conventions}/pr.md`. Fill it as-is: sections, order, `Closes` last (`plane`: **store → Other**). ≤ 20 lines, **How it works** aside.
 - **Rewritten whole** at every write: end state, never round history ("after feedback").
 - **Sprint PR** sums up the sprint: never one bullet per task.
 - No task slugs, sprint jargon, verifier rounds, test counts, process section, follow-up list.
@@ -33,7 +33,7 @@ One change a line, glossary terms, sorted by type:
 | measured perf / UX | `Improve … : <measure>` | `Amélioration de … : <mesure>` |
 
 - Other language → same five, native words. Nothing fits → plain line, rare.
-- Words the user sees, not `debounce` / `backoff`. Why, not how.
+- Words the user sees, not `debounce` / `backoff`. Why, not how: how → **How it works**.
 - `Improve` only with a measure.
 
 ## Screenshots
@@ -56,17 +56,49 @@ One change a line, glossary terms, sorted by type:
 - **Failure** never blocks (build, sim, `gh` < 2.102, `--attach` non-zero). Keep what uploaded, never half a pair. **Warning** + **components → Shots**.
 - No confirm before upload. Never a shot from the sprint test branch.
 
+## How it works
+
+For the reviewer: between `Changes` and the diff.
+
+- **When**: a mechanism to explain (new flow, state, business rule, data model, cache or concurrency, non-obvious fix). `Changes` says it all (copy, style, rename, config) → none.
+- **Place**: after `## Screenshots`, before `## To test`, even if the template lacks it. Collapsed, label in `pr_language`:
+  ```md
+  <details>
+  <summary><b>How it works</b></summary>
+
+  …
+
+  </details>
+  ```
+- **Blocks**: ≤ 3, flow order, no prose between. `**<glossary name>**: <one line, ≤ 12 words>` + one visual:
+  - who calls whom, order → mermaid `sequenceDiagram` / `flowchart`
+  - states, transitions → mermaid `stateDiagram-v2`
+  - logic, rule → pseudo-code
+  - contract (API, model, signature) → real code or `diff`, ≤ 15 lines
+- **Truth**: from the diff vs `merge-base` + `## Context / Decisions`. Code and names → **components → Sketch**.
+- **Sprint PR**: from the sprint diff, ≤ 3 blocks for the whole sprint.
+
 ## Example
 
-```md
+````md
 Les mails des 30 derniers jours sont lisibles hors ligne.
 
 ## Changes
 - Ajout du téléchargement du contenu des mails de l'Inbox (≤ 30 jours) pendant la Sync
 - Modification de l'écran de mail : contenu local d'abord, sinon téléchargement
 
+<details>
+<summary><b>Fonctionnement</b></summary>
+
+**Mail screen** : local d'abord, réseau en fallback.
+```
+body = MailStore.body(id) ?? API.fetchBody(id) → MailStore.save
+```
+
+</details>
+
 ## To test
 - [ ] Mode avion → un mail récent s'ouvre
 
 Closes #53
-```
+````

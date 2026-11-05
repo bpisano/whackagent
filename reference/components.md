@@ -4,7 +4,7 @@ Every shape shown to the user. Labels follow **voice → Language**.
 
 ## Task ref
 
-A task inside a sentence: `#42 Add Apple login` (`files`: `3 Add Apple login`).
+In a sentence: `#42 Add Apple login` (`files`: `3 Add Apple login`).
 
 ## Task line
 
@@ -13,7 +13,7 @@ A task inside a sentence: `#42 Add Apple login` (`files`: `3 Add Apple login`).
 ```
 
 - `<id> · <size> **<title>**`, then what applies, in order:
-  - `· <sprint>` — dropped when the view is that sprint
+  - `· <sprint>` — dropped in its sprint view
   - `· ⛔ #12` — open blockers
   - `· 🔒 <owner> <age>` — lock held; stale → `🔒⏳`
   - `· ⇡ #42` — stacked on #42 (+ `⛔ #42` while open)
@@ -23,7 +23,7 @@ A task inside a sentence: `#42 Add Apple login` (`files`: `3 Add Apple login`).
 
 ## Task list
 
-N tasks. Never a table.
+N tasks.
 
 ```
 ### Todo
@@ -48,9 +48,19 @@ N tasks. Never a table.
   Alt: memory only — safer, re-login every cold start.
 ```
 
-- One at a time. Recommendation always, one-line grounded why. Real alternative → `Alt:`.
+- Recommendation always, one-line grounded why. Real alternative → `Alt:`.
 - No basis → cheapest to undo, flagged as a guess.
 - Choice between named options → numbered list, recommended first.
+- Options differ by mechanism → **Sketch** under each.
+
+## Sketch
+
+`Sync : headers → save → bodies → save`
+
+- Flow → arrow line. Branches, states → ASCII (`─│└▶`), ≤ 8 lines, no emoji.
+- Logic → pseudo-code. Contract → real code from the diff, cut → `…`. ≤ 6 lines.
+- Names: real types or glossary terms.
+- Terminal: never mermaid. PR → **pr → How it works**.
 
 ## Warning
 
@@ -85,26 +95,22 @@ One line mid-run: `⏳ #42 verify — round 2`.
 
 ## Findings
 
-Review results, severity first:
-
 ```
 🔴 AuthStore.swift:42 — token in UserDefaults → Keychain
 🟠 LoginView.swift:18 — [style] force unwrap → guard
 ```
 
-- 🔴 critical · 🟠 major · 🟡 minor. ≤ 12 words. Clean → `✅ review clean`.
+- Severity first: 🔴 critical · 🟠 major · 🟡 minor. ≤ 12 words. Clean → `✅ review clean`.
 - User decides → line ends with the pick: `fix` / `accept` / `→ /wa-task`.
 
 ## Branch line
 
-Where the user stands now. Always in a **Report**.
+Always in a **Report**.
 
 - `branch: wa/42-add-apple-login — you're on it`
 - `test branch: sprint/login-refacto-test = sprint + #42 · #43 — you're on it`
-- Missing piece → `⚠️ #45 not in — conflicts with #42`
-- Not built → `⚠️ test branch not built — dirty tree`
-- Couldn't switch → `⚠️ still on <branch> — dirty tree`
-- Batch report → task's own branch
+- Problem → `⚠️` + what + why: `#45 not in — conflicts with #42`, `test branch not built — dirty tree`.
+- Batch report → task's own branch.
 
 ## Status line
 
@@ -132,17 +138,16 @@ Round end: `/wa-code`, `/wa-feedback`, `/wa-validate`.
 
 ✅ agent: tap Apple → sheet → Home
 
-branch: wa/42-add-apple-login — you're on it
 build ✅ · tests ✅ · run ✅ · review → /wa-validate
 → next: test it, then /wa-feedback 42 or /wa-validate 42
 ```
 
 - Header = **Task line** + summary. Feedback → `· round <n>` + **Asked** above Done.
-- **Done** — app changes, ≤ 5 bullets.
-- **To test** — unproven criteria + regression zones. All proven → `nothing required` + one smoke test.
-- **Review** — `/wa-validate` only, as **Findings**, above To test.
-- `✅ agent:` — what the runtime check proved.
-- Then **Shots**, **Branch line**, **Status line**, **Next**. File list → saved report only.
+- **Done**: app changes, ≤ 5 bullets.
+- **To test**: unproven criteria + regression zones. All proven → `nothing required` + one smoke test.
+- **Review**: `/wa-validate` only, as **Findings**, above To test.
+- `✅ agent:` what the runtime check proved.
+- Then **Shots**, **Branch line**, **Status line**, **Next**. Files → saved report only.
 
 ## Shots
 
@@ -157,13 +162,12 @@ PR screenshots, in **Report**. **Landing**: `⚠️` lines only.
 
 ## Landing
 
-`/wa-close`, once, at the end. No fence. Blank line between blocks.
+`/wa-close`, at the end. No fence. Blank line between blocks.
 
 ```
 ✅ #42 **Add Apple login**
 PR #57 `wa/42-add-apple-login` → `main`
 
-⚠️ code changed since your test: Apple button hidden offline
 ⚠️ before release: enable Sign in with Apple in App Store Connect
 
 → next: merge https://github.com/acme/app/pull/57
@@ -191,11 +195,9 @@ test branch: wa/autopilot-2026-09-18-test = #42 · #44 — you're on it
 <Report per delivered task>
 
 ---
-⛔ #45 Add password reset
-<Question>
+<Question per blocked task>
 
 → next: /wa-validate 42
 ```
 
 - Recap = **Task lines** + outcome: `to test`, `blocked`, `skipped`. By sprint if several.
-- One **Report** per delivered task, one **Question** per blocked one.
