@@ -7,7 +7,7 @@ description: Applies your notes on a coded task, then re-checks it. Use after /w
 
 Applies the user's notes on a coded task, without losing rules. Ends at `to-test`.
 
-Read: voice, pr, components, tasks, git, store
+Read: voice, pr, how-it-works, components, tasks, git, store
 
 ## Steps
 

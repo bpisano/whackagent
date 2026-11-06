@@ -7,7 +7,7 @@ description: Runs the code review once you're happy with the feature. Doesn't cl
 
 User says the feature matches the spec. Run one verifier pass over the whole diff, end at `to-close`. Closing stays `/wa-close`.
 
-Read: voice, pr, components, tasks, git, store
+Read: voice, pr, how-it-works, components, tasks, git, store
 
 ## Steps
 

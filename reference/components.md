@@ -60,7 +60,7 @@ N tasks.
 - Flow → arrow line. Branches, states → ASCII (`─│└▶`), ≤ 8 lines, no emoji.
 - Logic → pseudo-code. Contract → real code from the diff, cut → `…`. ≤ 6 lines.
 - Names: real types or glossary terms.
-- Terminal: never mermaid. PR → **pr → How it works**.
+- Terminal: never mermaid. PR → **how-it-works**.
 
 ## Warning
 

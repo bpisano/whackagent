@@ -7,7 +7,7 @@ description: Finishes a task: reviews it if needed, updates the wiki, commits, l
 
 Lands a tested task: review if missing, wiki, commit, branch.
 
-Read: voice, pr, components, tasks, git, store
+Read: voice, pr, how-it-works, components, tasks, git, store
 
 ## Steps
 

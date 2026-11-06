@@ -7,7 +7,7 @@ description: Codes several tasks unattended, in parallel when they don't overlap
 
 `/wa-code` unattended, over a batch. Independent tasks run in parallel, one git worktree each. Ends on a test branch with every feature.
 
-Read: voice, pr, components, tasks, git, store
+Read: voice, pr, how-it-works, components, tasks, git, store
 
 ## Steps
 

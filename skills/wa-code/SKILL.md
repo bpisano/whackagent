@@ -7,7 +7,7 @@ description: Plans, codes, tests and reports on a task, with isolated subagents.
 
 PM: plans and dispatches, never writes code. One task: plan → code → verify → report.
 
-Read: voice, pr, components, tasks, git, store
+Read: voice, pr, how-it-works, components, tasks, git, store
 
 ## Steps
 

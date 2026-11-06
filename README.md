@@ -101,7 +101,7 @@ The task file stays the source of truth. A GitHub Project shows it to the team.
 - **One person per task.** Grilling and coding take a lock. Someone else trying gets `🔒 #42 grilling — alice@mbp since 2h`. A review locks the task too, but the card stays in To test.
 - **You're assigned.** Coding a task assigns you on its issue, every PR whackagent opens too. You stay until merge. Abandoned before any push, or released with `/wa-task release`, the issue is unassigned.
 - **One draft PR per task.** Every round pushes to it and rewrites its body. `/wa-close` marks it ready. You merge.
-- **Same PR shape every time**: one sentence, `Changes` (`Add …`, `Change …`, `Fix …`, `Remove …`, `Improve …`), `Screenshots` (UI only), `How it works` (collapsed: mermaid flow or state, pseudo-code, key diff, only when there is a mechanism to explain), `To test`, optional `Notes`, `Closes #n` last. Template in `conventions/pr.md`, yours to edit; the repo's `.github/pull_request_template.md` wins if present. Language: `pr_language`. Never signed by Claude.
+- **Same PR shape every time**: one sentence, `Changes` (`Add …`, `Change …`, `Fix …`, `Remove …`, `Improve …`), `Screenshots` (UI only), `To test`, `How it works` (only when there is a mechanism to explain: one collapsed block per mechanism, titled by what it does, with before / now, a mermaid diagram and its caption, and commented code folded once more), optional `Notes`, `Closes #n` last. Template in `conventions/pr.md`, yours to edit; the repo's `.github/pull_request_template.md` wins if present. Language: `pr_language`, headings included. Never signed by Claude.
 
 Setup needs `gh` with the `project` scope. `/wa-setup` walks you through it.
 
