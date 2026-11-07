@@ -1,128 +1,105 @@
 # How it works
 
-PR section that explains the mechanisms behind the diff, for a reviewer who never saw the task. **voice**, **pr** apply.
+Technical detail of each `Changes` bullet, for a reviewer new to the task. **voice**, **pr** apply.
 
-## When
+## Place
 
-- Mechanism to explain: new flow, state, business rule, data model, cache or concurrency, non-obvious fix.
-- `Changes` says it all (copy, style, rename, config) → no section.
-- Sprint PR → from the sprint diff, for the whole sprint.
+- The line folds: `<dl><dd><details>`, `<summary>` = its text (code → `<code>`), content in `<dl><dd><br>`. Never its own section.
+- Trivial bullet (copy, style, rename, translations) → plain `- ` line.
+- Mechanism without a bullet: derived from one → in its fold. Independent → add its `Changes` line.
+- Custom template → the section playing `Changes`.
+- Sprint PR → sprint diff. Known bug, no issue → `## Notes`.
 
-## Shape
+## Level
 
-`## How it works` heading, right after `## To test`, even if the template lacks it. Under it, one collapsed block per mechanism:
+Per bullet, never shown. Doubt → higher.
 
-```md
-<details>
-<summary><b>Une synchro à la fois par Compte</b></summary>
+| level | when | fold |
+|---|---|---|
+| easy | reads in one function, no new type, no state | one sentence + code unfolded, or none |
+| medium | one new concept (type, rule, flow), 1–2 components | Before / Now, Overview if new type, Callers, Code |
+| hard | ≥ 3 components, lifecycle or concurrency, failure handling, or several sub-mechanisms | all, ≤ 4 parts, ≤ 2 diagrams |
 
-…
-
-</details>
-```
-
-- ≤ 3 blocks, code execution order. One block = one mechanism the reviewer needs to read the diff.
-- Known bug or limit → own block only with an issue: `Bug connu #283 : un état lu envoyé en trop`. Else `## Notes`.
-- **Summary** = title alone, ≤ 6 words, a fact about behavior: `Réception synchronisée en premier`, never `Ordre de synchro`. No sentence, no type. HTML only (`<b>`, `<code>`): GitHub ignores markdown there.
-
-## Block
+## Fold
 
 Labels in `pr_language`, this order:
 
-1. **Before** / **Now**: one or two sentences each. Nothing before → **Problem**: what was missing.
-   - Test block → **Situation**, **Risk**, **Expected** bullets instead.
-2. Diagram + caption (**Diagram**).
-3. `<details><summary>Code</summary>`: code (**Code**), then **Read**: entry function → next → next.
+1. **Before** / **Now**. Nothing before → **Problem**. Test → **Situation**, **Risk**, **Expected**.
+2. **Overview** — the type carrying the mechanism, visible. Real code: stored properties, signatures called from outside, bodies `{ … }`, role comment per member. ≤ 20 lines, ≤ 2 types.
+3. **Callers** — signature, injection or lifecycle changed for callers. Why in one sentence, others named, a ` ```diff ` on one caller, ≤ 12 lines. Visible.
+4. Diagram + caption (**Diagram**).
+5. Hard → parts, execution order: bold title, ≤ 1 context sentence, bullets, diagram if useful, Code fold. Else → Code fold.
+6. **Read**: entry function → next → next, each linked to its line: in the diff → `pull/<n>/files#diff-<sha256(path)>R<line>`, else `blob/<head sha>/<path>#L<line>`. Hard → end of fold, else in Code.
+
+≤ 2 fold levels.
+
+## UI bullet
+
+- Component alone, from **wa-screenshot** `COMPONENTS`: `| Before | After |`. New → After alone. Screens stay in `## Screenshots`.
+- One image per variant, in a row.
+- **Usage**: the call a dev writes, real parameters, one commented call per variant, ≤ 10 lines.
+- Logic behind → per level. Easy (color, spacing) → images only.
 
 ## Code
 
-- Mechanism → pseudo-code in the language's syntax, real type and function names.
-- Contract (type, enum, signature, model) → real code from the diff, cut, ≤ 15 lines, doc comments removed.
-- Same function never twice in two forms.
-- `if / else` over `??` or chained `guard`.
-- Comments:
-  - Intent, never the effect the name says: `// confirmation perdue : l'app croit à un échec`, not `// envoie UID MOVE`.
-  - Each branch: when it happens, in usage terms: `// Trois push = une passe`.
-  - No unknown name: every type, property or method in a condition → caption, or replaced by a plain-named expression.
-  - No undefined jargon (`rendu`, `porte`, `replay`).
-- Test → each `#expect` comments what it proves.
+- Code fold `<summary>` = 🧩 + what it shows: `<code>Pool.borrow</code>`, ≤ 2, ` · `.
+- Mechanism → pseudo-code, real names. Contract → real code from the diff, cut, ≤ 15 lines.
+- Inside its real owner: `actor IMAPSessionPool {`. Free function → none. Role comment on the type line.
+- Properties the snippet reads → declared atop the owner, commented. No caption under code.
+- Never one function twice. `if / else` over `??` or chained `guard`.
+- Comments: intent, not the name. Each branch: when it happens. No unknown name.
+- Test → each `#expect` says what it proves.
 
 ## Diagram
 
-- Mermaid, when a picture beats the code: several components, order in time, branches. Code shows it all → none.
-- `flowchart LR` → steps, branches. `sequenceDiagram` → exchanges over time. `stateDiagram-v2` → only ≥ 3 states in the code.
-- ≤ 8 nodes, arrow labels ≤ 4 words, detail → `Note`.
-- Node = name alone: type or glossary term. Never a definition in it.
-- Categories → named `subgraph` (`Code de prod`, `Faux, pour le test`). Never a style to explain.
-- **Caption** right under: one bullet per name of the diagram and the code. Glossary terms skipped. Code-only name → `(dans le code)`. No diagram → same caption under the code.
-  ```md
-  - <sub>`ScriptedIMAPGate` : retient la réponse du serveur à une commande IMAP.</sub>
-  ```
+- Mermaid, when it beats code. `flowchart TD` (never `LR`) → steps, branches. `sequenceDiagram` → exchanges. `stateDiagram-v2` → ≥ 3 code states.
+- ≤ 8 nodes, arrow labels ≤ 4 words, detail → `Note`. Node = name alone. Categories → named `subgraph`.
+- **Caption** right under, one per name: `- <sub>`Pass` : une synchro d'un Compte.</sub>`. Glossary and Overview names skipped.
 
-## Style
+## Words
 
-Full sentences, short: not the terminal telegraph.
+A dev talking to a dev: simple, not simplified.
 
-- One sentence, one fact. Cause needed → same sentence.
-- No `on` / `we`: concrete subject (type, user, app, server).
-- No guessable justification (`Inutile de…`).
-- No emphasis words (`pile`, `bien`, `déjà`, `justement`, `une fois pour toutes`).
-- Condition → `<case> : <result>`. No rhetorical question.
+- **Part title** starts with the situation: `How` / `When` / `If` (`Comment`, `Quand`, `Si`). Subject + verb, common words, no comma, no `?`. `Quand les 3 sessions sont occupées`, never `Attente quand 3 sessions travaillent`.
+- ≥ 2 independent facts → bullets. Paragraph = one sentence, or two linked by a cause.
+- Bullet = a spoken sentence: subject, verb, active. Condition → `Si …, …`, never `<case> : <result>`. Verb over noun: `échoue`, not `en échec`.
+- Technical terms stay: LOGIN, FETCH, retry. Unknown one → **pr → Vocabulary**.
+- Concept named in the code → the code's word, English in any language: borrow, `giveBack`, idle, waiters. Never translated. Glossary terms unchanged.
+- Concrete subject, never `on` / `we`. No emphasis.
 
 ## Truth
 
-From the diff vs `merge-base` + `## Context / Decisions`. Link unsure (who calls what) → read the caller, never guess.
+From the diff vs `merge-base` + `## Context / Decisions`. Link unsure → read the caller, never guess.
 
 ## Example
 
 ````md
-## Fonctionnement
+<dl><dd><details>
+<summary>Ajout d'un pool de sessions IMAP par Compte</summary>
+<dl><dd><br>
+
+**Avant** : chaque opération ouvrait sa propre session.
+
+**Maintenant** : `NIOIMAPClient` garde ses sessions dans un `IMAPSessionPool`.
+- Le pool garde au plus 3 sessions connectées par Compte.
+- Chaque opération fait un borrow de session, puis un `giveBack`.
+
+**Quand les 3 sessions sont occupées**
+
+- L'opération attend dans `waiters`.
+- À chaque `giveBack`, le pool sert le premier waiter du Compte.
 
 <details>
-<summary><b>Une synchro à la fois par Compte</b></summary>
-
-**Avant** : synchro complète, pull to refresh et push lançaient chacun leur passe. Deux passes pouvaient tourner sur un Compte, avec deux connexions IMAP.
-
-**Maintenant** : `MailboxSyncScheduler` tient une file par Compte. Une passe tourne à la fois.
-
-```mermaid
-sequenceDiagram
-  participant P as Push
-  participant S as MailboxSyncScheduler
-  participant I as IMAP
-  P->>S: synchronize(.inbox)
-  S->>I: passe A
-  P->>S: synchronize(.inbox)
-  Note right of S: B en file
-  P->>S: synchronize(.inbox)
-  Note right of S: rejoint B
-  I-->>S: A finie
-  S->>I: passe B
-```
-
-- <sub>Passe : une synchro d'un Compte (`Pass`), en file ou en cours. Partagée (`isShared`) : plusieurs push la rejoignent.</sub>
-- <sub>`MailboxScope` : les Dossiers qu'une passe synchronise. `.inbox` pour le push.</sub>
-
-<details>
-<summary>Code</summary>
+<summary>🧩 <code>IMAPSessionPool.borrowSession</code></summary>
 
 ```swift
-func synchronize(_ scope: MailboxScope, of account: Account) async throws {
-    let pass: Pass
-    if let waiting = waitingPasses[account].last(where: { $0.isShared && $0.scope == scope }) {
-        // Passe partagée sur les mêmes Dossiers déjà en file : le push la rejoint. Trois push = une passe.
-        pass = waiting
-    } else {
-        // Sinon : nouvelle passe en fin de file.
-        pass = startPass(scope, of: account)
-    }
-    try await wait(for: pass)                    // l'appelant attend la fin de la passe
-}
+actor IMAPSessionPool { // garde les sessions connectées de chaque Compte
+    private var waiters: [Waiter] // opérations en attente d'une session
+    …
 ```
 
-**À lire** : `synchronize` → `startPass` → `finish`.
-
 </details>
 
-</details>
+</dd></dl>
+</details></dd></dl>
 ````

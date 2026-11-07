@@ -6,7 +6,7 @@ Headings translated to `pr_language`. HTML comments never copied into the PR.
 <one sentence: what changes for the user>
 
 ## Changes
-<!-- one change per line, pattern per type, this order: Add · Change · Fix · Remove · Improve -->
+<!-- one change per line, pattern per type, this order: Add · Change · Fix · Remove · Improve. Each non-trivial line folds open on its How it works, filled by whackagent. -->
 - Add …
 
 ## Screenshots
@@ -15,9 +15,6 @@ Headings translated to `pr_language`. HTML comments never copied into the PR.
 ## To test
 <!-- one manual check per line -->
 - [ ] …
-
-## How it works
-<!-- mechanism to explain only, filled by whackagent: ≤ 3 collapsed blocks (behavior title, before / now, mermaid + caption, commented code). Else drop the section. -->
 
 ## Notes
 <!-- only if someone must act: migration, breaking change, config to set. Else drop the section. -->

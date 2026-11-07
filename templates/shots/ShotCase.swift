@@ -16,6 +16,15 @@ class ShotCase: XCTestCase {
         add(shot)
     }
 
+    /// Attaches a shot of one element only, named `<part>-<variant>`.
+    @MainActor
+    func snap(_ name: String, of element: XCUIElement) {
+        let shot = XCTAttachment(screenshot: element.screenshot())
+        shot.name = name
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
+
     /// On failure, attaches the app's UI tree: what was on screen instead.
     override func tearDownWithError() throws {
         guard testRun?.hasSucceeded == false else { return }

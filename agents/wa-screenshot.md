@@ -1,8 +1,8 @@
 ---
 name: wa-screenshot
 description: >
-  Isolated screenshot taker for whackagent PRs. Picks every screen a task
-  touched, captures new screens, and before/after pairs for changed ones (base
+  Isolated screenshot taker for whackagent PRs. Picks every screen and shared
+  component a task touched, captures new ones, and before/after pairs for changed ones (base
   built in a temporary worktree). On iOS writes one XCUITest replayed on both
   sides, else drives the app. Read-only on code, never touches git history or
   `gh`. Returns the shot list.
@@ -11,7 +11,7 @@ tools: [Read, Write, Grep, Glob, Bash]
 
 # wa-screenshot
 
-Captures the screens a task changed, for its PR (**pr → Screenshots**).
+Captures the screens and components a task changed, for its PR (**pr → Screenshots**, **how-it-works → UI bullet**).
 
 ## Inputs
 
@@ -28,14 +28,16 @@ Captures the screens a task changed, for its PR (**pr → Screenshots**).
    - screen file added → `new`
    - screen file changed, or a **Part** it uses → `before/after`
    - nothing a screen shows → `RESULT: none`, stop.
-2. **Pick states**, ≤ 6 for the task: default state of each screen, then one per visible criterion. Over 6 → criteria first.
-3. **Device** — one simulator for every shot: session default, else latest standard iPhone (not Pro Max, not mini). `verify.target: device` → simulator anyway.
+2. **Pick components** — glossary **Part** added or changed, or a changed view used by ≥ 2 screens or modes. ≤ 3, each `new` or `before/after`.
+   - Variants ≤ 3: the ones the diff touches (enum case, new parameter), else default.
+3. **Pick states**, ≤ 6 for the task: default state of each screen, then one per visible criterion. Over 6 → criteria first.
+4. **Device** — one simulator for every shot: session default, else latest standard iPhone (not Pro Max, not mini). `verify.target: device` → simulator anyway.
    - iOS → `xcrun simctl status_bar <udid> override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3`. Light appearance, dark only if a criterion says so.
-4. **Runner** — iOS + `replay: on` + scheme `<App>Screenshots` on the task branch (**shots → Target**) → **Replay**. Else → **Drive**.
-5. **Base** — any `before/after` screen: `git worktree add --detach <tmp> <merge-base>`.
+5. **Runner** — iOS + `replay: on` + scheme `<App>Screenshots` on the task branch (**shots → Target**) → **Replay**. Else → **Drive**.
+6. **Base** — any `before/after` screen or component: `git worktree add --detach <tmp> <merge-base>`.
    - Replay + no scheme in the base → skip every `before`, **Warning** `base without screenshot target`.
-6. **Shoot** per runner, both sides. State absent before → skip that side.
-7. **Clean** — remove the worktree and `Generated/` copies, whatever happened.
+7. **Shoot** per runner, both sides. State absent before → skip that side.
+8. **Clean** — remove the worktree and `Generated/` copies, whatever happened.
 
 ## Replay
 
@@ -44,6 +46,7 @@ Captures the screens a task changed, for its PR (**pr → Screenshots**).
    - Navigate from code: accessibility ids, else static labels. `waitForExistence` before each tap and before the shot.
    - System alert → `addUIInterruptionMonitor`, allow.
    - `snap("<screen>-<state>")`.
+   - Component → `test<Part><Variant>()`, `snap("<part>-<variant>", of: <element>)`: accessibility id, else label or hierarchy. Not found → `SKIPPED`.
    - Re-shoot → file present: reuse, change nothing.
 2. **Copy** it into `<App>Screenshots/Generated/` of each side.
 3. **Build** both sides in parallel (`&`, `wait`): `xcodebuild build-for-testing -scheme <App>Screenshots -destination 'platform=iOS Simulator,id=<udid>' -derivedDataPath <tmp>/dd-<side> -skipPackagePluginValidation`. Base build failed → retry once, else `before` failed.
@@ -57,7 +60,8 @@ Captures the screens a task changed, for its PR (**pr → Screenshots**).
 - Build, install, shoot each side: same launch, same taps, same data.
 - UI tree first, accessibility ids before coordinates.
 - Wait for the screen to settle: no spinner, no transition mid-shot.
-- File name: `<screen>-<state>-<new|before|after>.png`, kebab-case.
+- Component → full shot cropped to the element's UI-tree bounds: `sips -c <h> <w> --cropOffset <y> <x>`.
+- File name: `<screen>-<state>-<new|before|after>.png`, `<part>-<variant>-…` for a component, kebab-case.
 
 ## Never
 
@@ -77,6 +81,9 @@ SHOTS:
   Login screen · default · new · <path>
   Map screen · empty · before · <path>
   Map screen · empty · after · <path>
+COMPONENTS:
+  Editable rows · distance · before · <path>
+  Editable rows · distance · after · <path>
 SKIPPED: <screen · state — reason>
 FAILED: <what — one line>
 ```

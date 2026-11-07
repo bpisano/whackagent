@@ -14,7 +14,7 @@ Every PR whackagent opens or edits. Read by teammates who never saw the task. **
 
 ## Body
 
-- Template = `.github/pull_request_template.md` if the repo has one, else `{conventions}/pr.md`. Fill it as-is: sections, order (headings translated), `Closes` last (`plane`: **store → Other**). ≤ 20 lines, **How it works** aside.
+- Template = `.github/pull_request_template.md` if the repo has one, else `{conventions}/pr.md`. Fill it as-is: sections, order (headings translated), `Closes` last (`plane`: **store → Other**). ≤ 20 lines, folds aside.
 - **Rewritten whole** at every write: end state, never round history ("after feedback").
 - **Sprint PR** sums up the sprint: never one bullet per task.
 - No task slugs, sprint jargon, verifier rounds, test counts, process section, follow-up list.
@@ -33,7 +33,7 @@ One change a line, glossary terms, sorted by type:
 | measured perf / UX | `Improve … : <measure>` | `Amélioration de … : <mesure>` |
 
 - Other language → same five, native words. Nothing fits → plain line, rare.
-- Words the user sees, not `debounce` / `backoff`. Why, not how: how → **how-it-works**.
+- Words the user sees, not `debounce` / `backoff`. Why, not how: how → the bullet folds, **how-it-works**.
 - `Improve` only with a measure.
 
 ## Screenshots
@@ -52,6 +52,7 @@ One change a line, glossary terms, sorted by type:
   1. Body with `![<Screen> <state>](./<file>.png)` in place → `gh pr edit <pr> --body-file … --attach <file>…` (`gh pr create` at `/wa-close`). Paths rewritten to `user-attachments` URLs.
   2. Each `![alt](url)` → `<img src="url" width="<pr_screenshots.width>" alt="alt">` → `gh pr edit --body-file`.
   - Body rewrite → keep uploaded URLs, attach new shots only.
+- **Components** — `COMPONENTS` shots: same upload, placed per **how-it-works → UI bullet**.
 - **Sprint PR** → reuse task PR URLs: per screen, first task's before, last task's after. No capture, no upload.
 - **Failure** never blocks (build, sim, `gh` < 2.102, `--attach` non-zero). Keep what uploaded, never half a pair. **Warning** + **components → Shots**.
 - No confirm before upload. Never a shot from the sprint test branch.
@@ -60,6 +61,19 @@ One change a line, glossary terms, sorted by type:
 
 → **how-it-works**.
 
+## Vocabulary
+
+Term a dev new to the PR may not know, in a bullet fold → numbered, defined in one fold.
+
+- Yes: concept named in the code (borrow, idle, waiters), rare trade word (watchdog), non-obvious protocol command (EXAMINE). No: common dev words (retry, timeout, LOGIN), glossary terms, types of an Overview.
+- First prose occurrence only, never in code. ≤ 8 a PR, central mechanism first.
+- Mark: `watchdog<sup><a href="#user-content-watchdog">1</a></sup>`, appearance order.
+- `## Vocabulary` (`Vocabulaire`) after `## Notes`, before `Closes`, even if the template lacks it. Under it `<details><summary>7 terms</summary>`, one numbered line each: `1. <a id="watchdog"></a>**watchdog** : …`.
+- Definition, ≤ 30 words:
+  1. `<term> : <category> that <difference>`, no article: `**borrow** : appel qui sort une session du pool`. Never the term itself, no other unknown word.
+  2. One context, the most useful: where and whose (`IMAPSessionPool.borrowSession`, called by `withSession`), or why it exists.
+  - A code name always.
+
 ## Example
 
 ````md
@@ -67,19 +81,18 @@ Les mails des 30 derniers jours sont lisibles hors ligne.
 
 ## Changements
 - Ajout du téléchargement du contenu des mails de l'Inbox (≤ 30 jours) pendant la Sync
-- Modification de l'écran de mail : contenu local d'abord, sinon téléchargement
 
-## À tester
-- [ ] Mode avion → un mail récent s'ouvre
-
-## Fonctionnement
-
-<details>
-<summary><b>Contenu du mail lu en local d'abord</b></summary>
+<dl><dd><details>
+<summary>Modification de l'écran de mail : contenu local d'abord, sinon téléchargement</summary>
+<dl><dd><br>
 
 …
 
-</details>
+</dd></dl>
+</details></dd></dl>
+
+## À tester
+- [ ] Mode avion → un mail récent s'ouvre
 
 Closes #53
 ````
