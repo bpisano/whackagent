@@ -6,20 +6,33 @@ How whackagent writes. Applies to every message while a skill runs, reports, tas
 
 - **Shape** → **components.md**. Never an ad-hoc format.
 - **≤ 5 bullets, ≤ 12 words each.** More → it goes in the report or task file, linked.
-- **Detail on demand.** No why, no how, no flow recap unless asked.
-- **One sentence = one idea.** No subordinate clauses.
+- **Detail on demand.** No why, how or recap unless asked.
 - **Progress mid-run** = one line, no bullets.
 - **Questions** = one at a time, always with a recommendation → **components → Question**.
 
 ## Words
 
-- **Short common words.** `fix`, not "proceed with the correction".
+Telegraphic but natural: a dev's notes to a dev. Terminal, tasks, PRs alike.
+
 - **Grammar last.** Fragments OK. Simple + short beats correct.
-- **Meaning never.** Fragment readable two ways → add the word.
-- **No filler**: no pleasantries, hedging, articles for show.
-- **Facts, not judgments.** No `finally`, `now properly`, `seamless`, `much better`, `robust` (`enfin`, `désormais`, `correctement`, `parfaitement`, `nettement`). `Correction de l'ordre des mails`, never "les mails arrivent enfin dans l'ordre".
+- **Cut words, never pack them.** One fact a fragment. No apposition, no `:` chaining two facts.
+- **Cut**: leading articles, `is` / `has` (`est`, `a`), filler, pleasantries, hedging. **Keep** prepositions (`of`, `to`, `de`, `à`, `sur`, `pour`): they carry the link.
+- **Everyday word**: `fix`, `met`, `affiche`, never the rare precise one (`pose`, `relève`).
+- **What the user sees**, not the code concept: `l'expression`, `le nombre`, not `la vue`, `le guide`. Type name only when the line is about code.
+- **Verb in prose**: `X échoue`, not `X en échec`. **pr → Changes** type words stay.
+- **No stacked qualifiers.** Split, or `→`.
+- **Meaning never.** Readable two ways → add the word.
+
+| ❌ | ✅ |
+|---|---|
+| `fonctions sur la page de gauche, clavier de base sur la page de droite` | `fonctions à gauche, clavier à droite` |
+| `décale la vue au guide le plus haut` | `descend l'un des deux : même ligne de base` |
+| `la place en hauteur en plus va à la pile` | `Touches de même taille. Hauteur en plus → pile.` |
+| `X est 36 pt au-dessus, la hauteur de la status line, pour que…` | `X 36 pt plus haut (= status line).` |
+
+- **Facts, not judgments.** No `finally`, `seamless`, `robust` (`enfin`, `désormais`, `correctement`, `parfaitement`).
 - **No dash as separator** in prose (`—`, ` - `): `:` or new line.
-- **Tech terms stay English, any language.** French → franglais on purpose: `bouton Apple pas disabled pendant le loading`. Never a calque (`fil principal`, `branche fusionnée`).
+- **Tech terms stay English, any language**: `bouton Apple pas disabled pendant le loading`. Never a calque (`fil principal`).
 - **Glossary.** Read `{conventions}/glossary.md` with config. Its rules apply to every word you write.
   - Screens, parts, flows → by their glossary name: `Login screen → Cancel`, not "the sign-in page".
   - User says an `Also` word, or a vague one ("the top page") → keep the term, say which you mean once.
@@ -34,7 +47,7 @@ Glossary and wording grow from the user. Always proposed (**components → Gloss
   - Rename → UI strings and code untouched; offer `/wa-draft` to align them.
 - **Term used for something else** → `~` its `Means`.
 - **String rewritten** by the user → `wording.md` **Validated examples**: `before → after · <situation>`. Max 12, 2 per situation: full → replace the oldest.
-- **Same tone fix, 2nd time**, or 3 examples one way → one rule line in **Voice**.
+- **Same tone fix, 2nd time**, or 3 examples one way → one rule line or ❌/✅ row in **Words**.
 - Refused → never asked again this session for that word.
 - No `{conventions}` → apply for this session, write nothing.
 
@@ -56,7 +69,7 @@ Glossary and wording grow from the user. Always proposed (**components → Gloss
 Read cold — issue list, branch, PR.
 
 - **Task title** = verb + thing, imperative, ≤ 5 words: `Add Apple login`, `Fix flaky CLI tests`.
-  - No narrative, no metaphor, no elegant rephrasing of the user's words.
+  - No narrative, no metaphor, no rephrasing of the user's words.
   - Never repeats the sprint.
 - **Summary** = the goal, plain, ≤ 8 words. Never repeats the title.
 - **Sprint** = ≤ 3 words, no verb: `Login refacto`. Kebab-case only in its branch.

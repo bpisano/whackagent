@@ -39,6 +39,14 @@ has "$out" "overview:" "swift body without overview"
 rm -f "$tmp"
 [ "$fail" = 0 ] && echo "✅ swift body without overview fails"
 
+tmp=$(mktemp); awk '/^<br>/ && !h {print; print "```mermaid\nflowchart TD\n    HR[HingeRule] -->|choisit| KER[KeypadEdgeReach]\n    SOM[ScreenOcclusionsModifier] --> KER\n```"; h=1; next} 1' \
+  $F/swift/body-good.md > "$tmp"
+out=$(scripts/pr-check check "$tmp" --diff $F/swift/diff.patch) && err "swift body with type graph green"
+has "$out" "diagram: node \`HingeRule\` is a type" "swift type graph"
+has "$out" "diagram: node \`ScreenOcclusionsModifier\` is a type" "swift type graph"
+rm -f "$tmp"
+[ "$fail" = 0 ] && echo "✅ swift type graph fails"
+
 # Kotlin: suspend members, enum class, primary constructor.
 out=$(scripts/pr-check signals --diff $F/kotlin/diff.patch)
 has "$out" "new types: 2" "kotlin signals"

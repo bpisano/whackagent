@@ -4,20 +4,15 @@ Sur l'iPhone Duo, le clavier utilise toute la largeur de l'écran dès qu'aucune
 <summary>Vue d'ensemble</summary>
 <br>
 
-```mermaid
-flowchart TD
-    KLM[KeypadLayoutModifier] -->|lit la posture| CTX[LayoutContext]
-    CTX --> HR[HingeRule]
-    HR -->|sinon| SCR[SizeClassRule]
-    SCR -->|choisit| KER[KeypadEdgeReach]
-    SOM[ScreenOcclusionsModifier] -->|lit| SO[ScreenOcclusion]
-    KER --> KSE[KeypadScreenEdgesModifier]
-    SO --> KSE
-```
+**Duo fermé, en paysage, caméra à gauche**
 
-- <sub>`KeypadLayoutModifier` : lit le conteneur et la posture, choisit le layout.</sub>
-- <sub>`ScreenOcclusionsModifier` : lit les zones de l'écran cachées par la caméra ou la Dynamic Island.</sub>
-- <sub>`KeypadScreenEdgesModifier` : étend le clavier sur les côtés que `KeypadEdgeReach` autorise.</sub>
+1. `HingeStatusChangeModifier` lit la charnière : `.closed`.
+2. `HingeRule` laisse `SizeClassRule` choisir le layout.
+3. `SizeClassRule` renvoie `.unoccludedScreenEdges` : clavier jusqu'aux bords.
+4. `ScreenOcclusionsModifier` lit la caméra : une occlusion à gauche.
+5. `KeypadScreenEdgesModifier` étend le clavier à droite seulement.
+
+→ Clavier à 14 pt du bord droit, safe area à gauche.
 
 </details>
 

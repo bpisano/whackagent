@@ -261,7 +261,7 @@ def print_signals(files):
         print("links:")
         for a, bs in links.items():
             print(f"  {a} → {', '.join(bs)}")
-    print("overview: " + ("yes, if the types span ≥ 2 lines" if len(types) >= 3 else "no"))
+    print("overview: " + ("yes, one scenario, if the types span ≥ 2 lines" if len(types) >= 3 else "no"))
 
 
 def check(body, files):
@@ -305,7 +305,27 @@ def check(body, files):
             miss.append(f"{name}: new type named in no Changes fold")
     if len(types) >= 3 and len(set(holder.values())) >= 2 and not folds(intro):
         miss.append(f"overview: {len(types)} new types over {len(set(holder.values()))} lines, no fold before `## {lines[heads[0]][3:]}`")
+    for name in type_nodes(body, types):
+        miss.append(f"diagram: node `{name}` is a type: show a step or a state")
     return miss
+
+
+def type_nodes(body, types):
+    """Flowchart nodes showing a bare new type name: a type graph, not steps."""
+    out = []
+    for block in re.findall(r"```mermaid\n(.*?)```", body, re.S):
+        if not re.match(r"\s*(flowchart|graph)\b", block):
+            continue
+        for line in block.split("\n")[1:]:
+            line = re.sub(r"\|[^|]*\|", " ", line.strip())
+            if not line or re.match(r"(subgraph|end|classDef|class|style|click|linkStyle|%%)\b", line):
+                continue
+            for part in re.split(r"\s*(?:-->|---|-\.->|==>|&)\s*", line):
+                m = re.match(r"(\w+)\s*(?:[\[({>]+\"?(.*?)\"?[\])}]+)?\s*$", part)
+                label = m and (m.group(2) if m.group(2) is not None else m.group(1)).strip().strip("`")
+                if label in types and label not in out:
+                    out.append(label)
+    return out
 
 
 def main(argv):
