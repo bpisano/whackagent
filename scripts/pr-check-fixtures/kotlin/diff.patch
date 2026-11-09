@@ -1,0 +1,50 @@
+diff --git b/app/src/main/java/sync/RetryPolicy.kt b/app/src/main/java/sync/RetryPolicy.kt
+new file mode 100644
+index 0000000..9b64272
+--- /dev/null
++++ b/app/src/main/java/sync/RetryPolicy.kt
+@@ -0,0 +1,12 @@
++package sync
++
++enum class SyncPhase { IDLE, FETCHING, WAITING, FAILED }
++
++data class RetryPolicy(val maxAttempts: Int) {
++    suspend fun <T> attempt(block: suspend () -> T): T {
++        repeat(maxAttempts - 1) {
++            try { return block() } catch (e: Exception) { }
++        }
++        return block()
++    }
++}
+diff --git a/app/src/main/java/sync/SyncEngine.kt b/app/src/main/java/sync/SyncEngine.kt
+index ff631f9..3817450 100644
+--- a/app/src/main/java/sync/SyncEngine.kt
++++ b/app/src/main/java/sync/SyncEngine.kt
+@@ -1,11 +1,12 @@
+ package sync
+ 
+ interface SyncSource {
+-    fun fetch(since: Long): List<Mail>
++    suspend fun fetch(since: Long): List<Mail>
++    suspend fun ping(): Boolean
+ }
+ 
+-class SyncEngine(private val source: SyncSource) {
+-    fun run(since: Long): List<Mail> {
+-        return source.fetch(since)
++class SyncEngine(private val source: SyncSource, private val policy: RetryPolicy) {
++    suspend fun run(since: Long): List<Mail> {
++        return policy.attempt { source.fetch(since) }
+     }
+ }
+diff --git b/app/src/test/java/sync/RetryPolicyTest.kt b/app/src/test/java/sync/RetryPolicyTest.kt
+new file mode 100644
+index 0000000..4b9bbd3
+--- /dev/null
++++ b/app/src/test/java/sync/RetryPolicyTest.kt
+@@ -0,0 +1,5 @@
++package sync
++
++class RetryPolicyTest {
++    fun retries() {}
++}

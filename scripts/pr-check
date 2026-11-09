@@ -1,0 +1,279 @@
+#!/usr/bin/env python3
+"""whackagent PR helper: internal, called by the skills, never by the user.
+
+Reads a branch diff (Swift, Kotlin) and either prints the signals that decide each
+How it works fold, or checks a PR body against them. Stdlib only.
+
+  pr-check signals <base> | --diff <file>
+  pr-check check <body.md> <base> | --diff <file>
+
+Exit 0 ok · 1 body misses something (check) · 2 usage.
+Rules: reference/how-it-works.md → Signals.
+"""
+import re
+import subprocess
+import sys
+
+EXTS = (".swift", ".kt", ".kts")
+MODS = (r"(?:(?:@\w+(?:\([^)]*\))?|public|internal|private|fileprivate|open|final|nonisolated|"
+        r"indirect|sealed|data|abstract|inner|value|annotation|static|override|"
+        r"mutating|nonmutating|convenience|required|dynamic|lazy|weak|unowned|protected|suspend|inline|"
+        r"operator|infix|tailrec|lateinit|const|enum(?=\s+class))\s+)*")
+TYPE = re.compile(r"^\s*" + MODS + r"(struct|enum|class|protocol|actor|interface|object|extension)\s+([A-Z]\w*)")
+MEMBER = re.compile(r"^\s*(" + MODS + r")(func|fun|init|var|let|val|subscript)\b\s*(?:<[^>]*>\s*)?([A-Za-z_]\w*)?")
+ASYNC = re.compile(r"\b(async|await|actor|suspend|AsyncStream|DispatchQueue|withChecked\w*Continuation)\b|\bTask\s*[{(]|\blaunch\s*\{|\bFlow<")
+FAILURE = re.compile(r"\b(throws?|try|catch|runCatching)\b|\bResult<")
+UI = re.compile(r":\s*(View|ViewModifier)\b|\bsome View\b|@Composable\b")
+
+
+def usage():
+    print("usage: pr-check signals <base>|--diff <file> · pr-check check <body.md> <base>|--diff <file>", file=sys.stderr)
+    sys.exit(2)
+
+
+def code(line):
+    """Line without comments and string contents."""
+    line = re.sub(r'"(?:\\.|[^"\\])*"', '""', line)
+    return line.split("//", 1)[0]
+
+
+def is_test(path):
+    return bool(re.search(r"(^|/)[^/]*Tests?/|(^|/)test/|Tests?\.(swift|kt)$", path))
+
+
+def parse(diff):
+    """{path: (old_lines, new_lines, added_idx, old_exists)}, code files only."""
+    files = {}
+    for chunk in re.split(r"^diff --git ", diff, flags=re.M)[1:]:
+        old = re.search(r"^--- (?:a/)?(.+?)\t?$", chunk, re.M)
+        new = re.search(r"^\+\+\+ (?:b/)?(.+?)\t?$", chunk, re.M)
+        if not new or new.group(1) == "/dev/null":
+            continue
+        path = new.group(1).rstrip("\t")
+        if not path.endswith(EXTS) or path.startswith(".whackagent/") or is_test(path):
+            continue
+        o, n, added = [], [], set()
+        body = chunk[chunk.find("\n@@"):] if "\n@@" in chunk else ""
+        for line in body.split("\n"):
+            if line.startswith("@@") or line.startswith("\\"):
+                continue
+            tag, text = line[:1], line[1:]
+            if tag == " ":
+                o.append(text); n.append(text)
+            elif tag == "-":
+                o.append(text)
+            elif tag == "+":
+                added.add(len(n)); n.append(text)
+        files[path] = (o, n, added, bool(old) and old.group(1) != "/dev/null")
+    return files
+
+
+def blocks(lines):
+    """[(kind, name, start, end, depth)] per type block; depth = brace depth of its line."""
+    out, stack, pending, depth = [], [], None, 0
+    for i, raw in enumerate(lines):
+        c = code(raw)
+        m = TYPE.match(c)
+        if m:
+            pending = (m.group(1), m.group(2), i, depth)
+        elif MEMBER.match(c):
+            pending = None
+        for ch in c:
+            if ch == "{":
+                if pending:
+                    stack.append(pending); pending = None
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if stack and stack[-1][3] == depth:
+                    k, n, s, d = stack.pop()
+                    out.append((k, n, s, i, d))
+        if pending and pending[2] == i and "{" not in c and not c.rstrip().endswith(("(", ",", ":")):
+            out.append((*pending[:3], i, pending[3])); pending = None
+    return out
+
+
+def owner(bl, i):
+    """Innermost type block whose body directly holds line i (member level)."""
+    best = None
+    for b in bl:
+        if b[2] < i <= b[3] and (best is None or b[2] > best[2]):
+            best = b
+    return best
+
+
+def depth_at(lines, i):
+    d = 0
+    for raw in lines[:i]:
+        c = code(raw); d += c.count("{") - c.count("}")
+    return d
+
+
+def members(lines, bl):
+    """{(type, name): normalized line} for member-level declarations."""
+    out = {}
+    for i, raw in enumerate(lines):
+        c = code(raw)
+        m = MEMBER.match(c)
+        if not m:
+            continue
+        b = owner(bl, i)
+        if not b or depth_at(lines, i) != b[4] + 1:
+            continue
+        name = m.group(3) or m.group(2)
+        out[(b[1], name)] = (" ".join(c.split()), m.group(1), m.group(2), b[0])
+    return out
+
+
+def cases(kind, lines, b):
+    body = [code(l) for l in lines[b[2]:b[3] + 1]]
+    if any("enum class" in l for l in body[:1]):
+        text = " ".join(body)[" ".join(body).find("{") + 1:]
+        text = re.split(r"[;}]", text, maxsplit=1)[0]
+        return len([t for t in text.split(",") if re.match(r"\s*[A-Z_]\w*", t)])
+    if kind != "enum":
+        return 0
+    n = 0
+    for l in body[1:]:
+        m = re.match(r"\s*case\s+(.+)", l)
+        if m and not l.strip().startswith("case ."):
+            n += len([t for t in re.sub(r"\([^)]*\)", "", m.group(1)).split(",") if t.strip()])
+    return n
+
+
+def signals(files):
+    report, types = {}, {}
+    for path, (old, new, added, existed) in files.items():
+        nb, ob = blocks(new), blocks(old)
+        old_names = {b[1] for b in ob}
+        s = {"type": [], "signature": [], "states": [], "async": False, "failure": False, "ui": False}
+        for b in nb:
+            if b[2] in added and b[0] != "extension" and b[1] not in old_names:
+                s["type"].append(f"{b[1]} ({b[0]})")
+                types[b[1]] = (path, b)
+                n = cases(b[0], new, b)
+                if n >= 3:
+                    s["states"].append(f"{b[1]} ({n})")
+        om, nm = members(old, ob), members(new, nb)
+        new_types = {b[1] for b in nb if b[1] not in old_names}
+        for key, (text, mods, kw, kind) in nm.items():
+            if key[0] in new_types or re.search(r"\b(private|fileprivate)\b", mods):
+                continue
+            was = om.get(key)
+            stored = kw in ("let", "var", "val") and "=" not in text and "{" not in text and "static" not in mods
+            if was and was[0] != text:
+                s["signature"].append(f"{key[0]}.{key[1]} changed")
+            elif not was and kind in ("protocol", "interface"):
+                s["signature"].append(f"{key[0]}.{key[1]} required")
+            elif not was and stored and kind in ("struct", "class"):
+                s["signature"].append(f"{key[0]}.{key[1]} stored")
+        for b in nb:
+            was = next((o for o in ob if o[1] == b[1] and o[0] == b[0]), None)
+            if was and "(" in code(new[b[2]]) and " ".join(code(old[was[2]]).split()) != " ".join(code(new[b[2]]).split()):
+                s["signature"].append(f"{b[1]} constructor changed")
+        for key, (text, mods, kw, kind) in om.items():
+            if key not in nm and key[0] not in new_types and not re.search(r"\b(private|fileprivate)\b", mods) and key[0] in {b[1] for b in nb}:
+                s["signature"].append(f"{key[0]}.{key[1]} removed")
+        plus = [code(new[i]) for i in sorted(added)]
+        s["async"] = any(ASYNC.search(l) for l in plus)
+        s["failure"] = any(FAILURE.search(l) for l in plus)
+        s["ui"] = any(UI.search(l) for l in plus)
+        report[path] = s
+    links = {}
+    for name, (path, b) in types.items():
+        text = "\n".join(code(l) for l in files[path][1][b[2]:b[3] + 1])
+        hits = [o for o in types if o != name and re.search(rf"\b{o}\b", text)]
+        if hits:
+            links[name] = hits
+    return report, types, links
+
+
+def print_signals(files):
+    report, types, links = signals(files)
+    print(f"code files: {len(report)} · new types: {len(types)}")
+    for path, s in report.items():
+        print(path)
+        lines = [f"  {k}: {', '.join(v)}" for k, v in s.items() if isinstance(v, list) and v]
+        lines += [f"  {k}" for k, v in s.items() if v is True]
+        print("\n".join(lines) or "  -")
+    if links:
+        print("links:")
+        for a, bs in links.items():
+            print(f"  {a} → {', '.join(bs)}")
+    print("overview: " + ("yes, if the types span ≥ 2 lines" if len(types) >= 3 else "no"))
+
+
+def check(body, files):
+    report, types, _ = signals(files)
+    lines, fence, heads = body.split("\n"), False, []
+    for i, l in enumerate(lines):
+        if l.startswith("```"):
+            fence = not fence
+        elif not fence and l.startswith("## "):
+            heads.append(i)
+    if not heads:
+        return ["no `## ` heading: Changes section not found"]
+    end = heads[1] if len(heads) > 1 else len(lines)
+    intro, changes = "\n".join(lines[:heads[0]]), "\n".join(lines[heads[0]:end])
+    miss = []
+
+    def folds(text):
+        """Top-level <details> blocks of text."""
+        out, depth, start = [], 0, 0
+        for m in re.finditer(r"<(/?)details>", text):
+            if not m.group(1):
+                if depth == 0:
+                    start = m.start()
+                depth += 1
+            else:
+                depth -= 1
+                if depth == 0:
+                    out.append(text[start:m.end()])
+        return out
+
+    top = folds(changes)
+    sig = any(s["type"] or s["signature"] or s["states"] or s["async"] or s["failure"] for s in report.values())
+    if sig and not top:
+        miss.append("Changes: no fold, but the diff has signals")
+    holder = {}
+    for name in types:
+        for k, f in enumerate(top):
+            if re.search(rf"\b{name}\b", f):
+                holder.setdefault(name, k)
+        if name not in holder and not any(re.search(rf"\b{name}\b", f) for f in folds(intro)):
+            miss.append(f"{name}: new type named in no Changes fold")
+    if len(types) >= 3 and len(set(holder.values())) >= 2 and not folds(intro):
+        miss.append(f"overview: {len(types)} new types over {len(set(holder.values()))} lines, no fold before `## {lines[heads[0]][3:]}`")
+    return miss
+
+
+def main(argv):
+    if len(argv) < 2 or argv[0] not in ("signals", "check"):
+        usage()
+    verb, rest = argv[0], argv[1:]
+    body = None
+    if verb == "check":
+        if len(rest) < 2:
+            usage()
+        body, rest = open(rest[0]).read(), rest[1:]
+    if rest[0] == "--diff":
+        if len(rest) < 2:
+            usage()
+        diff = open(rest[1]).read()
+    else:
+        diff = subprocess.run(["git", "diff", "-U100000", f"{rest[0]}...HEAD"],
+                              capture_output=True, text=True, check=True).stdout
+    files = parse(diff)
+    if verb == "signals":
+        print_signals(files)
+        return 0
+    miss = check(body, files)
+    for m in miss:
+        print(f"❌ {m}")
+    if not miss:
+        print("✅ body covers the diff")
+    return 1 if miss else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

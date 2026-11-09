@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Proves scripts/pr-check on real diffs: signals found, a body missing them fails, a body
+# covering them passes. Run before any commit touching scripts/pr-check.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+
+F=scripts/pr-check-fixtures
+fail=0
+err() { echo "❌ $1"; fail=1; }
+has() { echo "$1" | grep -qF -- "$2" || err "$3: missing \"$2\""; }
+
+# Swift: PR with 8 new types over 2 mechanisms.
+out=$(scripts/pr-check signals --diff $F/swift/diff.patch)
+has "$out" "new types: 8" "swift signals"
+for t in HingeStatus HingeRule ScreenOcclusion KeypadEdgeReach KeypadScreenEdgesModifier \
+         ScreenOcclusionsModifier DivisionAxisChangeModifier HingeStatusChangeModifier; do
+  has "$out" "$t (" "swift signals"
+done
+has "$out" "states: HingeStatus (3)" "swift signals"
+has "$out" "LayoutModeRule.keypadEdgeReach required" "swift signals"
+has "$out" "LayoutContext.hingeStatus stored" "swift signals"
+has "$out" "HingeRule → KeypadEdgeReach" "swift links"
+has "$out" "overview: yes" "swift signals"
+echo "$out" | grep -q "Tests" && err "swift signals: test file counted"
+[ "$fail" = 0 ] && echo "✅ swift signals"
+
+out=$(scripts/pr-check check $F/swift/body-bad.md --diff $F/swift/diff.patch) && err "swift bad body green"
+has "$out" "Changes: no fold" "swift bad body"
+has "$out" "HingeRule: new type named in no Changes fold" "swift bad body"
+[ "$fail" = 0 ] && echo "✅ swift bad body fails"
+
+scripts/pr-check check $F/swift/body-good.md --diff $F/swift/diff.patch >/dev/null \
+  && echo "✅ swift good body green" || err "swift good body red"
+
+tmp=$(mktemp); awk '/^<details>/ && !h {skip=1} skip && /^<\/details>/ {skip=0; h=1; next} !skip' \
+  $F/swift/body-good.md > "$tmp"
+out=$(scripts/pr-check check "$tmp" --diff $F/swift/diff.patch) && err "swift body without overview green"
+has "$out" "overview:" "swift body without overview"
+rm -f "$tmp"
+[ "$fail" = 0 ] && echo "✅ swift body without overview fails"
+
+# Kotlin: suspend members, enum class, primary constructor.
+out=$(scripts/pr-check signals --diff $F/kotlin/diff.patch)
+has "$out" "new types: 2" "kotlin signals"
+has "$out" "states: SyncPhase (4)" "kotlin signals"
+has "$out" "SyncSource.ping required" "kotlin signals"
+has "$out" "SyncEngine constructor changed" "kotlin signals"
+has "$out" "failure" "kotlin signals"
+echo "$out" | grep -q "RetryPolicyTest" && err "kotlin signals: test file counted"
+[ "$fail" = 0 ] && echo "✅ kotlin signals"
+
+[ "$fail" = 0 ] && echo "✅ pr-check proven"
+exit "$fail"

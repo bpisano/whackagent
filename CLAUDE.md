@@ -104,4 +104,5 @@ A change to what's stored in a user project → a migration, same commit.
 - Behavior change → update `README.md`.
 - Stored format changed → migration added (**Migrations**).
 - `templates/archtest/` changed → `scripts/test-archtest` green (good fixture green, bad fails every rule, bad + baseline green).
+- `scripts/pr-check` changed → `scripts/test-pr-check` green (signals found on real diffs, bad body fails, good body green).
 - Commit `feat:` / `fix:` / `refactor:` + summary + `vX.Y.Z`. Push on `main`.

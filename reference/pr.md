@@ -18,7 +18,7 @@ Every PR whackagent opens or edits. Read by teammates who never saw the task. **
 - **Rewritten whole** at every write: end state, never round history ("after feedback").
 - **Sprint PR** sums up the sprint: never one bullet per task.
 - No task slugs, sprint jargon, verifier rounds, test counts, process section, follow-up list.
-- Before `gh pr create` / `gh pr edit` → drop any `🤖`, `Generated with`, `Co-Authored-By` line.
+- Before `gh pr create` / `gh pr edit` → drop any `🤖`, `Generated with`, `Co-Authored-By` line, then **how-it-works → Check** green.
 
 ## Changes
 

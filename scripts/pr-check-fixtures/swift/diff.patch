@@ -1,0 +1,1967 @@
+diff --git a/.whackagent/conventions/glossary.md b/.whackagent/conventions/glossary.md
+index b8b75b7..e6aa4b9 100644
+--- a/.whackagent/conventions/glossary.md
++++ b/.whackagent/conventions/glossary.md
+@@ -1,58 +1,62 @@
+ # Glossary
+ 
+ > whackagent convention module. One word per thing, same word everywhere: UI strings, conversation, tasks, reports, PRs, wiki, code. Yours to edit — every skill and both agents read it. Rules below are plugin text, refreshed by `/wa-update`.
+ 
+ ## Rules
+ 
+ - **One thing, one term.** Listed → use it. Never a word from `Never`.
+ - **Also** = words people say for it. Understand them, never write them.
+ - **Code** = its name in source. New type, file, variable for it → that name. Existing code named otherwise → never rename unasked.
+ - **Means** = one line, ≤ 12 words. Detail → `→ [[wiki page]]`.
+ - **Missing term** → propose the row, add on yes. Never coin a second word for a listed thing.
+ - Short: what users see or the team argues about. Not a dictionary.
+ - Review: UI string with a `Never` word → `correctness`. New type or variable off `Code`, or a `Never` word in code → `style`.
+ 
+ ## Concepts
+ 
+ Product objects and notions, their states, roles, plans. Users see these: one column per UI language, source first.
+ 
+ | en | Also | Never | Code | Means |
+ |---|---|---|---|---|
+ <!-- | Inbox | mailbox | Messages | `Inbox` | received mail, not archived, all accounts | -->
+ <!-- | Message | mail | Email | `Message` | one mail. States: Draft, Sent, Pending | -->
+ | Clx | | | `Drop` | removes X from the stack |
+ | Clear | | | `Clear` | empties the whole stack |
+ | Compact | Compact | | `KeypadLayoutMode.compact` | keypad 4 × 8, function pages |
+ | Expanded | Étendu | Large | `KeypadLayoutMode.wide` | keypad 12 × 4, every function visible |
++| Stacked | | | `KeypadLayoutMode.stacked` | functions 6 × 4 above base 6 × 4, Duo open portrait |
++| Tabletop | mode DS | | `KeypadLayoutMode.tabletop` | Duo half-folded, base below fold, functions above |
++| Book | mode livre, bouquin | | `KeypadLayoutMode.book` | Duo half-folded vertically, one block per page |
++| Pliure | hinge, charnière, fold | | `.division` | line where the Duo screen bends |
+ | Function Lock | Verrouillage fonction | Lock f, Verrouiller f | `isShiftLocked` | f stays on until pressed again |
+ | Expression | | | `Expression` | how a stack number was computed |
+ | Pro | | | `PurchaseStore.isPro` | every function unlocked, one-time purchase |
+ | Ancien acheteur | Legacy buyer | | `LegacyPurchase` | paid for the legacy app, Pro for free |
+ 
+ ## Screens
+ 
+ One precise screen. Team names, in the discussion language. UI projects only.
+ 
+ | Name | Also | Code | Means |
+ |---|---|---|---|
+ <!-- | Login screen | login page | `LoginView` | email + password, forgot-password link | -->
+ | Écran réglages | Settings | `SettingsView` | séparateur décimal, exposant, verrou f, haptic |
+ | Upgrade sheet | paywall | `UpgradeView` | pitch Pro, Unlock + Restore |
+ 
+ ## Parts
+ 
+ A named piece of UI, reused or talked about on its own. UI projects only.
+ 
+ | Name | Also | Code | On | Means |
+ |---|---|---|---|---|
+ <!-- | Composer | editor | `ComposerView` | Inbox, Thread | writes or replies to a message | -->
+ | Menu bar | menus | `CalculatorMenus` | Mac, iPad | every operation, ⌘ shortcuts |
+ | Upgrade cell | | `UpgradeCell` | Écran réglages | top section, opens Upgrade sheet |
+ 
+ ## Flows
+ 
+ Screens chained for one goal. Steps name **Screens**. UI projects only.
+ 
+ | Name | Also | Steps | Means |
+ |---|---|---|---|
+ <!-- | Login flow | sign-in | Welcome → Login screen → 2FA → Inbox | first sign-in, until Inbox | -->
+diff --git a/.whackagent/tasks/66-add-hingerule-and-duo-safe-area.md b/.whackagent/tasks/66-add-hingerule-and-duo-safe-area.md
+new file mode 100644
+index 0000000..166b4ad
+--- /dev/null
++++ b/.whackagent/tasks/66-add-hingerule-and-duo-safe-area.md
+@@ -0,0 +1,102 @@
++---
++issue: 66
++status: to-close
++wiki: [[ui-calculatrice]]
++note: split of #26 (umbrella, all grill decisions + mockups there)
++created: 2026-11-08
++---
++
++## Context / Decisions
++
++First brick of iPhone Duo support (#26). Lays the posture plumbing and the keypad edges. Other postures (#67, #68, #69) plug into it.
++
++Mockups: closed https://claude.ai/artifact/JxLVV5v8VvnnmoUfHtKxof · flat https://claude.ai/artifact/NLrVCWx2Fd6jHdemQnwy9U
++
++- Native APIs only. No hard-coded device sizes, no special cases per device.
++- Keypad edges: vertical `.regular` → keypad ignores the horizontal safe area on both sides, 14 pt from the physical edge (touch rules only, Mac never). Vertical compact → each side ignores it unless an `.occlusion` region (`reservedRegions`) crosses the keypad's height on that side (round 2, prototype approved: https://claude.ai/artifact/Qo5eGsX1fS8LvgDPXtLPrh).
++  - vR: any iPhone portrait (no side safe area, Dynamic Island above the keypad: no change), Duo closed portrait, Duo open, iPad (no change).
++  - C/C (iPhone landscape, Duo closed landscape): per side, by occlusion (round 2). Side crossed by the camera or Dynamic Island keeps the safe area, other side 14 pt.
++  - Synchronous: right on the first frame, no launch jump.
++- Occlusion read in vertical compact only, never the hinge. Generic: no device check. vR ignores occlusions (closed portrait graze stays out). Accepted: landscape launch jump (regions arrive 76–180 ms after the first frame, no earlier API), iPhone landscape asymmetric (Dynamic Island side keeps its margin).
++- Hinge (`onHingeChange`) and `.division` only decide posture modes in `HingeRule` (no hinge or closed → `SizeClassRule`, fully open landscape → `.wide`). Never the edges.
++- Expanded: status line follows the keypad edges (lines up with it), and the gap status line ↔ keypad equals Compact's (status line rests on the keypad, no longer centered on the X line). Applies to iPhone landscape and iPad too.
++- Stack keeps the safe area.
++- Clean, small, composable: one job per type, one file each.
++
++## Acceptance criteria
++
++- Duo closed portrait: no layout jump at launch; keypad 14 pt from both edges, function pager full width, page 2 never visible.
++- Duo closed landscape, camera top-left: keypad 14 pt from the left edge (under the camera), right side unchanged. Camera bottom-right: identical to before (left already 14 pt, right keeps the safe area since the camera crosses the `+` row).
++- Duo open flat landscape: Expanded keypad 14 pt from both edges, status line aligned with it.
++- Expanded (Duo open, iPhone landscape, iPad): gap between status line and keypad equals Compact's.
++- Rotating or folding live switches layout; shift, current page and entry survive.
++- iPhone 18 Pro portrait: identical to before. Landscape: side without Dynamic Island 14 pt from the edge, Dynamic Island side keeps the safe area; flips with rotation.
++- Tests: posture modes; edges on in vR; in C/C, per-side edges from occlusion frames vs keypad band (none crossing → both, crossing on one side → the other only).
++
++## Implementation
++
++- `Core/Layout/Hinge/HingeStatus.swift`, `Core/Layout/Rules/HingeRule.swift`: no hinge or closed → `SizeClassRule`, fully open landscape → `.wide`. `#Playground` per posture.
++- `LayoutContext` + `hingeStatus`, `divisionAxis`, `containerAxis` (open Duo is R/R both ways).
++- `LayoutModeRule.keypadEdgeReach(in:)` (round 2, replaced round 1's `keypadReachesScreenEdges`): `HingeRule` delegates to `SizeClassRule`; `ChosenModeRule` → `.safeArea`. Travels as `\.keypadEdgeReach`.
++- `UI/ViewModifiers/Layout/Hinge/`: `HingeStatusChangeModifier`, `DivisionAxisChangeModifier`, behind `if #available(anyAppleOS 27.1, *)`. `KeypadLayoutModifier` stays the only environment reader.
++- `UI/ViewModifiers/Layout/Edges/KeypadScreenEdgesModifier.swift`: `ignoresSafeArea(.container, edges:)` with the edges `KeypadEdgeReach` computes (round 2).
++- `CalculatorView` Expanded: status line `.padding(.leading, margin).keypadScreenEdges(alongside: keypadSpan)`, no xLineHeight frame; stack `.padding(.trailing, margin)`.
++- `CalculatorCoordinator`: iOS injects `HingeRule()`.
++- Removed in round 1: occlusion clearance (`OcclusionClearanceChangeModifier`, `EdgeInsetsExtension`, `CGRectExtension` + tests).
++- Tests: `HingeRuleTests`, `AxisExtensionTests`, `SizeClassRuleTests`, `ChosenModeRuleTests`.
++- Build ✅ · tests ✅ (635) · SwiftLint ✅ · archtest ✅.
++- Round 2 (occlusion edges): `Core/Layout/Edges/KeypadEdgeReach.swift` (`.safeArea` / `.screenEdges` / `.unoccludedScreenEdges`, pure `ignoredEdges(clearOf:alongside:)`), `Core/Layout/Edges/Occlusions/ScreenOcclusion.swift` (side + vertical span, `crosses(_:)`), `UI/ViewModifiers/Layout/Edges/Occlusions/ScreenOcclusionsModifier.swift` (full-screen `reservedRegions(kind: .occlusion)` reader → `\.screenOcclusions`, behind `#available(anyAppleOS 27.1, *)`). `LayoutModeRule.keypadReachesScreenEdges` → `keypadEdgeReach(in:)` (SizeClassRule: regular → `.screenEdges`, compact → `.unoccludedScreenEdges`; HingeRule delegates; ChosenModeRule → `.safeArea`). `KeypadScreenEdgesModifier` takes `alongside keypadSpan`; `CalculatorView` measures the keypad span once, keypad and status line share it. `CalculatorCoordinator` adds `.screenOcclusions()`. Tests: `KeypadEdgeReachTests` (7), `ScreenOcclusionTests` (4), rule tests updated.
++- Round 2: build ✅ · tests ✅ (647) · SwiftLint ✅ · archtest ✅.
++
++## Review
++
++### Round validation · 2026-11-09
++
++Scope: `origin/develop...HEAD`, 24 code files + task file. LENSES: style ✓ · elegance ✓ · structure ✓ · correctness ✓.
++
++- 🟠 [correctness] `ScreenOcclusionsModifier.swift`: below 27.1 occlusions stayed `[]` ("none"), so vertical compact ignored both sides (keypad under Dynamic Island / camera on 27.0). Autofix: occlusions `[ScreenOcclusion]?`, `nil` until read → safe area kept; test added. Fixed.
++- 🟡 [style] task file: C/C decision bullet stale (pre round 2). Fixed.
++- 🟡 [style] task file: Implementation lines named round 1 APIs. Fixed.
++
++Autofix round 1 (implementer): `KeypadEdgeReach.swift`, `KeypadScreenEdgesModifier.swift`, `ScreenOcclusionsModifier.swift`, `EnvironmentValuesExtension.swift`, `KeypadEdgeReachTests.swift`. Build ✅ · tests ✅ · SwiftLint ✅ · archtest ✅. Re-verify: clean.
++
++## Verification
++
++Round 1, agent on simulators (DeviceHub posture/rotate, pixel diffs vs pre-#66 build dd7a7dd):
++- ✅ Duo closed portrait: 15 rapid shots after launch, first app frame already 14 / 14, page 2 hidden.
++- ✅ Duo closed landscape, both rotations: keypad identical to pre-#66, only the status line gap differs.
++- ✅ Duo open flat landscape: 14 / 14, status line aligned, gap 13 pt.
++- ✅ Gap 13 pt in Compact and Expanded (was 23–37 pt in Expanded).
++- ✅ iPhone 18 Pro portrait identical; landscape keypad identical, gap only.
++- ⚠️ Shift / page / entry across fold: checked in #67 (kept), not re-run here.
++
++Round 2, implementer on simulators (Mac screen locked midway, rotations impossible):
++- ✅ Duo closed landscape, camera bottom-right: left 14 pt, right inside safe area (≈ 98 pt), status line aligned.
++- ✅ iPhone 18 Pro portrait unchanged.
++- ⬜ Not run: Duo closed landscape camera top-left, Duo closed portrait launch, iPhone landscape both rotations — run: yours. (Prototype with the same logic showed top-left → left 14 pt, iPhone → asymmetric.)
++
++## Feedback
++
++### Round 1 · 2026-11-08
++
++Asked:
++- launch on closed Duo portrait jumps (safe area first, ignored 0.2 s later)
++- closed landscape camera top-left: status line looks offset, should ignore horizontal safe area
++- closed landscape camera bottom-right: keypad should go above the camera, full width
++- Expanded: gap between status line and keypad too big
++
++Triage: defect · adjustment · adjustment · adjustment.
++
++Changes: the jump came from the hinge arriving ~230 ms after the first frame (never on non-foldable iPhones). Discussed: user chose no special cases, edges follow `verticalSizeClass == .regular` only. Items 2 and 3 dropped for closed landscape with it (C/C keeps the safe area), occlusion handling removed. Item 4 done (gap = Compact's, all Expanded).
++Review: deferred → /wa-validate. Verify: agent, see Verification round 1. Rule captured: none (decision lives in the umbrella #26).
++
++### Round 2 · 2026-11-08
++
++Asked: "En vertical compact, chaque bord horizontal du clavier ignore la safe area sauf si une zone reservedRegions(kind: .occlusion) croise la hauteur du clavier de ce côté. Vertical regular inchangé (les deux bords). Pas de charnière." Prototype approved (https://claude.ai/artifact/Qo5eGsX1fS8LvgDPXtLPrh); landscape launch jump and asymmetric iPhone landscape accepted.
++
++- Triage: adjustment → criteria updated (closed landscape, iPhone landscape, tests). Implementer.
++- Changes: see `## Implementation` round 2.
++- Review: deferred → /wa-validate.
++- Verify: partial (see `## Verification` round 2), rest manual.
++- Rule captured: none.
++
+diff --git a/.whackagent/wiki/ui-calculatrice.md b/.whackagent/wiki/ui-calculatrice.md
+index 3ded980..54c697a 100644
+--- a/.whackagent/wiki/ui-calculatrice.md
++++ b/.whackagent/wiki/ui-calculatrice.md
+@@ -1,194 +1,204 @@
+ # UI calculatrice
+ 
+ Écran principal de l'app v5 : zone pile, status line, clavier. Full SwiftUI, iOS 27 / macOS 27. Branché sur [[engine-rpn]].
+ 
+-Tasks : #21 (écran portrait iPhone, fondations), #22 (layout large 12 × 4, iPad et Mac), #31 (sensation d'appui), #23 (raccourcis clavier), #24 (menu bar), #25 (fenêtre Mac), #27 (réglages), #38 (expressions dans la pile), #35 (séparateur des milliers), #43 (gate Pro). Suites prévues : #26 (pliure iPhone Duo), #36 (son des touches).
++Tasks : #21 (écran portrait iPhone, fondations), #22 (layout large 12 × 4, iPad et Mac), #31 (sensation d'appui), #23 (raccourcis clavier), #24 (menu bar), #25 (fenêtre Mac), #27 (réglages), #38 (expressions dans la pile), #35 (séparateur des milliers), #43 (gate Pro), #66 (charnière et bords du clavier, iPhone Duo). Suites prévues : #26 (pliure iPhone Duo, #67–#69), #36 (son des touches).
+ 
+ Référence visuelle : maquette piste B — https://claude.ai/artifact/YJfbcXe4ndVKNXJ7gbjSjF. Elle fixe l'apparence, pas le code.
+ 
+ ## Chaîne d'injection
+ 
+ `RPNCalculatorApp` → `CalculatorCoordinator` (`@State store`) → `UICalculatorViewModel` → `CalculatorView`.
+ 
+ Un Store par fenêtre / scène (#24) : deux fenêtres Mac ont deux piles. Le Coordinator le publie via `.focusedSceneValue(\.calculatorStore, store)` ; la menu bar le lit avec `@FocusedValue` et agit sur la fenêtre active.
+ 
+ ## Commandes
+ 
+ Chaque action de l'utilisateur est une struct conforme à `CalculatorCommand` (`run(on: inout CalculatorState) throws(OperationError)`). Ni enum d'actions, ni `switch` central : même principe que les opérations de l'engine.
+ 
+ - `Perform<O: Operation>` enveloppe n'importe quelle opération de l'engine. Le catalogue n'est pas dupliqué dans l'app.
+ - Commande Pro + utilisateur gratuit : `ProGate` la bloque avant `perform` et ouvre l'Upgrade sheet (→ [[achat-pro]]).
+ - `CalculatorStore.perform(_:)` est le seul point d'entrée. Les touches et les raccourcis clavier l'appellent ; la menu bar l'appellera aussi.
+ - `CalculatorState` : le `Calculator` de l'engine, l'état du shift, la notation d'affichage. Shift et notation vivent hors de l'engine.
+ - Le shift `f` est one-shot et vit dans le Store : il s'éteint après toute commande, même en échec. Sauf avec Verrouillage fonction (#27) : il reste armé jusqu'au prochain `f`. Le Store lit le réglage à chaque commande.
+ - `⌫` : pendant une saisie, efface le dernier caractère ; sans saisie, retire X (comme `Clx`) ; pile vide, rien.
+ - `±` sans saisie nie X (`CHS` de la HP).
+ - `RND` lit la notation au moment de l'appui (`RoundToNotation`).
+ 
+ ## Clavier
+ 
+ Les touches sont de la data. `KeypadKey` porte un `id` stable, une commande principale, une secondaire optionnelle. Les vues ne connaissent aucune touche en dur.
+ 
+ Le clavier n'est pas une grille unique. `KeypadLayout` est une liste de `KeypadBlock`, `KeypadView` assemble des vues de bloc :
+ 
+ - `FunctionPager` : pages de fonctions, 2 rangées de 4. `ScrollView` horizontal paginé, `.scrollPosition(id:)` lié à la page courante, partagé avec les icônes de la status line. Pas de `TabView` : `.tabViewStyle(.page)` n'existe pas sur macOS. Le pager prend toute la largeur de l'écran ; chaque page porte sa marge.
+ - `BaseBlock` : `f`, touches de pile, `Enter`, pavé numérique. `SpanGridLayout` gère la fusion de colonnes et de rangées (`Enter` sur 2 colonnes).
+ 
+ Pourquoi des blocs : en layout large deux blocs se posent côte à côte, et la hinge de l'iPhone Duo passe entre deux blocs.
+ 
+ ### Layout compact et layout large
+ 
+ Deux layouts, choisis par une valeur `KeypadLayoutMode` (`.compact` 4 × 8, `.wide` 12 × 4) posée dans l'`Environment` par `KeypadLayoutModifier`. Les vues lisent ce mode, jamais les size classes ni la largeur.
+ 
+ - Layout large : `FunctionGrid` (6 × 4) à gauche, `BaseBlock` (6 × 4) à droite, séparés par une gouttière plus large que l'espacement. Pas de pages ni d'icônes de page.
+ - Le bloc de fonctions large se construit depuis les trois pages du portrait (`KeypadPage.wideFunctions`) : pages 1 et 2 empilées sur 4 colonnes, page 3 dépliée sur 2. Une touche ajoutée à une page apparaît dans les deux layouts, à la même colonne.
+ - `Enter` en large : 1 colonne × 2 rangées.
+ - Shift, page courante et saisie vivent dans le ViewModel : ils survivent à la bascule.
+ 
+ Un label de touche est un texte, un symbole, ou `.joined` : une rangée de morceaux. `x⇄y` et `Re⇄Im` s'en servent pour que la flèche soit un SF Symbol à la graisse du texte. `√x` et `ˣ√y` aussi, avec le symbole `squareroot` (#62).
+ 
+ - `KeyLabel` lit la police posée par l'appelant (`\.font`, `\.fontResolutionContext`) pour connaître taille et hauteur d'x.
+ - Flèches : ramenées à la hauteur d'un `x`, centrées sur les lettres. Le `√` Unicode et `.imageScale(.small)` tombaient trop bas ou trop gros.
+ - Racine : taille pleine sur la ligne de base, la lettre glisse sous la barre. Ratios mesurés sur les SF Symbols, dans `KeyLabel.Layout`.
+ 
+ Les pages déclarent un `KeypadPageIcon` : un SF Symbol, ou `.sineWave`, dessinée (`SineWaveShape`) parce qu'aucun symbole système ne donnait une sinusoïde assez marquée.
+ 
+ ### Sensation
+ 
+ - Touches = `ButtonStyle` standard (`configuration.isPressed`), aucun gesture custom (#31). Action au relâchement partout, comme un bouton iOS ; dans le pager, le système arbitre appui et swipe.
+ - Appui : léger assombrissement, scale 0,97, haptic léger, instantanés. Relâchement : `.easeOut` 0,1 s, pas de spring. Pas de son.
+ - Timing d'appui et haptic partagés par les touches et les icônes de page (`pressFeedback(isPressed:isTouched:)`). Le haptic ne part que d'un toucher, jamais d'une frappe au clavier ni d'un menu. Idem pour le haptic d'erreur (`touchErrorCount`, compté seulement dans `press(_:)`).
+ - Au toggle de `f`, les labels principal et secondaire s'échangent sans animation. Une animation d'échange a été essayée (arc, puis croisement vertical avec profondeur) et retirée : trop buguée.
+ - `Enter` : même fond que les touches de fonction, label semi-gras. Plus de capsule (#61) : le label et la taille suffisent.
+ 
+ ## Clavier physique
+ 
+ Frappe directe sans modificateur (#23) : chiffres, opérateurs, Return, une lettre par fonction courante. Tous les raccourcis avec ⌘ vivent dans la menu bar (#24), dont ⌘⌫ → Clx.
+ 
+ - `Core/Keyboard/` : `KeyInput` (caractère produit ou touche spéciale), `KeyBinding` (→ une commande, + touche à enfoncer), `KeyBindingTable` (la data, un seul fichier), `KeyPressResolver` (filtre la répétition). Testables sans vue.
+ - Matching sur le caractère produit, jamais le keycode : même table en QWERTY, AZERTY, pavé numérique, iPad. Minuscule = fonction principale, majuscule = secondaire ; Caps Lock seul ne compte pas comme ⇧.
+ - `f` armé s'applique à la touche tapée suivante, sauf `↑` / `↓` qui gardent leur sens.
+ - Delete du Mac envoie U+007F, pas `KeyEquivalent.delete` (U+0008) : les deux sont mappés sur ⌫. Suppr (⌦) n'est lié à rien.
+ - `KeyboardInputModifier` : un seul récepteur focusable à la racine de `CalculatorView`, focus repris au retour au premier plan. Frappe imprimable non liée → `.handled` (sinon bip système sur Mac) ; ⌘ / ⌥ / ⌃, Tab, Espace → `.ignored`.
+ - Retour visuel : la touche tapée s'enfonce ~100 ms. `PressedKeys` (dans le ViewModel) donne un `KeyPressState` observable par touche : une frappe ne recalcule que la touche enfoncée et celle relâchée, jamais tout le clavier.
+ - Tooltips générés depuis la table (`Sinus — S`), jamais écrits à la main.
+ 
+ ## Menu bar
+ 
+ Mac et iPad (#24). Edit · Stack · Math · Display. `CalculatorMenus` (`Commands`) dans `Coordinators/Calculator/Menus/`, branché par `.commands` sur la `WindowGroup`. Aucun `Store` dispo (pas de fenêtre active) → items grisés.
+ 
+ - Toutes les fonctions du clavier sont dans un menu : un test de couverture échoue si une fonction principale ou secondaire n'a pas d'item (hors chiffres et saisie).
+ - `Math` (fr `Calcul`) : un sous-menu par groupe, Arithmetic puis une page de fonctions chacun (`CalculatorMenu.math`). Une page ajoutée = un sous-menu, jamais un menu de tête. Pourquoi : la barre ne grossit pas avec le catalogue.
+ - Items générés depuis la data des touches : titre = `spokenLabel` capitalisé. Clx et Clear gardent leur nom du glossaire.
+ - Modèle sans vue (`MenuItem`, `MenuItemAvailability`, `CalculatorMenu`), testable ; les vues de menu le dessinent.
+ - Les vues de menu (`MenuItemButton`, `AngleMenu`, `NotationMenu`) ne voient jamais le Store (#56) : valeurs, `Binding` optionnels (`nil` → grisé) et action. Les `Commands` (Edit, Stack, Math, Display) jouent le coordinator et les construisent depuis le Store.
+ - Raccourcis ⌘ seulement : ⌘Z ⇧⌘Z, ⌘C ⌘X ⌘V (remplacent les groupes système), ⌘F `f`, ⌘S swap, ⌘R ⇧⌘R roll, ⌘⌫ Clx, ⇧⌘⌫ Clear. Aucun sur les fonctions : la frappe directe de #23 les couvre.
+ - Un item exécute la fonction qu'il nomme, quel que soit `f`.
+ - Grisés : Undo / Redo selon l'historique, Copy / Cut si pile vide sans saisie. Le reste échoue comme une touche.
+ - Display : notation et angle en `Picker` inline, coche native. Chaque notation listée avec son propre nombre de chiffres ; Digits change la notation courante seulement. Sur Mac seulement, en fin de menu : section « Keypad », Compact ⌘1 / Expanded ⌘2 (fr Étendu), `LayoutModePicker`. Il lit un binding, pas le Store : jamais grisé.
+ 
+ ### Presse-papiers
+ 
+ - Copy : X en pleine précision (`Double.description`), séparateur de la locale, saisie validée d'abord. Complexe → texte `a + bi`.
+ - Paste : un réel (`.` ou `,`, exposant `e`) ; illisible ou complexe → `invalidNumber`, `Not a number` sous X.
+ - `Core/Pasteboard/` : `NumberParser`, `NumberWriter`, protocole `Pasteboard` ; `SystemPasteboard` porte le seul `#if os(macOS)`.
+ - Compromis accepté : sur iPadOS, ⌘V lit `UIPasteboard` par code → alerte « Autoriser le collage » probable.
+ - ⌘E (éditer X) reporté. ⌘, ouvre les Réglages sur Mac (scene `Settings`, #27).
+ 
+ ## Status line
+ 
+ Au-dessus du clavier : trois icônes de page à gauche, puis notation (`AUTO 9`) et mode d'angle (`RAD`) en petit texte.
+ 
+ - Tap sur la notation : FIX → SCI → ENG → AUTO. Appui long : menu des quatre notations, chacune un sous-menu 0 à 9 (`NotationKindMenu`), coche sur la notation courante et sur le nombre de chiffres de chaque notation (#45).
+ - Chaque notation garde son propre nombre de chiffres (`NotationDigitCounts`, `Core/Notation/Models/`) : défauts FIX 4 · SCI 4 · ENG 3 · AUTO 9. Le tap ramène la notation suivante avec le sien. Libellé partagé `Notation.label` (`AUTO 9`), status line et Menu bar.
+ - Tap sur l'angle : RAD → DEG → GRAD. Appui long : menu des trois modes.
+ - Icônes et textes partagent une seule police (`StatusLineFontModifier`).
+ - Icônes de page : scale down instantané à l'appui + haptic, même timing que les touches. Notation et angle : pulse + haptic au tap seulement, parce que ce sont des `Menu` à primary action, sans état pressed.
+ - Notation et angle sont mémorisés au relancement (#27), comme la Continuous Memory de la HP. Chaque fenêtre garde les siens ; le dernier changé, toutes fenêtres confondues, est sauvé, et une nouvelle fenêtre part de lui. La pile n'est pas persistée.
+ - À droite : icône `gear` → sheet Réglages (iPhone, iPad, compact et large). Absente sur Mac. Un seul `onOpenSettings` optionnel : nil = pas d'icône.
+ 
+ ## Réglages
+ 
+ Task : #27, #38, #43, #47, #35. Liste legacy remise à plat, HP-15C en référence. Sections Format · Stack · Keypad, puis Contact · Rate the App et le bloc À propos, réglages valables pour toute l'app. Au-dessus, tant que l'utilisateur n'est pas Pro : l'Upgrade cell, dans sa propre section (→ [[achat-pro]]).
+ 
+ - Séparateur décimal : Automatique (locale) · Point · Virgule.
+ - Séparateur des milliers, juste dessous : Automatique (locale : espace en français) · Espace · Point · Virgule. Même signe que le décimal → l'autre signe (règle engine, → [[engine-rpn]]). Vaut pour la pile, la saisie et les expressions ; le copier garde le nombre sans groupement.
+ - Exposant : `e` · `E`. Affichage seulement ; Copy garde `Double.description`.
+ - Verrouillage fonction (`isShiftLocked`) : voir Commandes.
+ - Show Dividers (off) : filet entre les rangées de pile, indépendant des expressions.
+ - Show Expressions (on) et Expression Layout (`ExpressionLayout` : Beside `.side` · Above `.top`) : voir Zone pile. La ligne Expression Layout disparaît quand les expressions sont off.
+ - Contact : mail composer (`MailComposer`, MessageUI) vers `contact@snopia.net`, sujet `Contact - RPN Calculator`, comme le legacy. Pas de compte Mail ou Mac (pas de MessageUI) → `mailto:` (`ContactMail`). Choix fait par le coordinator au tap.
+ - Rate the App : page d'avis App Store `id568690457?action=write-review` (`AppStoreReviewPage`), jamais `requestReview` (plafonné, un tap peut ne rien faire).
+ - Icônes de ces lignes : `CircleIconLabelStyle` (`UI/Components/LabelStyles/`), symbole plein blanc dans un cercle `accentColor.gradient`.
+ - Bloc À propos (`AboutView`), hors cellule, en dernier : icône (image set `AppIconImage`, export PNG clair / sombre — `AppIcon.icon` ne se charge pas au runtime), nom lu du bundle, `Made with ❤️ by bpisano`, `version (build)` (`AppInfo`). iOS : section à fond transparent. Mac : footer de la section Contact (le `Form` groupé du Mac ignore `listRowBackground`).
+ - Mac : lignes Contact / Rate en `FormRowButtonStyle` (`.formRow`, pleine largeur, sans chrome de bouton Mac).
+ - Retour haptique : off coupe tous les haptics (touches, icônes, notation / angle, erreur). Valeur d'`Environment` `areHapticsEnabled`, posée par le coordinator. Ligne absente sur Mac.
+ 
+ `SettingsStore` (`Core/Stores/Settings/`) : un seul pour l'app, détenu par `RPNCalculatorApp`, sur `UserDefaults`. Il porte aussi la dernière notation et le dernier angle. `CalculatorStore` et `UICalculatorViewModel` le reçoivent (paramètre requis) et le lisent en direct : un réglage changé met à jour toutes les fenêtres.
+ 
+ - Notation et angle stockés app-side (`NotationKind`, `StoredAngleMode`, valeurs stables), jamais par leur libellé d'affichage. Notation = dernier kind + un nombre de chiffres par kind (`settings.{fixed,scientific,engineering,automatic}DigitCount`) ; une fenêtre n'enregistre que la notation qu'elle change. Installation neuve : `AUTO 9`. Migration : l'ancien `lastNotationDigitCount` est versé dans son kind puis supprimé (`migrateLegacyNotation`). L'engine reste sans `Codable` ni `UserDefaults`. Un nombre de chiffres hors 0…9 relu → défaut.
+ - Écran : `SettingsCoordinator` → `SettingsView` + trio de ViewModels. `Form` `.grouped`, `Picker` au style par défaut (menu), jamais de segmented. Sur iPhone / iPad : sheet, `DismissButton` en haut à gauche (`.cancellationAction`). Sur Mac : scene `Settings`, 450 pt de large, hauteur au contenu plafonnée à 600 pt puis scroll (`MacWindow.settingsWidth`, `settingsMaxHeight` ; `.frame(maxHeight:)` avant `.fixedSize`) — le `Form` par défaut du Mac (colonnes) rendait mal.
+ - Previews et playgrounds : `UserDefaults.isolated()` ; tests : `TemporaryDefaults`, suite supprimée à la fin.
+ - Hors scope assumé : son (#36), écran toujours allumé, historique.
+ 
+ ## Zone pile
+ 
+ `ScrollView` ancré en bas, X en bas et en grand, lecture seule. Status line et clavier sont une `safeAreaBar` basse de ce `ScrollView` : la pile défile sous la barre avec le scroll edge effect du système, sans coupure nette.
+ 
+ Sur Mac (tailles pointeur), `safeAreaInset` à la place : `safeAreaBar` y dessine un fond plus clair avec une ligne de séparation, même en `.soft`. La pile s'arrête donc au-dessus du clavier. Choix porté par `KeypadBarModifier` (`View.keypadBar`), lu depuis `\.keySizing`.
+ 
+ - Tous les nombres en couleur principale (#60) : X se distingue par la taille et la graisse, pas par la couleur. Expressions et message d'erreur restent en secondaire.
+ - La saisie en cours remplace X, telle que tapée, avec un caret.
+ - Un complexe tient sur une ligne `a + bi`.
+ - Une erreur de l'engine s'affiche en texte court localisé sous X, avec un haptic d'erreur, jusqu'à la touche suivante. Pas d'alert.
+ 
+ ### Expressions
+ 
+ Task : #38. Chaque nombre montre l'expression qui l'a produit ([[engine-rpn]] → Expressions), typographiée par `SwiftMath` (package SPM, target app seulement), police Fira Math. Un nombre tapé, collé ou la saisie n'en ont pas.
+ 
+ - `RenderedExpression` (LaTeX + texte) est produit par le ViewModel avec le `NumberFormat` courant : la vue ne connaît aucun type de l'engine. Feuille (`expression == .number(number)`) → nil.
+ - `LaTeXLabel` enveloppe `MTMathUILabel`, seul `#if os(macOS)`. Mode `.text` (fractions compactes). Il fixe `fontSize` et une marge verticale de 0,15 × la taille : sans elles, SwiftMath gardait 20 pt et coupait la barre des racines (paysage, Mac).
+ - Beside : expression à gauche, nombre à droite, rangées à 8 pt. Above : expression au-dessus, alignée à droite, rangées à 16 pt (`ScreenSpacing.stackRowUnderExpression`).
+ - Trop longue : réduite jusqu'à 0,7 (pas 0,4 : illisible), puis coupée à gauche derrière un fondu. Le nombre n'est jamais réduit à cause d'elle : l'écart Beside est un padding dans le cadre flexible de l'expression.
+ - Mesure : `onGeometryChange` sur le vrai label, largeur naturelle réécrite seulement au-delà de 0,5 pt (sinon boucle de layout). Pas de second label de mesure : #31 a fixé la lenteur d'appui.
+ - VoiceOver : une ligne = un élément, « nombre, expression en texte ».
+ 
+ ## Thème
+ 
+ Color sets nommés dans `Assets.xcassets`, variantes claire, sombre, contraste élevé. Aucune valeur hexadécimale en Swift. L'orange est l'`AccentColor`. `KeyTheme` regroupe couleurs et `KeyMetrics`, et passe par l'`Environment`.
+ 
+ Les tailles (hauteur de touche, espacement, rayon, typo) vivent dans `KeyMetrics`, les couleurs ne varient jamais :
+ 
+ - `standard` : portrait de #21.
+ - `wideDense` (vertical `compact`, iPhone paysage) et `wideAmple` (vertical `regular`, iPad, Mac).
+ - `KeySizing` : `.touch` (×1, iPhone, iPad) ou `.pointer` (×0,75, Mac), seule valeur 0,75. Sur Mac les tailles ne dépendent jamais de la fenêtre : un pointeur n'a pas besoin d'une cible de doigt (#25).
+ - La hauteur d'une touche ne grandit jamais avec la fenêtre : la place en plus va à la zone pile.
+ 
+ Opérateurs : orange plein avec glyphe foncé en clair, orange teinté en sombre. Le bleu des fonctions secondaires n'est pas définitivement tranché : il se change dans l'asset seul.
+ 
+ ## Plateformes
+ 
+ Le choix du layout est une règle `LayoutModeRule`, injectée une fois dans `CalculatorCoordinator` (seul `#if os(macOS)` de la composition) :
+ 
+ - `SizeClassRule` (iPhone, iPad) : `.wide` si horizontal `regular` ou vertical `compact`. Donc tout iPhone en paysage, iPad plein écran ; Split View étroit et Slide Over restent compacts.
+ - `ChosenModeRule` (Mac) : le mode choisi par l'utilisateur dans la menu bar, jamais la largeur. Persisté pour toute l'app : `@AppStorage`, clé `keypadLayoutMode`, défaut compact. Toutes les fenêtres suivent ; survit au relancement.
+ - Chaque règle dit aussi ses tailles (`keySizing`) : `SizeClassRule` → `.touch`, `ChosenModeRule` → `.pointer`.
+-- #26 (iPhone Duo) ajoutera sa propre règle.
++- `HingeRule` (iOS, #66) : enveloppe `SizeClassRule`. Pas de charnière ou Duo fermé → `SizeClassRule`. Duo ouvert à plat en paysage → `.wide`. La charnière (`onHingeChange`, `.division`) décide seulement le mode, jamais les bords. `#available(anyAppleOS 27.1, *)`.
+ 
+-Plafonds tactiles : compact ~430 pt, large ~1100 pt, centrés ; la zone pile suit le même plafond. Marges latérales = safe area + 14 pt.
++Plafonds tactiles : compact ~430 pt, large ~1100 pt, centrés ; la zone pile suit le même plafond.
++
++Bords du clavier (#66) : chaque règle dit jusqu'où le clavier s'étend (`keypadEdgeReach(in:)` → `KeypadEdgeReach`, dans l'`Environment` via `\.keypadEdgeReach`).
++
++- Vertical `regular` → `.screenEdges` : le clavier ignore la safe area horizontale des deux côtés, 14 pt du bord physique.
++- Vertical `compact` → `.unoccludedScreenEdges` : par côté. Un côté garde la safe area si une zone `.occlusion` (`reservedRegions`, caméra, Dynamic Island) croise la hauteur du clavier de ce côté. Sinon 14 pt du bord.
++- Mac (`ChosenModeRule`) → `.safeArea`.
++- `ScreenOcclusionsModifier` lit les zones en plein écran (`.ignoresSafeArea()`), publie `\.screenOcclusions`. `nil` tant que non lues (avant 27.1, ou avant la première passe) → safe area gardée.
++- `CalculatorView` mesure la hauteur du clavier une fois (`onVerticalSpanChange`) ; clavier et status line partagent `keypadScreenEdges(alongside:)`, donc restent alignés.
++- Accepté : saut au lancement en paysage (zones reçues 76–180 ms après la première frame), iPhone paysage asymétrique (côté Dynamic Island garde sa marge).
++- Pile : garde la safe area.
+ 
+ Fenêtre Mac (#25) :
+ 
+ - Largeur fixée par le mode (compact 313,5 pt, étendu 816 pt), non redimensionnable ; la hauteur oui, et la place en plus va à la pile. `.windowResizability(.contentSize)`.
+ - Marges = espacement entre touches (6 pt). Fond du thème plein, comme sur iPhone.
+ - Tailles min et par défaut calculées dans `MacWindow` depuis les tailles, jamais en dur. Défaut : compact, X Y Z T visibles.
+ - Title bar cachée, fenêtre déplaçable depuis le fond, plein écran désactivé. `Scene.macWindowStyle()` et `View.fullScreenDisabledOnMac()` portent chacun leur `#if os(macOS)` (`windowFullScreenBehavior` n'existe qu'en modifier de vue).
+ - Accepté : une pile pleine défile sous les feux tricolores.
+ 
+-Status line en large : à côté de la zone pile, en bas à gauche, même `StatusLineView`, sélecteur de pages masqué.
++Status line en large : à côté de la zone pile, posée sur le clavier avec le même écart qu'en compact (#66), alignée sur les bords du clavier, même `StatusLineView`, sélecteur de pages masqué.
+ 
+ Pas de `#if os(...)` dans les vues : une API absente d'une plateforme s'isole dans un `ViewModifier` sous `UI/ViewModifiers/`.
+ 
+ ## Tests
+ 
+ Target `RPN CalculatorTests` (Swift Testing), arbre miroir du source. Testés : commandes, Store, invariants des layouts, formatage de la pile par le ViewModel. Vues et styles non testés : ils ont leurs `#Preview`.
+diff --git a/RPN Calculator/Coordinators/Calculator/CalculatorCoordinator.swift b/RPN Calculator/Coordinators/Calculator/CalculatorCoordinator.swift
+index 21c5be3..f4a332d 100644
+--- a/RPN Calculator/Coordinators/Calculator/CalculatorCoordinator.swift	
++++ b/RPN Calculator/Coordinators/Calculator/CalculatorCoordinator.swift	
+@@ -1,86 +1,87 @@
+ //
+ //  CalculatorCoordinator.swift
+ //  RPN Calculator
+ //
+ //  Created by Benjamin Pisano on 12/10/2026.
+ //
+ 
+ import SwiftUI
+ 
+ /// The root of the calculator feature, once per window: owns the store of the window, builds the view model on it, picks the layout rule of the platform, passes the haptics setting down, shows the screen and presents the settings in a sheet where the platform has no settings window.
+ ///
+ /// Owns the gate of the Pro functions of the window too, and presents the Upgrade sheet when it asks for it. The store and the gate are published to the menus of the focused window.
+ struct CalculatorCoordinator: View {
+     /// Whether the user chooses the shape of the keypad from the menu bar, as on the Mac, instead of the size classes deciding it.
+     static var letsUserChooseLayoutMode: Bool {
+         #if os(macOS)
+         true
+         #else
+         false
+         #endif
+     }
+ 
+     /// Whether the settings open in a sheet from the status line, instead of the window the Mac opens from its App menu.
+     static var opensSettingsInSheet: Bool {
+         #if os(macOS)
+         false
+         #else
+         true
+         #endif
+     }
+ 
+     private let settings: SettingsStore
+     private let purchases: PurchaseStore
+ 
+     @State private var store: CalculatorStore
+     @State private var gate: ProGate
+     @State private var viewModel: UICalculatorViewModel
+     @State private var isShowingSettings: Bool = false
+ 
+     @AppStorage private var chosenLayoutMode: KeypadLayoutMode
+ 
+     private var layoutRule: any LayoutModeRule {
+-        Self.letsUserChooseLayoutMode ? ChosenModeRule(chosenLayoutMode) : SizeClassRule()
++        Self.letsUserChooseLayoutMode ? ChosenModeRule(chosenLayoutMode) : HingeRule()
+     }
+ 
+     /// Creates the coordinator with an empty calculator, in the modes last selected in any window.
+     ///
+     /// - Parameters:
+     ///   - settings: The settings of the app, shared by every window.
+     ///   - purchases: What the user bought, shared by every window.
+     init(settings: SettingsStore, purchases: PurchaseStore) {
+         let store: CalculatorStore = .init(settings: settings)
+         let gate: ProGate = .init(status: purchases)
+         self.settings = settings
+         self.purchases = purchases
+         self.store = store
+         self.gate = gate
+         self.viewModel = .init(store: store, settings: settings, gate: gate)
+         self._chosenLayoutMode = .chosenLayoutMode()
+     }
+ 
+     var body: some View {
+         CalculatorView(viewModel)
+             .onOpenSettings(Self.opensSettingsInSheet ? { isShowingSettings = true } : nil)
+             .keypadLayout(layoutRule)
++            .screenOcclusions()
+             .focusedSceneValue(\.calculatorStore, store)
+             .focusedSceneValue(\.proGate, gate)
+             .environment(\.areHapticsEnabled, settings.areHapticsEnabled)
+             .sheet(isPresented: $isShowingSettings) {
+                 SettingsCoordinator(settings: settings, purchases: purchases)
+                     .closable()
+             }
+             .sheet(isPresented: $gate.isShowingUpgrade) {
+                 UpgradeCoordinator(purchases: purchases)
+             }
+     }
+ }
+ 
+ #Preview("Light") {
+     CalculatorCoordinator(settings: .init(defaults: .isolated()), purchases: .init())
+ }
+ 
+ #Preview("Dark") {
+     CalculatorCoordinator(settings: .init(defaults: .isolated()), purchases: .init())
+         .preferredColorScheme(.dark)
+ }
+diff --git a/RPN Calculator/Core/Layout/Edges/KeypadEdgeReach.swift b/RPN Calculator/Core/Layout/Edges/KeypadEdgeReach.swift
+new file mode 100644
+index 0000000..e3950cd
+--- /dev/null
++++ b/RPN Calculator/Core/Layout/Edges/KeypadEdgeReach.swift	
+@@ -0,0 +1,48 @@
++//
++//  KeypadEdgeReach.swift
++//  RPN Calculator
++//
++//  Created by Benjamin Pisano on 08/11/2026.
++//
++
++import SwiftUI
++
++/// How far the keypad spreads on its sides, decided by a `LayoutModeRule`.
++enum KeypadEdgeReach: Sendable, Equatable {
++    /// The keypad stays within the safe area.
++    case safeArea
++    /// The keypad spreads to both physical sides of the screen, over the horizontal safe area.
++    case screenEdges
++    /// The keypad spreads to each physical side of the screen no `.occlusion` crosses at its height, and stays within the safe area until the occlusions are read.
++    case unoccludedScreenEdges
++
++    /// The sides of the safe area the keypad spreads over.
++    ///
++    /// - Parameters:
++    ///   - occlusions: The occlusions of the screen, or `nil` until they are read.
++    ///   - keypadSpan: The height the keypad spans, in the same space as the occlusions, or `nil` before it is laid out.
++    /// - Returns: The horizontal edges of the safe area to ignore.
++    func ignoredEdges(clearOf occlusions: [ScreenOcclusion]?, alongside keypadSpan: ClosedRange<CGFloat>?) -> Edge.Set {
++        switch self {
++        case .safeArea:
++            []
++        case .screenEdges:
++            .horizontal
++        case .unoccludedScreenEdges:
++            occlusions?
++                .filter { occlusion in keypadSpan.map(occlusion.crosses) ?? false }
++                .reduce(into: .horizontal) { edges, occlusion in edges.remove(occlusion.edge) } ?? []
++        }
++    }
++}
++
++#if DEBUG
++import Playgrounds
++
++#Playground("KeypadEdgeReach · a closed foldable in landscape") {
++    let keypadSpan: ClosedRange<CGFloat> = 200...440
++    let reach: KeypadEdgeReach = .unoccludedScreenEdges
++    print("camera top left:", reach.ignoredEdges(clearOf: [.mock()], alongside: keypadSpan))
++    print("camera bottom right:", reach.ignoredEdges(clearOf: [.mock(side: .trailing, verticalSpan: 384...466)], alongside: keypadSpan))
++}
++#endif
+diff --git a/RPN Calculator/Core/Layout/Edges/Occlusions/ScreenOcclusion.swift b/RPN Calculator/Core/Layout/Edges/Occlusions/ScreenOcclusion.swift
+new file mode 100644
+index 0000000..5dcdfed
+--- /dev/null
++++ b/RPN Calculator/Core/Layout/Edges/Occlusions/ScreenOcclusion.swift	
+@@ -0,0 +1,81 @@
++//
++//  ScreenOcclusion.swift
++//  RPN Calculator
++//
++//  Created by Benjamin Pisano on 08/11/2026.
++//
++
++import SwiftUI
++
++/// An `.occlusion` of the screen, such as a camera, as the keypad sees it: the side of the screen it sits on and the height it spans.
++nonisolated struct ScreenOcclusion: Sendable, Equatable {
++    /// The side of the screen the occlusion sits on.
++    let side: HorizontalEdge
++    /// The height the occlusion spans, from its top to its bottom.
++    let verticalSpan: ClosedRange<CGFloat>
++
++    /// The edge of the screen the occlusion sits on, as `ignoresSafeArea` names it.
++    var edge: Edge.Set {
++        switch side {
++        case .leading:
++            .leading
++        case .trailing:
++            .trailing
++        }
++    }
++
++    /// Creates the occlusion.
++    ///
++    /// - Parameters:
++    ///   - side: The side of the screen the occlusion sits on.
++    ///   - verticalSpan: The height the occlusion spans.
++    init(side: HorizontalEdge, verticalSpan: ClosedRange<CGFloat>) {
++        self.side = side
++        self.verticalSpan = verticalSpan
++    }
++
++    /// Creates the occlusion of a frame on the screen.
++    ///
++    /// - Parameters:
++    ///   - frame: The frame of the occlusion, in the space of the screen.
++    ///   - screenWidth: The width of the screen.
++    init(frame: CGRect, onScreenOfWidth screenWidth: CGFloat) {
++        self.side = frame.midX < screenWidth / 2 ? .leading : .trailing
++        self.verticalSpan = frame.minY...frame.maxY
++    }
++
++    /// Whether the occlusion spans some of a height.
++    ///
++    /// - Parameters:
++    ///   - span: The height, in the same space as the occlusion.
++    /// - Returns: `true` when the two heights overlap, `false` when they only touch or stay apart.
++    func crosses(_ span: ClosedRange<CGFloat>) -> Bool {
++        verticalSpan.lowerBound < span.upperBound && span.lowerBound < verticalSpan.upperBound
++    }
++}
++
++extension ScreenOcclusion {
++    /// An occlusion for previews and tests, a camera on the leading side at the top by default.
++    ///
++    /// - Parameters:
++    ///   - side: The side of the screen the occlusion sits on. Defaults to leading.
++    ///   - verticalSpan: The height the occlusion spans. Defaults to the top 82 points.
++    /// - Returns: The occlusion.
++    static func mock(
++        side: HorizontalEdge = .leading,
++        verticalSpan: ClosedRange<CGFloat> = 0...82
++    ) -> ScreenOcclusion {
++        .init(side: side, verticalSpan: verticalSpan)
++    }
++}
++
++#if DEBUG
++import Playgrounds
++
++#Playground("ScreenOcclusion · cameras of a closed foldable in landscape") {
++    let topLeft: ScreenOcclusion = .init(frame: .init(x: 0, y: 0, width: 84, height: 82), onScreenOfWidth: 678)
++    let bottomRight: ScreenOcclusion = .init(frame: .init(x: 594, y: 384, width: 84, height: 82), onScreenOfWidth: 678)
++    print("top left:", topLeft.side, topLeft.verticalSpan, "crosses keypad:", topLeft.crosses(200...440))
++    print("bottom right:", bottomRight.side, bottomRight.verticalSpan, "crosses keypad:", bottomRight.crosses(200...440))
++}
++#endif
+diff --git a/RPN Calculator/Core/Layout/Hinge/HingeStatus.swift b/RPN Calculator/Core/Layout/Hinge/HingeStatus.swift
+new file mode 100644
+index 0000000..3a063c4
+--- /dev/null
++++ b/RPN Calculator/Core/Layout/Hinge/HingeStatus.swift	
+@@ -0,0 +1,39 @@
++//
++//  HingeStatus.swift
++//  RPN Calculator
++//
++//  Created by Benjamin Pisano on 08/11/2026.
++//
++
++import SwiftUI
++
++/// How far the screen of a foldable iPhone is opened.
++enum HingeStatus: Sendable, Equatable {
++    /// Folded shut, only the outer screen in use.
++    case closed
++    /// Half folded, the screen bent along its `.division`.
++    case partiallyOpen
++    /// Opened flat.
++    case fullyOpen
++}
++
++extension HingeStatus {
++    /// The status of a hinge the system reports.
++    ///
++    /// - Parameters:
++    ///   - status: The status the system reports.
++    /// - Returns: The matching status, or `nil` for a status this version of the app does not know.
++    @available(anyAppleOS 27.1, *)
++    init?(_ status: DeviceHinge.Status) {
++        switch status {
++        case .closed:
++            self = .closed
++        case .partiallyOpen:
++            self = .partiallyOpen
++        case .fullyOpen:
++            self = .fullyOpen
++        default:
++            return nil
++        }
++    }
++}
+diff --git a/RPN Calculator/Core/Layout/LayoutContext.swift b/RPN Calculator/Core/Layout/LayoutContext.swift
+index e7130a5..987e5ca 100644
+--- a/RPN Calculator/Core/Layout/LayoutContext.swift	
++++ b/RPN Calculator/Core/Layout/LayoutContext.swift	
+@@ -1,34 +1,49 @@
+ //
+ //  LayoutContext.swift
+ //  RPN Calculator
+ //
+ //  Created by Benjamin Pisano on 12/10/2026.
+ //
+ 
+ import SwiftUI
+ 
+-/// The size classes of the container the calculator is given, as a `LayoutModeRule` reads them.
++/// The container the calculator is given and the posture of the device, as a `LayoutModeRule` reads them.
+ struct LayoutContext: Sendable, Equatable {
+     /// The horizontal size class of the container, or `nil` when the system gives none.
+     let horizontalSizeClass: UserInterfaceSizeClass?
+     /// The vertical size class of the container, or `nil` when the system gives none.
+     let verticalSizeClass: UserInterfaceSizeClass?
++    /// The axis the container stretches along: `.horizontal` in landscape, `.vertical` in portrait.
++    let containerAxis: Axis
++    /// How far the screen is opened, or `nil` on a device without hinge.
++    let hingeStatus: HingeStatus?
++    /// The axis of the `.division` that crosses the container, or `nil` when none does.
++    let divisionAxis: Axis?
+ }
+ 
+ extension LayoutContext {
+-    /// A context for previews and tests, an iPhone in portrait by default.
++    /// A context for previews and tests, an iPhone without hinge in portrait by default.
+     ///
+     /// - Parameters:
+     ///   - horizontalSizeClass: The horizontal size class of the container. Defaults to compact.
+     ///   - verticalSizeClass: The vertical size class of the container. Defaults to regular.
++    ///   - containerAxis: The axis the container stretches along. Defaults to vertical, portrait.
++    ///   - hingeStatus: How far the screen is opened. Defaults to `nil`, no hinge.
++    ///   - divisionAxis: The axis of the `.division` that crosses the container. Defaults to `nil`, none.
+     /// - Returns: The context.
+     static func mock(
+         horizontalSizeClass: UserInterfaceSizeClass? = .compact,
+-        verticalSizeClass: UserInterfaceSizeClass? = .regular
++        verticalSizeClass: UserInterfaceSizeClass? = .regular,
++        containerAxis: Axis = .vertical,
++        hingeStatus: HingeStatus? = nil,
++        divisionAxis: Axis? = nil
+     ) -> LayoutContext {
+         .init(
+             horizontalSizeClass: horizontalSizeClass,
+-            verticalSizeClass: verticalSizeClass
++            verticalSizeClass: verticalSizeClass,
++            containerAxis: containerAxis,
++            hingeStatus: hingeStatus,
++            divisionAxis: divisionAxis
+         )
+     }
+ }
+diff --git a/RPN Calculator/Core/Layout/Rules/ChosenModeRule.swift b/RPN Calculator/Core/Layout/Rules/ChosenModeRule.swift
+index a00e1cc..3a5bca4 100644
+--- a/RPN Calculator/Core/Layout/Rules/ChosenModeRule.swift	
++++ b/RPN Calculator/Core/Layout/Rules/ChosenModeRule.swift	
+@@ -1,35 +1,39 @@
+ //
+ //  ChosenModeRule.swift
+ //  RPN Calculator
+ //
+ //  Created by Benjamin Pisano on 19/10/2026.
+ //
+ 
+ /// The rule of the Mac: the keypad takes the shape the user chose from the menu bar, whatever the size of the window. A pointer presses the keys.
+ struct ChosenModeRule: LayoutModeRule {
+     /// The shape the user chose.
+     let chosenMode: KeypadLayoutMode
+     let keySizing: KeySizing = .pointer
+ 
+     /// Creates the rule.
+     ///
+     /// - Parameters:
+     ///   - chosenMode: The shape the user chose.
+     init(_ chosenMode: KeypadLayoutMode) {
+         self.chosenMode = chosenMode
+     }
+ 
+     func mode(for context: LayoutContext) -> KeypadLayoutMode {
+         chosenMode
+     }
++
++    func keypadEdgeReach(in context: LayoutContext) -> KeypadEdgeReach {
++        .safeArea
++    }
+ }
+ 
+ #if DEBUG
+ import Playgrounds
+ 
+ #Playground("ChosenModeRule · the mode the user chose") {
+     for chosenMode: KeypadLayoutMode in KeypadLayoutMode.allCases {
+         print(chosenMode, "->", ChosenModeRule(chosenMode).mode(for: .mock(horizontalSizeClass: nil, verticalSizeClass: nil)))
+     }
+ }
+ #endif
+diff --git a/RPN Calculator/Core/Layout/Rules/HingeRule.swift b/RPN Calculator/Core/Layout/Rules/HingeRule.swift
+new file mode 100644
+index 0000000..04bc43d
+--- /dev/null
++++ b/RPN Calculator/Core/Layout/Rules/HingeRule.swift	
+@@ -0,0 +1,68 @@
++//
++//  HingeRule.swift
++//  RPN Calculator
++//
++//  Created by Benjamin Pisano on 08/11/2026.
++//
++
++import SwiftUI
++
++/// The rule of iPhone and iPad that also reads the posture of a foldable iPhone.
++///
++/// Without hinge or closed, the device is laid out by its fallback rule. Opened flat in landscape, the keypad is wide. The keypad spreads to the sides of the screen where its fallback rule spreads it.
++struct HingeRule: LayoutModeRule {
++    private let fallback: any LayoutModeRule
++
++    var keySizing: KeySizing {
++        fallback.keySizing
++    }
++
++    /// Creates the rule.
++    ///
++    /// - Parameters:
++    ///   - fallback: The rule for the postures this rule leaves alone. Defaults to the size classes.
++    init(fallback: any LayoutModeRule = SizeClassRule()) {
++        self.fallback = fallback
++    }
++
++    func mode(for context: LayoutContext) -> KeypadLayoutMode {
++        switch context.hingeStatus {
++        case .fullyOpen where context.containerAxis == .horizontal:
++            .wide
++        case .closed, .partiallyOpen, .fullyOpen, nil:
++            fallback.mode(for: context)
++        }
++    }
++
++    func keypadEdgeReach(in context: LayoutContext) -> KeypadEdgeReach {
++        fallback.keypadEdgeReach(in: context)
++    }
++}
++
++#if DEBUG
++import Playgrounds
++
++#Playground("HingeRule · no hinge") {
++    let rule: HingeRule = .init()
++    print("portrait:", rule.mode(for: .mock()))
++    print("landscape:", rule.mode(for: .mock(verticalSizeClass: .compact, containerAxis: .horizontal)))
++}
++
++#Playground("HingeRule · closed") {
++    let rule: HingeRule = .init()
++    print("portrait:", rule.mode(for: .mock(hingeStatus: .closed)))
++    print("landscape:", rule.mode(for: .mock(verticalSizeClass: .compact, containerAxis: .horizontal, hingeStatus: .closed)))
++}
++
++#Playground("HingeRule · opened flat") {
++    let rule: HingeRule = .init()
++    print("landscape:", rule.mode(for: .mock(horizontalSizeClass: .regular, containerAxis: .horizontal, hingeStatus: .fullyOpen)))
++    print("portrait:", rule.mode(for: .mock(horizontalSizeClass: .regular, hingeStatus: .fullyOpen)))
++}
++
++#Playground("HingeRule · half folded") {
++    let rule: HingeRule = .init()
++    print("fold across:", rule.mode(for: .mock(horizontalSizeClass: .regular, containerAxis: .horizontal, hingeStatus: .partiallyOpen, divisionAxis: .horizontal)))
++    print("fold down:", rule.mode(for: .mock(horizontalSizeClass: .regular, hingeStatus: .partiallyOpen, divisionAxis: .vertical)))
++}
++#endif
+diff --git a/RPN Calculator/Core/Layout/Rules/LayoutModeRule.swift b/RPN Calculator/Core/Layout/Rules/LayoutModeRule.swift
+index 9a8e1e4..4d869ce 100644
+--- a/RPN Calculator/Core/Layout/Rules/LayoutModeRule.swift	
++++ b/RPN Calculator/Core/Layout/Rules/LayoutModeRule.swift	
+@@ -1,19 +1,26 @@
+ //
+ //  LayoutModeRule.swift
+ //  RPN Calculator
+ //
+ //  Created by Benjamin Pisano on 12/10/2026.
+ //
+ 
+ /// Decides which shape the keypad takes in a given container, and how big its keys are. Each platform injects its own rule.
+ protocol LayoutModeRule: Sendable {
+     /// What presses the keys on the platform.
+     var keySizing: KeySizing { get }
+ 
+     /// The shape of the keypad for a container.
+     ///
+     /// - Parameters:
+-    ///   - context: The size classes of the container the calculator is given.
++    ///   - context: The container the calculator is given and the posture of the device.
+     /// - Returns: The mode to lay the keypad out in.
+     func mode(for context: LayoutContext) -> KeypadLayoutMode
++
++    /// How far the keypad spreads on its sides, over the horizontal safe area.
++    ///
++    /// - Parameters:
++    ///   - context: The container the calculator is given and the posture of the device.
++    /// - Returns: How far to lay the keypad out towards the physical sides of the screen.
++    func keypadEdgeReach(in context: LayoutContext) -> KeypadEdgeReach
+ }
+diff --git a/RPN Calculator/Core/Layout/Rules/SizeClassRule.swift b/RPN Calculator/Core/Layout/Rules/SizeClassRule.swift
+index 3842052..18bb73c 100644
+--- a/RPN Calculator/Core/Layout/Rules/SizeClassRule.swift	
++++ b/RPN Calculator/Core/Layout/Rules/SizeClassRule.swift	
+@@ -1,31 +1,44 @@
+ //
+ //  SizeClassRule.swift
+ //  RPN Calculator
+ //
+ //  Created by Benjamin Pisano on 12/10/2026.
+ //
+ 
+ import SwiftUI
+ 
+ /// The rule of iPhone and iPad: the keypad is wide when the container is regular in width or compact in height.
+ ///
+-/// The second condition covers the iPhones whose landscape stays compact in width. A finger presses the keys.
++/// The second condition covers the iPhones whose landscape stays compact in width. A finger presses the keys. The keypad spreads to both sides of the screen when the container is regular in height, and to each side no `.occlusion` crosses at its height when it is compact.
+ struct SizeClassRule: LayoutModeRule {
+     let keySizing: KeySizing = .touch
+ 
+     func mode(for context: LayoutContext) -> KeypadLayoutMode {
+         context.horizontalSizeClass == .regular || context.verticalSizeClass == .compact ? .wide : .compact
+     }
++
++    func keypadEdgeReach(in context: LayoutContext) -> KeypadEdgeReach {
++        switch context.verticalSizeClass {
++        case .regular:
++            .screenEdges
++        case .compact:
++            .unoccludedScreenEdges
++        case nil:
++            .safeArea
++        @unknown default:
++            .safeArea
++        }
++    }
+ }
+ 
+ #if DEBUG
+ import Playgrounds
+ 
+ #Playground("SizeClassRule · iPhone and iPad containers") {
+     let rule: SizeClassRule = .init()
+     print("iPhone portrait:", rule.mode(for: .mock()))
+     print("iPhone landscape:", rule.mode(for: .mock(verticalSizeClass: .compact)))
+     print("iPad full screen:", rule.mode(for: .mock(horizontalSizeClass: .regular)))
+     print("iPad Slide Over:", rule.mode(for: .mock()))
+ }
+ #endif
+diff --git a/RPN Calculator/UI/ViewModifiers/Layout/Edges/KeypadScreenEdgesModifier.swift b/RPN Calculator/UI/ViewModifiers/Layout/Edges/KeypadScreenEdgesModifier.swift
+new file mode 100644
+index 0000000..02579fa
+--- /dev/null
++++ b/RPN Calculator/UI/ViewModifiers/Layout/Edges/KeypadScreenEdgesModifier.swift	
+@@ -0,0 +1,50 @@
++//
++//  KeypadScreenEdgesModifier.swift
++//  RPN Calculator
++//
++//  Created by Benjamin Pisano on 08/11/2026.
++//
++
++import SwiftUI
++
++/// Spreads the keypad over the horizontal safe area, to the physical sides of the screen the layout rule and the occlusions of the screen leave it.
++struct KeypadScreenEdgesModifier: ViewModifier {
++    private let keypadSpan: ClosedRange<CGFloat>?
++
++    @Environment(\.keypadEdgeReach) private var reach: KeypadEdgeReach
++    @Environment(\.screenOcclusions) private var occlusions: [ScreenOcclusion]?
++
++    /// Creates the modifier.
++    ///
++    /// - Parameters:
++    ///   - keypadSpan: The height the keypad spans in the global space, or `nil` before it is laid out.
++    init(alongside keypadSpan: ClosedRange<CGFloat>?) {
++        self.keypadSpan = keypadSpan
++    }
++
++    func body(content: Content) -> some View {
++        content
++            .ignoresSafeArea(.container, edges: reach.ignoredEdges(clearOf: occlusions, alongside: keypadSpan))
++    }
++}
++
++#Preview("Within the safe area", traits: .landscapeLeft) {
++    Color.orange
++        .frame(height: 120)
++        .keypadScreenEdges(alongside: nil)
++}
++
++#Preview("To the sides of the screen", traits: .landscapeLeft) {
++    Color.orange
++        .frame(height: 120)
++        .keypadScreenEdges(alongside: nil)
++        .environment(\.keypadEdgeReach, .screenEdges)
++}
++
++#Preview("Clear of an occlusion on the leading side", traits: .landscapeLeft) {
++    Color.orange
++        .frame(height: 120)
++        .keypadScreenEdges(alongside: 0...1_000)
++        .environment(\.keypadEdgeReach, .unoccludedScreenEdges)
++        .environment(\.screenOcclusions, [.mock(verticalSpan: 0...1_000)])
++}
+diff --git a/RPN Calculator/UI/ViewModifiers/Layout/Edges/Occlusions/ScreenOcclusionsModifier.swift b/RPN Calculator/UI/ViewModifiers/Layout/Edges/Occlusions/ScreenOcclusionsModifier.swift
+new file mode 100644
+index 0000000..3d06f97
+--- /dev/null
++++ b/RPN Calculator/UI/ViewModifiers/Layout/Edges/Occlusions/ScreenOcclusionsModifier.swift	
+@@ -0,0 +1,35 @@
++//
++//  ScreenOcclusionsModifier.swift
++//  RPN Calculator
++//
++//  Created by Benjamin Pisano on 08/11/2026.
++//
++
++import SwiftUI
++
++/// Reads the `.occlusion` regions of the whole screen, safe area included, and hands them down as `\.screenOcclusions`, each time one appears, moves or goes away, or `nil` until they are read.
++struct ScreenOcclusionsModifier: ViewModifier {
++    @State private var occlusions: [ScreenOcclusion]?
++
++    func body(content: Content) -> some View {
++        content
++            .environment(\.screenOcclusions, occlusions)
++            .background {
++                if #available(anyAppleOS 27.1, *) {
++                    Color.clear
++                        .onGeometryChange(for: [ScreenOcclusion].self) { proxy in
++                            let screenTop: CGFloat = proxy.frame(in: .global).minY
++                            return proxy.reservedRegions(kind: .occlusion).map { region in
++                                ScreenOcclusion(
++                                    frame: region.frame.offsetBy(dx: 0, dy: screenTop),
++                                    onScreenOfWidth: proxy.size.width
++                                )
++                            }
++                        } action: { occlusions in
++                            self.occlusions = occlusions
++                        }
++                        .ignoresSafeArea()
++                }
++            }
++    }
++}
+diff --git a/RPN Calculator/UI/ViewModifiers/Layout/Hinge/DivisionAxisChangeModifier.swift b/RPN Calculator/UI/ViewModifiers/Layout/Hinge/DivisionAxisChangeModifier.swift
+new file mode 100644
+index 0000000..94166d8
+--- /dev/null
++++ b/RPN Calculator/UI/ViewModifiers/Layout/Hinge/DivisionAxisChangeModifier.swift	
+@@ -0,0 +1,34 @@
++//
++//  DivisionAxisChangeModifier.swift
++//  RPN Calculator
++//
++//  Created by Benjamin Pisano on 08/11/2026.
++//
++
++import SwiftUI
++
++/// Reports the axis of the `.division` that crosses the view, each time it appears, moves or goes away.
++struct DivisionAxisChangeModifier: ViewModifier {
++    private let action: (Axis?) -> Void
++
++    /// Creates the modifier.
++    ///
++    /// - Parameters:
++    ///   - action: The action to run with the new axis, `nil` when no active `.division` crosses the view.
++    init(_ action: @escaping (Axis?) -> Void) {
++        self.action = action
++    }
++
++    func body(content: Content) -> some View {
++        if #available(anyAppleOS 27.1, *) {
++            content
++                .onGeometryChange(for: Axis?.self) { proxy in
++                    proxy.reservedRegions(kind: .division).first.map { Axis(longSideOf: $0.frame.size) }
++                } action: { axis in
++                    action(axis)
++                }
++        } else {
++            content
++        }
++    }
++}
+diff --git a/RPN Calculator/UI/ViewModifiers/Layout/Hinge/HingeStatusChangeModifier.swift b/RPN Calculator/UI/ViewModifiers/Layout/Hinge/HingeStatusChangeModifier.swift
+new file mode 100644
+index 0000000..d6a4f6d
+--- /dev/null
++++ b/RPN Calculator/UI/ViewModifiers/Layout/Hinge/HingeStatusChangeModifier.swift	
+@@ -0,0 +1,32 @@
++//
++//  HingeStatusChangeModifier.swift
++//  RPN Calculator
++//
++//  Created by Benjamin Pisano on 08/11/2026.
++//
++
++import SwiftUI
++
++/// Reports how far the screen of the device is opened, each time it folds or unfolds.
++struct HingeStatusChangeModifier: ViewModifier {
++    private let action: (HingeStatus?) -> Void
++
++    /// Creates the modifier.
++    ///
++    /// - Parameters:
++    ///   - action: The action to run with the new status, `nil` on a device without hinge.
++    init(_ action: @escaping (HingeStatus?) -> Void) {
++        self.action = action
++    }
++
++    func body(content: Content) -> some View {
++        if #available(anyAppleOS 27.1, *) {
++            content
++                .onHingeChange { _, context in
++                    action(context.hinge.flatMap { HingeStatus($0.status) })
++                }
++        } else {
++            content
++        }
++    }
++}
+diff --git a/RPN Calculator/UI/ViewModifiers/Layout/KeypadLayoutModifier.swift b/RPN Calculator/UI/ViewModifiers/Layout/KeypadLayoutModifier.swift
+index 214bee7..323de72 100644
+--- a/RPN Calculator/UI/ViewModifiers/Layout/KeypadLayoutModifier.swift	
++++ b/RPN Calculator/UI/ViewModifiers/Layout/KeypadLayoutModifier.swift	
+@@ -1,57 +1,72 @@
+ //
+ //  KeypadLayoutModifier.swift
+ //  RPN Calculator
+ //
+ //  Created by Benjamin Pisano on 12/10/2026.
+ //
+ 
+ import SwiftUI
+ 
+ /// Decides the shape of the keypad for the container a view is given, and hands it down with what presses the keys and the sizes that suit both.
+ ///
+-/// It is the only place that reads the size classes: the views below read `\.keypadLayoutMode`, `\.keySizing` and `\.keyTheme`.
++/// It is the only place that reads the size classes, the shape of the container and the posture of the device: the views below read `\.keypadLayoutMode`, `\.keySizing`, `\.keyTheme` and `\.keypadEdgeReach`.
+ struct KeypadLayoutModifier: ViewModifier {
+     private let rule: any LayoutModeRule
+ 
++    @State private var containerAxis: Axis = .vertical
++    @State private var hingeStatus: HingeStatus?
++    @State private var divisionAxis: Axis?
++
+     @Environment(\.horizontalSizeClass) private var horizontalSizeClass: UserInterfaceSizeClass?
+     @Environment(\.verticalSizeClass) private var verticalSizeClass: UserInterfaceSizeClass?
+ 
+     private var context: LayoutContext {
+         .init(
+             horizontalSizeClass: horizontalSizeClass,
+-            verticalSizeClass: verticalSizeClass
++            verticalSizeClass: verticalSizeClass,
++            containerAxis: containerAxis,
++            hingeStatus: hingeStatus,
++            divisionAxis: divisionAxis
+         )
+     }
+ 
+     /// Creates the modifier.
+     ///
+     /// - Parameters:
+     ///   - rule: The rule that picks the shape of the keypad.
+     init(_ rule: any LayoutModeRule) {
+         self.rule = rule
+     }
+ 
+     func body(content: Content) -> some View {
+         let mode: KeypadLayoutMode = rule.mode(for: context)
+         let metrics: KeyMetrics = .metrics(for: mode, verticalSizeClass: verticalSizeClass, sizing: rule.keySizing)
+         content
+             .environment(\.keypadLayoutMode, mode)
+             .environment(\.keySizing, rule.keySizing)
++            .environment(\.keypadEdgeReach, rule.keypadEdgeReach(in: context))
+             .transformEnvironment(\.keyTheme) { $0.metrics = metrics }
++            .onGeometryChange(for: Axis.self) { proxy in
++                Axis(longSideOf: proxy.size)
++            } action: { containerAxis in
++                self.containerAxis = containerAxis
++            }
++            .onHingeStatusChange { hingeStatus = $0 }
++            .onDivisionAxisChange { divisionAxis = $0 }
+     }
+ }
+ 
+ #Preview("Size classes", traits: .landscapeLeft) {
+     CalculatorView(MockCalculatorViewModel())
+         .keypadLayout(SizeClassRule())
+ }
+ 
+ #Preview("Chosen, compact", traits: .fixedLayout(width: 314, height: 524)) {
+     CalculatorView(MockCalculatorViewModel())
+         .keypadLayout(ChosenModeRule(.compact))
+ }
+ 
+ #Preview("Chosen, expanded", traits: .fixedLayout(width: 816, height: 400)) {
+     CalculatorView(MockCalculatorViewModel())
+         .keypadLayout(ChosenModeRule(.wide))
+ }
+diff --git a/RPN Calculator/UI/Views/Calculator/CalculatorView.swift b/RPN Calculator/UI/Views/Calculator/CalculatorView.swift
+index f2c0ef7..3e41956 100644
+--- a/RPN Calculator/UI/Views/Calculator/CalculatorView.swift	
++++ b/RPN Calculator/UI/Views/Calculator/CalculatorView.swift	
+@@ -1,221 +1,226 @@
+ //
+ //  CalculatorView.swift
+ //  RPN Calculator
+ //
+ //  Created by Benjamin Pisano on 12/10/2026.
+ //
+ 
+ import RPNEngine
+ import SwiftUI
+ 
+ /// The calculator screen: the stack and the status line above the keypad, composed for the layout mode of the environment.
+ struct CalculatorView<ViewModel: CalculatorViewModel>: View {
+     private let viewModel: ViewModel
+     private var onOpenSettings: (() -> Void)?
+ 
+     @State private var hasBottomSafeArea: Bool = false
++    @State private var keypadSpan: ClosedRange<CGFloat>?
+ 
+     @Environment(\.keyTheme) private var theme: KeyTheme
+     @Environment(\.keypadLayoutMode) private var layoutMode: KeypadLayoutMode
+     @Environment(\.keySizing) private var keySizing: KeySizing
+     @Environment(\.areHapticsEnabled) private var areHapticsEnabled: Bool
+ 
+     private var layout: KeypadLayout {
+         viewModel.layout(for: layoutMode)
+     }
+ 
+     private var stackDisplay: some View {
+         StackDisplayView(viewModel.stackRows)
+             .errorMessage(viewModel.errorMessage)
+             .expressionLayout(viewModel.expressionLayout)
+             .dividers(viewModel.showsStackDividers)
+     }
+ 
+     private var statusLine: some View {
+         @Bindable var viewModel: ViewModel = viewModel
+         return StatusLineView(
+             pages: layout.pagedBlock?.pages ?? [],
+             currentPageID: $viewModel.currentPageID,
+             notation: viewModel.notation,
+             notations: viewModel.notations,
+             angleMode: viewModel.angleMode
+         )
+         .onCycleNotation { viewModel.cycleNotation() }
+         .onSelectNotation { viewModel.selectNotation($0) }
+         .onCycleAngleMode { viewModel.cycleAngleMode() }
+         .onSelectAngleMode { viewModel.setAngleMode($0) }
+         .onOpenSettings(onOpenSettings)
+     }
+ 
+     private var keypad: KeypadView {
+         @Bindable var viewModel: ViewModel = viewModel
+         return KeypadView(layout, currentPageID: $viewModel.currentPageID)
+             .shifted(viewModel.isShifted)
+             .onKey { viewModel.press($0) }
+     }
+ 
+     @ViewBuilder
+     private var composition: some View {
+         switch layoutMode {
+         case .compact:
+             stackDisplay
+                 .contentMargins(.horizontal, margin, for: .scrollContent)
+                 .keypadBar {
+                     VStack(spacing: 0) {
+                         statusLine
+                             .padding(.horizontal, margin)
+                         keypad
+                             .horizontalMargin(margin)
++                            .keypadScreenEdges(alongside: keypadSpan)
++                            .onVerticalSpanChange { keypadSpan = $0 }
+                     }
+                     .padding(.bottom, bottomPadding)
+                 }
+         case .wide:
+             VStack(spacing: 0) {
+                 HStack(alignment: .bottom, spacing: Layout.statusSpacing) {
+                     statusLine
+                         .fixedSize()
+-                        .frame(height: theme.metrics.xLineHeight)
+-                        .padding(.bottom, Layout.statusBottomPadding)
++                        .padding(.leading, margin)
++                        .keypadScreenEdges(alongside: keypadSpan)
+                     stackDisplay
++                        .padding(.trailing, margin)
+                 }
+                 keypad
++                    .padding(.horizontal, margin)
++                    .keypadScreenEdges(alongside: keypadSpan)
++                    .onVerticalSpanChange { keypadSpan = $0 }
+             }
+-            .padding(.horizontal, margin)
+             .padding(.bottom, bottomPadding)
+         }
+     }
+ 
+     private var margin: CGFloat {
+         theme.metrics.screenMargin(for: keySizing)
+     }
+ 
+     private var bottomPadding: CGFloat {
+         hasBottomSafeArea ? ScreenSpacing.bottomOverSafeArea : margin
+     }
+ 
+     private var minSize: CGSize? {
+         switch keySizing {
+         case .touch:
+             nil
+         case .pointer:
+             theme.metrics.minScreenSize(for: layoutMode, sizing: keySizing)
+         }
+     }
+ 
+     /// Creates the screen.
+     ///
+     /// - Parameters:
+     ///   - viewModel: What the screen shows and where it sends its actions.
+     init(_ viewModel: ViewModel) {
+         self.viewModel = viewModel
+     }
+ 
+     var body: some View {
+         composition
+             .frame(
+                 minWidth: minSize?.width,
+                 maxWidth: theme.metrics.screenWidth(for: keySizing),
+                 minHeight: minSize?.height,
+                 maxHeight: .infinity
+             )
+             .frame(maxWidth: keySizing.stretchesScreen ? .infinity : nil, maxHeight: .infinity)
+             .onGeometryChange(for: Bool.self) { proxy in
+                 proxy.safeAreaInsets.bottom > 0
+             } action: { hasBottomSafeArea in
+                 self.hasBottomSafeArea = hasBottomSafeArea
+             }
+             .background {
+                 theme.background
+                     .ignoresSafeArea()
+             }
+             .fontDesign(.rounded)
+             .sensoryFeedback(.error, trigger: viewModel.touchErrorCount) { _, _ in
+                 areHapticsEnabled
+             }
+             .environment(\.pressedKeys, viewModel.pressedKeys)
+             .environment(\.keyHints, viewModel.keyHints)
+             .keyboardInput { viewModel.handle($0) }
+     }
+ }
+ 
+ extension CalculatorView {
+     /// Shows the button of the status line that opens the settings and runs an action when it is tapped.
+     ///
+     /// - Parameters:
+     ///   - action: The action to run, or `nil` for no button, when the platform opens the settings elsewhere.
+     /// - Returns: The screen, reporting the tap.
+     func onOpenSettings(_ action: (() -> Void)?) -> Self {
+         var copy: Self = self
+         copy.onOpenSettings = action
+         return copy
+     }
+ }
+ 
+ private extension CalculatorView {
+     enum Layout {
+         static var statusSpacing: CGFloat { 12 }
+-        static var statusBottomPadding: CGFloat { 8 }
+     }
+ }
+ 
+ #Preview("Light") {
+     CalculatorView(MockCalculatorViewModel())
+         .onOpenSettings {}
+ }
+ 
+ #Preview("Dark") {
+     CalculatorView(MockCalculatorViewModel())
+         .onOpenSettings {}
+         .preferredColorScheme(.dark)
+ }
+ 
+ #Preview("Shifted, error") {
+     CalculatorView(
+         MockCalculatorViewModel(
+             stackRows: [.mock(id: 1, text: "5.0000"), .mock(id: 0, text: "0", isEntry: true)],
+             errorMessage: OperationError.divisionByZero(.x).message,
+             isShifted: true
+         )
+     )
+     .onOpenSettings {}
+ }
+ 
+ #Preview("Empty stack") {
+     CalculatorView(MockCalculatorViewModel(stackRows: []))
+         .onOpenSettings {}
+ }
+ 
+ #Preview("Wide, dense", traits: .landscapeLeft) {
+     CalculatorView(MockCalculatorViewModel())
+         .onOpenSettings {}
+         .keypadLayout(SizeClassRule())
+ }
+ 
+ #Preview("Wide, dense, dark, error", traits: .landscapeLeft) {
+     CalculatorView(
+         MockCalculatorViewModel(
+             errorMessage: OperationError.divisionByZero(.x).message,
+             isShifted: true
+         )
+     )
+     .onOpenSettings {}
+     .keypadLayout(SizeClassRule())
+     .preferredColorScheme(.dark)
+ }
+ 
+ #Preview("Wide, ample", traits: .fixedLayout(width: 1200, height: 700)) {
+     CalculatorView(MockCalculatorViewModel())
+         .onOpenSettings {}
+         .keypadLayout(SizeClassRule())
+         .environment(\.horizontalSizeClass, .regular)
+ }
+ 
+ #Preview("Mac, compact", traits: .fixedLayout(width: 314, height: 524)) {
+     CalculatorView(MockCalculatorViewModel())
+         .keypadLayout(ChosenModeRule(.compact))
+ }
+ 
+ #Preview("Mac, expanded", traits: .fixedLayout(width: 816, height: 400)) {
+     CalculatorView(MockCalculatorViewModel())
+         .keypadLayout(ChosenModeRule(.wide))
+ }
+diff --git a/RPN Calculator/Utils/Extensions/AxisExtension.swift b/RPN Calculator/Utils/Extensions/AxisExtension.swift
+new file mode 100644
+index 0000000..7d65ef4
+--- /dev/null
++++ b/RPN Calculator/Utils/Extensions/AxisExtension.swift	
+@@ -0,0 +1,19 @@
++//
++//  AxisExtension.swift
++//  RPN Calculator
++//
++//  Created by Benjamin Pisano on 08/11/2026.
++//
++
++import SwiftUI
++
++nonisolated extension Axis {
++    /// The axis a rectangle stretches along.
++    ///
++    /// - Parameters:
++    ///   - size: The size of the rectangle.
++    /// - Returns: `.horizontal` when the rectangle is wider than tall, `.vertical` otherwise.
++    init(longSideOf size: CGSize) {
++        self = size.width > size.height ? .horizontal : .vertical
++    }
++}
+diff --git a/RPN Calculator/Utils/Extensions/EnvironmentValuesExtension.swift b/RPN Calculator/Utils/Extensions/EnvironmentValuesExtension.swift
+index 2be0ff7..36476da 100644
+--- a/RPN Calculator/Utils/Extensions/EnvironmentValuesExtension.swift	
++++ b/RPN Calculator/Utils/Extensions/EnvironmentValuesExtension.swift	
+@@ -1,25 +1,29 @@
+ //
+ //  EnvironmentValuesExtension.swift
+ //  RPN Calculator
+ //
+ //  Created by Benjamin Pisano on 12/10/2026.
+ //
+ 
+ import SwiftUI
+ 
+ extension EnvironmentValues {
+     /// The look of the keys and of the screen around them.
+     @Entry var keyTheme: KeyTheme = .standard
+     /// The shape of the keypad, decided once for the whole screen by a `LayoutModeRule`.
+     @Entry var keypadLayoutMode: KeypadLayoutMode = .compact
+     /// What presses the keys, decided once for the whole screen by a `LayoutModeRule`.
+     @Entry var keySizing: KeySizing = .touch
++    /// How far the keypad spreads on its sides, over the horizontal safe area, decided once for the whole screen by a `LayoutModeRule`.
++    @Entry var keypadEdgeReach: KeypadEdgeReach = .safeArea
++    /// The occlusions of the screen, such as a camera, that the keypad keeps clear of, or `nil` until they are read.
++    @Entry var screenOcclusions: [ScreenOcclusion]?
+     /// The key the physical keyboard shows as pressed, which each key reads for itself.
+     @Entry var pressedKeys: PressedKeys = .idle
+     /// Whether the physical keyboard holds the key down, which draws it pressed.
+     @Entry var isKeyHeldDown: Bool = false
+     /// The tooltips of the keys that have a keyboard shortcut, by name of key.
+     @Entry var keyHints: [KeypadKey.ID: String] = [:]
+     /// Whether keys, page icons, status toggles and errors give haptic feedback.
+     @Entry var areHapticsEnabled: Bool = true
+ }
+diff --git a/RPN Calculator/Utils/Extensions/ViewExtension.swift b/RPN Calculator/Utils/Extensions/ViewExtension.swift
+index c46bc29..6e4e42e 100644
+--- a/RPN Calculator/Utils/Extensions/ViewExtension.swift	
++++ b/RPN Calculator/Utils/Extensions/ViewExtension.swift	
+@@ -1,101 +1,149 @@
+ //
+ //  ViewExtension.swift
+ //  RPN Calculator
+ //
+ //  Created by Benjamin Pisano on 12/10/2026.
+ //
+ 
+ import SwiftUI
+ 
+ extension View {
+     /// Keeps the window of the Mac out of full screen: its green button only zooms. Leaves the view unchanged elsewhere.
+     ///
+     /// - Returns: The view, in a window that never goes full screen on the Mac.
+     func fullScreenDisabledOnMac() -> some View {
+         #if os(macOS)
+         windowFullScreenBehavior(.disabled)
+         #else
+         self
+         #endif
+     }
+ 
+     /// Highlights the view under a pointer.
+     ///
+     /// - Parameters:
+     ///   - shape: The shape of the highlight.
+     /// - Returns: The view, reacting to the pointer.
+     func pointerHover(_ shape: some Shape) -> some View {
+         modifier(PointerHoverModifier(shape))
+     }
+ 
+     /// Makes the view the receiver of the physical keyboard and reports the binding of each key typed.
+     ///
+     /// - Parameters:
+     ///   - action: The action to run with the binding of a key typed.
+     /// - Returns: The view, focused and listening to the keyboard.
+     func keyboardInput(_ action: @escaping (KeyBinding) -> Void) -> some View {
+         modifier(KeyboardInputModifier(onBinding: action))
+     }
+ 
+     /// Shows a press at once and taps the finger as a touch goes down, then lets the view settle back quickly on release.
+     ///
+     /// Apply it after the modifiers that draw the pressed state, so their release is animated.
+     ///
+     /// - Parameters:
+     ///   - isPressed: Whether the view is held down, by a touch or by the keyboard.
+     ///   - isTouched: Whether a touch or a pointer holds the view down, which taps the finger.
+     /// - Returns: The view, reacting to the press.
+     func pressFeedback(
+         isPressed: Bool,
+         isTouched: Bool
+     ) -> some View {
+         modifier(PressFeedbackModifier(isPressed: isPressed, isTouched: isTouched))
+     }
+ 
+     /// Shrinks the view for an instant each time a trigger changes.
+     ///
+     /// - Parameters:
+     ///   - trigger: The value whose change makes the view pulse.
+     ///   - scale: The scale of the view while it is shrunk.
+     /// - Returns: The view, pulsing with the trigger.
+     func pressPulse(
+         trigger: some Equatable,
+         scale: CGFloat
+     ) -> some View {
+         modifier(PressPulseModifier(trigger: trigger, scale: scale))
+     }
+ 
+     /// Draws the texts and the symbols of the view in the font of the status line.
+     ///
+     /// - Returns: The view, in the font of the status line.
+     func statusLineFont() -> some View {
+         modifier(StatusLineFontModifier())
+     }
+ 
+     /// Decides the shape of the keypad for the space the view is given, and hands it down with the sizes that suit it.
+     ///
+     /// - Parameters:
+     ///   - rule: The rule that picks the shape of the keypad.
+     /// - Returns: The view, filling the space it is given, with `\.keypadLayoutMode` and the sizes of `\.keyTheme` set for what is below.
+     func keypadLayout(_ rule: any LayoutModeRule) -> some View {
+         modifier(KeypadLayoutModifier(rule))
+     }
+ 
++    /// Runs an action each time the screen of the device folds or unfolds.
++    ///
++    /// - Parameters:
++    ///   - action: The action to run with how far the screen is now opened, `nil` on a device without hinge.
++    /// - Returns: The view, reporting the posture of the device.
++    func onHingeStatusChange(_ action: @escaping (HingeStatus?) -> Void) -> some View {
++        modifier(HingeStatusChangeModifier(action))
++    }
++
++    /// Runs an action each time a `.division` of the screen starts or stops crossing the view, or turns.
++    ///
++    /// - Parameters:
++    ///   - action: The action to run with the axis of the `.division`, `nil` when none crosses the view.
++    /// - Returns: The view, reporting the `.division` that crosses it.
++    func onDivisionAxisChange(_ action: @escaping (Axis?) -> Void) -> some View {
++        modifier(DivisionAxisChangeModifier(action))
++    }
++
++    /// Spreads the keypad to the physical sides of the screen, over the horizontal safe area, as far as `\.keypadEdgeReach` asks and the `\.screenOcclusions` crossing the keypad allow. Leaves the view unchanged otherwise.
++    ///
++    /// - Parameters:
++    ///   - keypadSpan: The height the keypad spans in the global space, or `nil` before it is laid out.
++    /// - Returns: The view, reaching the sides of the screen when asked.
++    func keypadScreenEdges(alongside keypadSpan: ClosedRange<CGFloat>?) -> some View {
++        modifier(KeypadScreenEdgesModifier(alongside: keypadSpan))
++    }
++
++    /// Reads the `.occlusion` regions of the whole screen, such as a camera, and hands them down as `\.screenOcclusions`.
++    ///
++    /// - Returns: The view, with the occlusions of the screen in its environment.
++    func screenOcclusions() -> some View {
++        modifier(ScreenOcclusionsModifier())
++    }
++
++    /// Runs an action each time the height the view spans in the global space changes.
++    ///
++    /// - Parameters:
++    ///   - action: The action to run with the new height, from the top of the view to its bottom.
++    /// - Returns: The view, reporting the height it spans.
++    func onVerticalSpanChange(_ action: @escaping (ClosedRange<CGFloat>) -> Void) -> some View {
++        onGeometryChange(for: ClosedRange<CGFloat>.self) { proxy in
++            let frame: CGRect = proxy.frame(in: .global)
++            return frame.minY...frame.maxY
++        } action: { span in
++            action(span)
++        }
++    }
++
+     /// Pins a bar to the bottom of the view, under which the content scrolls for a finger and above which it stops for a pointer.
+     ///
+     /// - Parameters:
+     ///   - bar: The bar to pin.
+     /// - Returns: The view, with the bar at its bottom.
+     func keypadBar(@ViewBuilder _ bar: () -> some View) -> some View {
+         modifier(KeypadBarModifier(bar: bar))
+     }
+ 
+     /// Brings the view in once it appears, out of a blur and rising a little, or only fading in when the user reduces motion.
+     ///
+     /// - Parameters:
+     ///   - delay: How long after appearing the view starts rising, in seconds.
+     /// - Returns: The view, rising as it appears.
+     func rise(after delay: TimeInterval) -> some View {
+         modifier(RiseModifier(delay: delay))
+     }
+ }
+diff --git a/RPN CalculatorTests/Core/Layout/Edges/KeypadEdgeReachTests.swift b/RPN CalculatorTests/Core/Layout/Edges/KeypadEdgeReachTests.swift
+new file mode 100644
+index 0000000..c8b9c9f
+--- /dev/null
++++ b/RPN CalculatorTests/Core/Layout/Edges/KeypadEdgeReachTests.swift	
+@@ -0,0 +1,59 @@
++//
++//  KeypadEdgeReachTests.swift
++//  RPN CalculatorTests
++//
++//  Created by Benjamin Pisano on 08/11/2026.
++//
++
++import SwiftUI
++import Testing
++@testable import RPN_Calculator
++
++@Suite
++struct KeypadEdgeReachTests {
++    private let keypadSpan: ClosedRange<CGFloat> = 200...440
++    private let leadingCamera: ScreenOcclusion = .mock(side: .leading, verticalSpan: 384...466)
++    private let trailingCamera: ScreenOcclusion = .mock(side: .trailing, verticalSpan: 384...466)
++
++    @Test
++    func `keeps both sides within the safe area`() {
++        #expect(KeypadEdgeReach.safeArea.ignoredEdges(clearOf: [], alongside: keypadSpan) == [])
++    }
++
++    @Test
++    func `spreads to both sides whatever crosses the keypad`() {
++        #expect(KeypadEdgeReach.screenEdges.ignoredEdges(clearOf: [leadingCamera, trailingCamera], alongside: keypadSpan) == .horizontal)
++    }
++
++    @Test
++    func `spreads to both sides when no occlusion crosses the keypad`() {
++        let topCamera: ScreenOcclusion = .mock(side: .leading, verticalSpan: 0...82)
++        #expect(KeypadEdgeReach.unoccludedScreenEdges.ignoredEdges(clearOf: [], alongside: keypadSpan) == .horizontal)
++        #expect(KeypadEdgeReach.unoccludedScreenEdges.ignoredEdges(clearOf: [topCamera], alongside: keypadSpan) == .horizontal)
++    }
++
++    @Test
++    func `spreads only to the trailing side when an occlusion crosses the keypad on the leading side`() {
++        #expect(KeypadEdgeReach.unoccludedScreenEdges.ignoredEdges(clearOf: [leadingCamera], alongside: keypadSpan) == .trailing)
++    }
++
++    @Test
++    func `spreads only to the leading side when an occlusion crosses the keypad on the trailing side`() {
++        #expect(KeypadEdgeReach.unoccludedScreenEdges.ignoredEdges(clearOf: [trailingCamera], alongside: keypadSpan) == .leading)
++    }
++
++    @Test
++    func `keeps both sides within the safe area when occlusions cross the keypad on both sides`() {
++        #expect(KeypadEdgeReach.unoccludedScreenEdges.ignoredEdges(clearOf: [leadingCamera, trailingCamera], alongside: keypadSpan) == [])
++    }
++
++    @Test
++    func `spreads to both sides before the keypad is laid out`() {
++        #expect(KeypadEdgeReach.unoccludedScreenEdges.ignoredEdges(clearOf: [leadingCamera], alongside: nil) == .horizontal)
++    }
++
++    @Test
++    func `keeps both sides within the safe area until the occlusions are read`() {
++        #expect(KeypadEdgeReach.unoccludedScreenEdges.ignoredEdges(clearOf: nil, alongside: keypadSpan) == [])
++    }
++}
+diff --git a/RPN CalculatorTests/Core/Layout/Edges/Occlusions/ScreenOcclusionTests.swift b/RPN CalculatorTests/Core/Layout/Edges/Occlusions/ScreenOcclusionTests.swift
+new file mode 100644
+index 0000000..ece641b
+--- /dev/null
++++ b/RPN CalculatorTests/Core/Layout/Edges/Occlusions/ScreenOcclusionTests.swift	
+@@ -0,0 +1,41 @@
++//
++//  ScreenOcclusionTests.swift
++//  RPN CalculatorTests
++//
++//  Created by Benjamin Pisano on 08/11/2026.
++//
++
++import SwiftUI
++import Testing
++@testable import RPN_Calculator
++
++@Suite
++struct ScreenOcclusionTests {
++    @Test
++    func `sits on the leading side when on the leading half of the screen`() {
++        let occlusion: ScreenOcclusion = .init(frame: .init(x: 0, y: 0, width: 84, height: 82), onScreenOfWidth: 678)
++        #expect(occlusion.side == .leading)
++        #expect(occlusion.edge == .leading)
++        #expect(occlusion.verticalSpan == 0...82)
++    }
++
++    @Test
++    func `sits on the trailing side when on the trailing half of the screen`() {
++        let occlusion: ScreenOcclusion = .init(frame: .init(x: 594, y: 384, width: 84, height: 82), onScreenOfWidth: 678)
++        #expect(occlusion.side == .trailing)
++        #expect(occlusion.edge == .trailing)
++        #expect(occlusion.verticalSpan == 384...466)
++    }
++
++    @Test
++    func `crosses a height it overlaps`() {
++        #expect(ScreenOcclusion.mock(verticalSpan: 384...466).crosses(200...440))
++        #expect(ScreenOcclusion.mock(verticalSpan: 0...402).crosses(200...440))
++    }
++
++    @Test
++    func `does not cross a height it only touches or stays apart from`() {
++        #expect(!ScreenOcclusion.mock(verticalSpan: 0...82).crosses(200...440))
++        #expect(!ScreenOcclusion.mock(verticalSpan: 0...200).crosses(200...440))
++    }
++}
+diff --git a/RPN CalculatorTests/Core/Layout/Rules/ChosenModeRuleTests.swift b/RPN CalculatorTests/Core/Layout/Rules/ChosenModeRuleTests.swift
+index 864032a..6e529e4 100644
+--- a/RPN CalculatorTests/Core/Layout/Rules/ChosenModeRuleTests.swift	
++++ b/RPN CalculatorTests/Core/Layout/Rules/ChosenModeRuleTests.swift	
+@@ -1,24 +1,30 @@
+ //
+ //  ChosenModeRuleTests.swift
+ //  RPN CalculatorTests
+ //
+ //  Created by Benjamin Pisano on 19/10/2026.
+ //
+ 
+ import SwiftUI
+ import Testing
+ @testable import RPN_Calculator
+ 
+ @Suite
+ struct ChosenModeRuleTests {
+     @Test
+     func `ignores the size classes`() {
+         #expect(ChosenModeRule(.compact).mode(for: .mock(horizontalSizeClass: .regular, verticalSizeClass: .compact)) == .compact)
+         #expect(ChosenModeRule(.wide).mode(for: .mock(horizontalSizeClass: nil, verticalSizeClass: nil)) == .wide)
+     }
+ 
++    @Test
++    func `keeps the keypad within the safe area`() {
++        #expect(ChosenModeRule(.wide).keypadEdgeReach(in: .mock(horizontalSizeClass: nil, verticalSizeClass: nil)) == .safeArea)
++        #expect(ChosenModeRule(.wide).keypadEdgeReach(in: .mock(verticalSizeClass: .compact)) == .safeArea)
++    }
++
+     @Test
+     func `sizes the keys for a pointer`() {
+         #expect(ChosenModeRule(.compact).keySizing == .pointer)
+     }
+ }
+diff --git a/RPN CalculatorTests/Core/Layout/Rules/HingeRuleTests.swift b/RPN CalculatorTests/Core/Layout/Rules/HingeRuleTests.swift
+new file mode 100644
+index 0000000..188b014
+--- /dev/null
++++ b/RPN CalculatorTests/Core/Layout/Rules/HingeRuleTests.swift	
+@@ -0,0 +1,76 @@
++//
++//  HingeRuleTests.swift
++//  RPN CalculatorTests
++//
++//  Created by Benjamin Pisano on 08/11/2026.
++//
++
++import SwiftUI
++import Testing
++@testable import RPN_Calculator
++
++@Suite
++struct HingeRuleTests {
++    private let rule: HingeRule = .init()
++
++    @Test
++    func `follows the size classes without hinge`() {
++        #expect(rule.mode(for: .mock()) == .compact)
++        #expect(rule.mode(for: .mock(verticalSizeClass: .compact, containerAxis: .horizontal)) == .wide)
++        #expect(rule.mode(for: .mock(horizontalSizeClass: .regular, verticalSizeClass: .regular)) == .wide)
++    }
++
++    @Test
++    func `follows the size classes when closed`() {
++        #expect(rule.mode(for: .mock(hingeStatus: .closed)) == .compact)
++        #expect(rule.mode(for: .mock(verticalSizeClass: .compact, containerAxis: .horizontal, hingeStatus: .closed)) == .wide)
++    }
++
++    @Test
++    func `is wide when opened flat in landscape, whatever the size classes`() {
++        #expect(rule.mode(for: .mock(horizontalSizeClass: .compact, verticalSizeClass: .regular, containerAxis: .horizontal, hingeStatus: .fullyOpen)) == .wide)
++    }
++
++    @Test
++    func `follows the size classes in the postures it leaves alone`() {
++        #expect(rule.mode(for: .mock(hingeStatus: .fullyOpen)) == .compact)
++        #expect(rule.mode(for: .mock(horizontalSizeClass: .regular, hingeStatus: .fullyOpen)) == .wide)
++        #expect(rule.mode(for: .mock(containerAxis: .horizontal, hingeStatus: .partiallyOpen, divisionAxis: .horizontal)) == .compact)
++    }
++
++    @Test
++    func `does not need a division to decide`() {
++        #expect(rule.mode(for: .mock(containerAxis: .horizontal, hingeStatus: .fullyOpen, divisionAxis: nil)) == .wide)
++        #expect(rule.mode(for: .mock(hingeStatus: .partiallyOpen, divisionAxis: nil)) == .compact)
++    }
++
++    @Test
++    func `delegates to its fallback`() {
++        let rule: HingeRule = .init(fallback: ChosenModeRule(.wide))
++        #expect(rule.mode(for: .mock(hingeStatus: .closed)) == .wide)
++        #expect(rule.keySizing == .pointer)
++    }
++
++    @Test
++    func `spreads the keypad to both sides of the screen when regular in height`() {
++        #expect(rule.keypadEdgeReach(in: .mock(verticalSizeClass: .regular)) == .screenEdges)
++        #expect(rule.keypadEdgeReach(in: .mock(horizontalSizeClass: .regular, containerAxis: .horizontal, hingeStatus: .fullyOpen)) == .screenEdges)
++    }
++
++    @Test
++    func `spreads the keypad to the sides no occlusion crosses when compact in height, hinge or not`() {
++        #expect(rule.keypadEdgeReach(in: .mock(verticalSizeClass: .compact, containerAxis: .horizontal)) == .unoccludedScreenEdges)
++        #expect(rule.keypadEdgeReach(in: .mock(verticalSizeClass: .compact, containerAxis: .horizontal, hingeStatus: .closed)) == .unoccludedScreenEdges)
++    }
++
++    @Test
++    func `asks its fallback where to spread the keypad`() {
++        let rule: HingeRule = .init(fallback: ChosenModeRule(.wide))
++        #expect(rule.keypadEdgeReach(in: .mock(verticalSizeClass: .regular, hingeStatus: .closed)) == .safeArea)
++    }
++
++    @Test
++    func `sizes the keys for a finger`() {
++        #expect(rule.keySizing == .touch)
++    }
++}
+diff --git a/RPN CalculatorTests/Core/Layout/Rules/SizeClassRuleTests.swift b/RPN CalculatorTests/Core/Layout/Rules/SizeClassRuleTests.swift
+index b36233a..af0743e 100644
+--- a/RPN CalculatorTests/Core/Layout/Rules/SizeClassRuleTests.swift	
++++ b/RPN CalculatorTests/Core/Layout/Rules/SizeClassRuleTests.swift	
+@@ -1,56 +1,72 @@
+ //
+ //  SizeClassRuleTests.swift
+ //  RPN CalculatorTests
+ //
+ //  Created by Benjamin Pisano on 12/10/2026.
+ //
+ 
+ import SwiftUI
+ import Testing
+ @testable import RPN_Calculator
+ 
+ @Suite
+ struct SizeClassRuleTests {
+     private let rule: SizeClassRule = .init()
+ 
+     @Test
+     func `is compact on an iPhone in portrait`() {
+         #expect(rule.mode(for: .mock(horizontalSizeClass: .compact, verticalSizeClass: .regular)) == .compact)
+     }
+ 
+     @Test
+     func `is wide on an iPhone whose landscape stays compact in width`() {
+         #expect(rule.mode(for: .mock(horizontalSizeClass: .compact, verticalSizeClass: .compact)) == .wide)
+     }
+ 
+     @Test
+     func `is wide on an iPhone whose landscape is regular in width`() {
+         #expect(rule.mode(for: .mock(horizontalSizeClass: .regular, verticalSizeClass: .compact)) == .wide)
+     }
+ 
+     @Test
+     func `is wide on an iPad in full screen`() {
+         #expect(rule.mode(for: .mock(horizontalSizeClass: .regular, verticalSizeClass: .regular)) == .wide)
+     }
+ 
+     @Test
+     func `stays compact on an iPad in Slide Over`() {
+         #expect(rule.mode(for: .mock(horizontalSizeClass: .compact, verticalSizeClass: .regular)) == .compact)
+     }
+ 
+     @Test
+     func `is compact without any size class`() {
+         #expect(rule.mode(for: .mock(horizontalSizeClass: nil, verticalSizeClass: nil)) == .compact)
+     }
+ 
+     @Test
+     func `needs a single size class to be wide`() {
+         #expect(rule.mode(for: .mock(horizontalSizeClass: .regular, verticalSizeClass: nil)) == .wide)
+         #expect(rule.mode(for: .mock(horizontalSizeClass: nil, verticalSizeClass: .compact)) == .wide)
+     }
+ 
++    @Test
++    func `spreads the keypad to the sides no occlusion crosses when compact in height`() {
++        #expect(rule.keypadEdgeReach(in: .mock(verticalSizeClass: .compact, containerAxis: .horizontal)) == .unoccludedScreenEdges)
++    }
++
++    @Test
++    func `keeps the keypad within the safe area without any size class`() {
++        #expect(rule.keypadEdgeReach(in: .mock(horizontalSizeClass: nil, verticalSizeClass: nil)) == .safeArea)
++    }
++
++    @Test
++    func `spreads the keypad to both sides of the screen when regular in height`() {
++        #expect(rule.keypadEdgeReach(in: .mock(verticalSizeClass: .regular)) == .screenEdges)
++        #expect(rule.keypadEdgeReach(in: .mock(horizontalSizeClass: .regular, verticalSizeClass: .regular)) == .screenEdges)
++    }
++
+     @Test
+     func `sizes the keys for a finger`() {
+         #expect(rule.keySizing == .touch)
+     }
+ }
+diff --git a/RPN CalculatorTests/Utils/Extensions/AxisExtensionTests.swift b/RPN CalculatorTests/Utils/Extensions/AxisExtensionTests.swift
+new file mode 100644
+index 0000000..50c730e
+--- /dev/null
++++ b/RPN CalculatorTests/Utils/Extensions/AxisExtensionTests.swift	
+@@ -0,0 +1,28 @@
++//
++//  AxisExtensionTests.swift
++//  RPN CalculatorTests
++//
++//  Created by Benjamin Pisano on 08/11/2026.
++//
++
++import SwiftUI
++import Testing
++@testable import RPN_Calculator
++
++@Suite
++struct AxisExtensionTests {
++    @Test
++    func `is horizontal for a rectangle wider than tall`() {
++        #expect(Axis(longSideOf: CGSize(width: 669, height: 40)) == .horizontal)
++    }
++
++    @Test
++    func `is vertical for a rectangle taller than wide`() {
++        #expect(Axis(longSideOf: CGSize(width: 40, height: 669)) == .vertical)
++    }
++
++    @Test
++    func `is vertical for a square`() {
++        #expect(Axis(longSideOf: CGSize(width: 100, height: 100)) == .vertical)
++    }
++}

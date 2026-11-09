@@ -2,34 +2,48 @@
 
 Technical detail of each `Changes` bullet, for a reviewer new to the task. **voice**, **pr** apply.
 
+## Signals
+
+Before writing: `${CLAUDE_PLUGIN_ROOT}/scripts/pr-check signals <merge-base>` → signals per code file. Sprint PR → sprint base.
+
+- **Coverage**: each code file → one `Changes` line. In none → add its line. Tests follow their code.
+- **Split**: new types of a line not linked → one line per group.
+- Line signals = union of its files. Judgment adds blocks, never drops one.
+
+| signal | block |
+|---|---|
+| always | **Before** / **Now**, Code fold |
+| `type` | **Overview**, others named in **Now** |
+| `signature` | **Callers** |
+| ≥ 2 linked new types | `flowchart TD` |
+| `states` | transitions → `stateDiagram-v2`, else cases in **Now** |
+| ≥ 5 files, or ≥ 2 steps | parts |
+| `async` | part `When … at once` |
+| `failure` | part `If … fails` |
+| `ui` on a component | **UI bullet** |
+
+Cap: 2 Overview types, 2 diagrams, 4 parts. Over → split the line, never cut.
+
 ## Place
 
 - The line folds: `<dl><dd><details>`, `<summary>` = its text (code → `<code>`), content in `<dl><dd><br>`. Never its own section.
-- Trivial bullet (copy, style, rename, translations) → plain `- ` line.
-- Mechanism without a bullet: derived from one → in its fold. Independent → add its `Changes` line.
-- Custom template → the section playing `Changes`.
-- Sprint PR → sprint diff. Known bug, no issue → `## Notes`.
+- No signal, trivial (copy, rename, translations) → plain `- ` line.
+- Custom template → the section playing `Changes`. Known bug, no issue → `## Notes`.
 
-## Level
+## PR overview
 
-Per bullet, never shown. Doubt → higher.
-
-| level | when | fold |
-|---|---|---|
-| easy | reads in one function, no new type, no state | one sentence + code unfolded, or none |
-| medium | one new concept (type, rule, flow), 1–2 components | Before / Now, Overview if new type, Callers, Code |
-| hard | ≥ 3 components, lifecycle or concurrency, failure handling, or several sub-mechanisms | all, ≤ 4 parts, ≤ 2 diagrams |
+≥ 3 new types over ≥ 2 lines → `<details>` under the intro sentence, before `Changes`, `<summary>` = `Overview` translated. `flowchart TD`, each new type a node, caption (**Diagram**). No code.
 
 ## Fold
 
 Labels in `pr_language`, this order:
 
 1. **Before** / **Now**. Nothing before → **Problem**. Test → **Situation**, **Risk**, **Expected**.
-2. **Overview** — the type carrying the mechanism, visible. Real code: stored properties, signatures called from outside, bodies `{ … }`, role comment per member. ≤ 20 lines, ≤ 2 types.
-3. **Callers** — signature, injection or lifecycle changed for callers. Why in one sentence, others named, a ` ```diff ` on one caller, ≤ 12 lines. Visible.
+2. **Overview**: the type carrying the mechanism, visible. Real code: stored properties, signatures called from outside, bodies `{ … }`, role comment per member. ≤ 20 lines.
+3. **Callers**: why in one sentence, others named, a ` ```diff ` on one caller, ≤ 12 lines. Visible.
 4. Diagram + caption (**Diagram**).
-5. Hard → parts, execution order: bold title, ≤ 1 context sentence, bullets, diagram if useful, Code fold. Else → Code fold.
-6. **Read**: entry function → next → next, each linked to its line: in the diff → `pull/<n>/files#diff-<sha256(path)>R<line>`, else `blob/<head sha>/<path>#L<line>`. Hard → end of fold, else in Code.
+5. Parts, execution order: bold title, ≤ 1 context sentence, bullets, diagram if useful, Code fold. No parts → Code fold.
+6. **Read**: entry function → next → next, each linked to its line: in the diff → `pull/<n>/files#diff-<sha256(path)>R<line>`, else `blob/<head sha>/<path>#L<line>`. Parts → end of fold, else in Code.
 
 ≤ 2 fold levels.
 
@@ -38,7 +52,11 @@ Labels in `pr_language`, this order:
 - Component alone, from **wa-screenshot** `COMPONENTS`: `| Before | After |`. New → After alone. Screens stay in `## Screenshots`.
 - One image per variant, in a row.
 - **Usage**: the call a dev writes, real parameters, one commented call per variant, ≤ 10 lines.
-- Logic behind → per level. Easy (color, spacing) → images only.
+- Then the blocks of its other signals.
+
+## Check
+
+Before `gh pr create` / `gh pr edit`: `pr-check check <body.md> <merge-base>`. ❌ → fix, rerun. Publish green only.
 
 ## Code
 
@@ -52,7 +70,7 @@ Labels in `pr_language`, this order:
 
 ## Diagram
 
-- Mermaid, when it beats code. `flowchart TD` (never `LR`) → steps, branches. `sequenceDiagram` → exchanges. `stateDiagram-v2` → ≥ 3 code states.
+- Mermaid, when it beats code. `flowchart TD` (never `LR`) → steps, branches. `sequenceDiagram` → exchanges. `stateDiagram-v2` → states with transitions.
 - ≤ 8 nodes, arrow labels ≤ 4 words, detail → `Note`. Node = name alone. Categories → named `subgraph`.
 - **Caption** right under, one per name: `- <sub>`Pass` : une synchro d'un Compte.</sub>`. Glossary and Overview names skipped.
 
@@ -73,33 +91,4 @@ From the diff vs `merge-base` + `## Context / Decisions`. Link unsure → read t
 
 ## Example
 
-````md
-<dl><dd><details>
-<summary>Ajout d'un pool de sessions IMAP par Compte</summary>
-<dl><dd><br>
-
-**Avant** : chaque opération ouvrait sa propre session.
-
-**Maintenant** : `NIOIMAPClient` garde ses sessions dans un `IMAPSessionPool`.
-- Le pool garde au plus 3 sessions connectées par Compte.
-- Chaque opération fait un borrow de session, puis un `giveBack`.
-
-**Quand les 3 sessions sont occupées**
-
-- L'opération attend dans `waiters`.
-- À chaque `giveBack`, le pool sert le premier waiter du Compte.
-
-<details>
-<summary>🧩 <code>IMAPSessionPool.borrowSession</code></summary>
-
-```swift
-actor IMAPSessionPool { // garde les sessions connectées de chaque Compte
-    private var waiters: [Waiter] // opérations en attente d'une session
-    …
-```
-
-</details>
-
-</dd></dl>
-</details></dd></dl>
-````
+Full body, overview and three folds: `${CLAUDE_PLUGIN_ROOT}/scripts/pr-check-fixtures/swift/body-good.md`.
