@@ -49,5 +49,53 @@ has "$out" "failure" "kotlin signals"
 echo "$out" | grep -q "RetryPolicyTest" && err "kotlin signals: test file counted"
 [ "$fail" = 0 ] && echo "✅ kotlin signals"
 
+# Generated: SwiftGen header skipped, "Generated" comment past the header kept.
+out=$(scripts/pr-check signals --diff $F/swift/diff-generated.patch)
+has "$out" "generated (skipped): Modules/Assets/Strings.swift" "generated signals"
+has "$out" "new types: 1" "generated signals"
+has "$out" "ThumbnailCache (class)" "generated signals"
+echo "$out" | grep -q "states" && err "generated signals: SwiftGen enum counted"
+scripts/pr-check check $F/swift/body-generated.md --diff $F/swift/diff-generated.patch >/dev/null \
+  || err "generated: body with a plain translations line red"
+tmp=$(mktemp); sed '/Generated using SwiftGen/d' $F/swift/diff-generated.patch > "$tmp"
+out=$(scripts/pr-check signals --diff "$tmp"); rm -f "$tmp"
+has "$out" "states: Sync (3)" "generated without header"
+[ "$fail" = 0 ] && echo "✅ generated files skipped"
+
+# Base: temp repo with a local bare origin, no network. Each commit adds one type.
+t=$(mktemp -d); trap 'rm -rf "$t"' EXIT
+pc="$PWD/scripts/pr-check"
+g() { git -c user.name=t -c user.email=t@t -c init.defaultBranch=develop "$@" >/dev/null 2>&1; }
+add() { printf 'struct %s {\n    let id: Int\n}\n' "$2" > "$1/$2.swift"; g -C "$1" add -A; g -C "$1" commit -m "$2"; }
+base_case() { # name, expected note, type of the branch, type of the base (must not show)
+  out=$(cd "$t/work" && "$pc" signals develop 2>&1)
+  has "$out" "$2" "base $1"; has "$out" "$3 (struct)" "base $1"
+  echo "$out" | grep -q "$4 (struct)" && err "base $1: $4 from the base counted"
+}
+g init --bare "$t/origin.git"
+g clone "$t/origin.git" "$t/work"; add "$t/work" Root; g -C "$t/work" push -u origin develop
+g clone "$t/origin.git" "$t/peer"
+
+add "$t/peer" Remote1; g -C "$t/peer" push                          # local develop behind 1
+g -C "$t/work" fetch; g -C "$t/work" checkout -b behind origin/develop; add "$t/work" Behind
+base_case behind "base: origin/develop (local behind 1)" Behind Remote1
+
+g -C "$t/work" checkout develop; g -C "$t/work" merge --ff-only origin/develop
+add "$t/work" LocalOnly                                              # local develop ahead 1
+g -C "$t/work" checkout -b ahead; add "$t/work" Ahead
+base_case ahead "base: develop (local ahead 1)" Ahead LocalOnly
+
+g -C "$t/peer" pull; add "$t/peer" Remote2; g -C "$t/peer" push    # ahead 1, behind 1
+g -C "$t/work" fetch; g -C "$t/work" checkout -b diverged origin/develop; add "$t/work" Diverged
+base_case diverged "local diverged (ahead 1, behind 1)" Diverged Remote2
+
+echo 'Gen.swift linguist-generated' > "$t/work/.gitattributes"; add "$t/work" Gen
+out=$(cd "$t/work" && "$pc" signals develop 2>&1)
+has "$out" "generated (skipped): Gen.swift" "linguist-generated"
+out=$(cd "$t/work" && "$pc" signals "$(git -C "$t/work" rev-parse origin/develop)" 2>&1)
+has "$out" "(as given, not refreshed)" "base sha"
+has "$out" "Diverged (struct)" "base sha"
+[ "$fail" = 0 ] && echo "✅ base resolved"
+
 [ "$fail" = 0 ] && echo "✅ pr-check proven"
 exit "$fail"

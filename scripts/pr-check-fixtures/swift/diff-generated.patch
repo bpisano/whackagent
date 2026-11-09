@@ -1,0 +1,55 @@
+diff --git a/Modules/Assets/Strings.swift b/Modules/Assets/Strings.swift
+index 1111111..2222222 100644
+--- a/Modules/Assets/Strings.swift
++++ b/Modules/Assets/Strings.swift
+@@ -1,20 +1,32 @@
+ // swiftlint:disable all
+ // Generated using SwiftGen — https://github.com/SwiftGen/SwiftGen
+
+ import Foundation
+
+ public enum L10n {
+   public enum Home {
+     public static let title = L10n.tr("Localizable", "home.title")
+   }
++  public enum Sync {
++    case idle
++    case running
++    case failed
++  }
++  public enum Workout {
++    public static let start = L10n.tr("Localizable", "workout.start")
++    public static let stop = L10n.tr("Localizable", "workout.stop")
++  }
++  public enum Profile {
++    public static let edit = L10n.tr("Localizable", "profile.edit")
++  }
+ }
+
+ extension L10n {
+   private static func tr(_ table: String, _ key: String) -> String {
+     let format = Bundle.main.localizedString(forKey: key, value: nil, table: table)
+     return String(format: format, locale: Locale.current)
+   }
+ }
+diff --git a/App/Thumbnail/ThumbnailCache.swift b/App/Thumbnail/ThumbnailCache.swift
+new file mode 100644
+index 0000000..3333333
+--- /dev/null
++++ b/App/Thumbnail/ThumbnailCache.swift
+@@ -0,0 +1,14 @@
++import UIKit
++
++/// Keeps the thumbnails of the feed in memory.
++final class ThumbnailCache {
++    private var images: [URL: UIImage] = [:]
++
++    // Generated thumbnails are cached on disk too: see ThumbnailStore.
++    func image(for url: URL) -> UIImage? {
++        images[url]
++    }
++
++    func store(_ image: UIImage, for url: URL) {
++        images[url] = image
++    }
++}

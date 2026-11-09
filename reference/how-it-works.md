@@ -4,7 +4,7 @@ Technical detail of each `Changes` bullet, for a reviewer new to the task. **voi
 
 ## Signals
 
-Before writing: `${CLAUDE_PLUGIN_ROOT}/scripts/pr-check signals <merge-base>` → signals per code file. Sprint PR → sprint base.
+Before writing: `${CLAUDE_PLUGIN_ROOT}/scripts/pr-check signals <base-branch>` → signals per code file. Sprint PR → sprint branch. `<base-branch>` = a branch name (`develop`, `sprint/3`), never a sha: the script fetches it and diffs the newest of local / `origin`, `base:` says which. Generated files (header comment, `linguist-generated`) → `generated (skipped)`, no signal.
 
 - **Coverage**: each code file → one `Changes` line. In none → add its line. Tests follow their code.
 - **Split**: new types of a line not linked → one line per group.
@@ -28,6 +28,7 @@ Cap: 2 Overview types, 2 diagrams, 4 parts. Over → split the line, never cut.
 
 - The line folds: `<dl><dd><details>`, `<summary>` = its text (code → `<code>`), content in `<dl><dd><br>`. Never its own section.
 - No signal, trivial (copy, rename, translations) → plain `- ` line.
+- `generated (skipped)` → at most one plain `- ` line naming its source (`Update translations from Loco`), never a fold.
 - Custom template → the section playing `Changes`. Known bug, no issue → `## Notes`.
 
 ## PR overview
@@ -56,7 +57,7 @@ Labels in `pr_language`, this order:
 
 ## Check
 
-Before `gh pr create` / `gh pr edit`: `pr-check check <body.md> <merge-base>`. ❌ → fix, rerun. Publish green only.
+Before `gh pr create` / `gh pr edit`: `pr-check check <body.md> <base-branch>`. ❌ → fix, rerun. Publish green only.
 
 ## Code
 
