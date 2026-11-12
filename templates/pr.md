@@ -13,7 +13,7 @@ Headings translated to `pr_language`. HTML comments never copied into the PR.
 <!-- UI changed only, filled by whackagent (pr_screenshots). New screen → images in a row; changed screen → Before | After table. Else drop the section. -->
 
 ## To test
-<!-- one manual check per line -->
+<!-- first line: path from the first screen after launch, plain text (`Inbox → a mail`). Then one manual check per line. One path + checks per area. -->
 - [ ] …
 
 ## Notes

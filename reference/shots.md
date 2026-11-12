@@ -1,6 +1,15 @@
 # Shots
 
-PR screenshots replayed by XCUITest on iOS: `wa-screenshot` writes the path once, `xcodebuild` replays it on both sides. Config `pr_screenshots.replay`. Template = `${CLAUDE_PLUGIN_ROOT}/templates/shots/`.
+PR screenshots: upload, and replay by XCUITest on iOS (`wa-screenshot` writes the path once, `xcodebuild` replays it on both sides). Config `pr_screenshots.replay`. Template = `${CLAUDE_PLUGIN_ROOT}/templates/shots/`.
+
+## Upload
+
+Two passes:
+
+1. Body with `![<Screen> <state>](./<file>.png)` in place → `gh pr edit <pr> --body-file … --attach <file>…` (`gh pr create` at `/wa-close`). Paths rewritten to `user-attachments` URLs.
+2. Each `![alt](url)` → `<img src="url" width="<pr_screenshots.width>" alt="alt">` → `gh pr edit --body-file`.
+
+- Body rewrite → keep uploaded URLs, attach new shots only.
 
 ## Target
 

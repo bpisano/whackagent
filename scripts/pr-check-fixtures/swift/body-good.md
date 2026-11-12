@@ -170,6 +170,8 @@ enum KeypadEdgeReach { // jusqu'où le clavier s'étend sur ses côtés
 | <img src="https://github.com/user-attachments/assets/2e381fc6-7003-4291-973a-3b97c4137c77" width="250" alt="Calculator screen iPhone portrait, avant"> | <img src="https://github.com/user-attachments/assets/3dc7d4a3-3d63-4706-b5e9-596f9b9d05b4" width="250" alt="Calculator screen iPhone portrait, après"> |
 
 ## À tester
+Lancement → écran Calculatrice
+
 - [ ] Duo fermé, portrait : pas de saut au lancement, pager pleine largeur, Cos/Cosh invisibles
 - [ ] Duo fermé, paysage caméra en haut à gauche : clavier à 14 pt du bord gauche
 - [ ] Duo fermé, paysage caméra en bas à droite : comme avant

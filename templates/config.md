@@ -113,6 +113,9 @@ verify:                        # runtime check — implementer drive app it just
 
 commit:
   auto_commit_after_validation: false   # may Claude commit once YOU validate feature?
+  steps: on                    # on — /wa-close rewrites the task history as build steps, one commit
+                               # per Changes line, each building alone (force push own branch) · off
+                               # — round commits kept. Not asked at setup.
                                # (name kept for old configs: it gate the commit /wa-close make)
                                # github backend: ignored — every round commit + push (board need it)
                                # no author here, ever: each commit reads git config user.name/email

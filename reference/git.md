@@ -8,7 +8,7 @@ Commits and branches, every skill.
   - Plain `git commit` / `git merge`. Never `--author`, `-c user.*`, `GIT_AUTHOR_*`, `GIT_COMMITTER_*`.
   - Never cached, never in `.whackagent/config.md`: the config is shared, the author is whoever runs the command.
   - Legacy `commit.author_*` in config → ignore; `/wa-update` deletes it.
-- **Message** = `<prefix>: <task title, verb dropped>` (`fix: crash on map zoom`). Prefix from type (**tasks → Types**); no type → `feat:`. Round commits keep it.
+- **Message** = `<prefix>: <task title, verb dropped>` (`fix: crash on map zoom`). Prefix from type (**tasks → Types**); no type → `feat:`. Round commits keep it. Close with `commit.steps: on` → rewritten as build steps (**steps**).
 - **Never Claude.** No `Co-Authored-By`, no "Generated with", no 🤖 — commits and PRs (**pr → Body**).
 - Email unset → stop, ask `! git config --global user.email you@example.com`. Never invent one.
 

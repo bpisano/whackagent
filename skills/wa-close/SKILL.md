@@ -7,7 +7,7 @@ description: Finishes a task: reviews it if needed, updates the wiki, commits, l
 
 Lands a tested task: review if missing, wiki, commit, branch.
 
-Read: voice, pr, how-it-works, components, tasks, git, store
+Read: voice, pr, how-it-works, steps, shots, components, tasks, git, store
 
 ## Steps
 
@@ -25,14 +25,14 @@ Read: voice, pr, how-it-works, components, tasks, git, store
 2. **Review** `to-test` → *Review*.
 3. **Check nothing moved** — `git diff` against the state `## Review` recorded. Changed → say what, *Review* with scope = delta.
 4. **Wiki** → *Wiki*, before commit.
-5. **Shots** — per **pr → Screenshots**, whatever path led here (validated or not), whatever `verify.mode`. No shot for a touched screen at `HEAD` → one `wa-screenshot`, uploaded with the PR edit or create. Never blocks.
+5. **Shots** — per **pr → Screenshots**, whatever path or `verify.mode`. No shot for a touched screen at `HEAD` → one `wa-screenshot`, uploaded with the PR edit or create. Never blocks.
 6. **Go on, no yes.** Code changed since the user's test → **Landing** `⚠️` line, in user terms.
    - Only `files` + `close.strategy: merge` (no PR gate) → **Warning** + `ok?`, wait.
      - No → stop. Task stays `to-close`, review recorded, wiki pages left in tree, say so.
 7. **Commit** — `files`: when `commit.auto_commit_after_validation`; `board`: always. Author → **git → Commits**.
    - Clean tree → skip.
    - Nothing committed + dirty tree → stop before any branch move.
-8. **Land** — `board` → *Board landing*. `files` → *Land*.
+8. **Land** — `files` → **steps → Split** (`commit.steps: on`), then *Land*. `board` → *Board landing*.
 9. **Clean up** — `files` only → *Cleanup*.
 10. **Set `done`** — `files` only, per **store** (backlog line keeps `· <Sprint>`). `board`: never, **store → Reconcile** does.
 11. **Sprint complete?** Last task of a sprint closed (`board`: merged) → *Sprint landing*.
@@ -72,13 +72,14 @@ Branch + draft PR exist since `/wa-code`. `close.strategy`, `close.delete_branch
    - `git fetch` + `gh pr view --json mergeable,baseRefName`.
    - Behind or `CONFLICTING` → rebase task range onto `origin/<base>`, rebuild.
    - Conflict → stop, leave rebase in progress, name files, task stays `to-close`.
-3. **Push** — `--force-with-lease` only after a rebase, own branch only. Push releases the lock.
+3. **Split** — `commit.steps: on` → **steps → Split**.
+4. **Push** — `--force-with-lease` only after a rebase or split, own branch only. Push releases the lock.
    - Autopilot worktree → remove after push. Dirty → stop, ask.
-4. **PR ready** — refresh title + body (**pr**), `gh pr edit`, `gh pr ready`.
+5. **PR ready** — refresh title + body (**pr**), `gh pr edit`, `gh pr ready`.
    - No PR (pre-0.13) → `gh pr create --base <base> --assignee @me` non-draft + `link-pr <n> <pr>`.
-5. **Stop.** User merges on GitHub; **store → Reconcile** does the rest.
+6. **Stop.** User merges on GitHub; **store → Reconcile** does the rest.
 
-Failure before the push → lock still held: say so. User leaves it → `release <n> coding --reason "<what failed>"`.
+Failure before push → lock held: say so. User leaves it → `release <n> coding --reason "<what failed>"`.
 
 ## Land
 
@@ -115,7 +116,7 @@ Then:
 1. Show its 🏁 line (**components → Task list**).
 2. **Question**: apply `close.strategy` to the sprint branch onto `close.target`; alt = keep the branch, user ships it.
    - `board` → always a PR onto `branch.base` (**store → Other**).
-   - Sprint PR title + body → **pr** (sums up the sprint).
+   - Sprint PR title + body → **pr**, `Changes` → **steps → Sprint PR**.
 3. **Only on yes.** No → branch stays, nothing lost.
 4. Sprint branch merged or PR'd → `close.delete_branch` applies as for a task branch.
 5. Delete the sprint test branch, whatever the answer. Checked out → switch to sprint branch first.
@@ -126,10 +127,10 @@ Then:
 - Never close from the sprint test branch, never merge from it.
 - `board`: never `gh pr merge`, never set `done`, never close the issue, never delete the branch.
 - Never guess a conflict resolution, never `--abort` it behind the user's back.
-- Never force-push except own task branch after a rebase. Never rewrite a shared branch.
+- Never force-push except own task branch after a rebase or split. Never rewrite a shared branch.
 - Never touch another task's or sprint's branch.
 - Never delete a branch whose work isn't elsewhere, or one with an open PR.
-- Never delete a remote branch or `push --delete` unless asked in that message.
+- Never delete a remote branch or `push --delete` unless asked.
 
 ## Ask
 

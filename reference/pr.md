@@ -16,13 +16,13 @@ Every PR whackagent opens or edits. Read by teammates who never saw the task. **
 
 - Template = `.github/pull_request_template.md` if the repo has one, else `{conventions}/pr.md`. Fill it as-is: sections, order (headings translated), `Closes` last (`plane`: **store → Other**). ≤ 20 lines, folds aside.
 - **Rewritten whole** at every write: end state, never round history ("after feedback").
-- **Sprint PR** sums up the sprint: never one bullet per task.
+- **Sprint PR**: intro sums up the sprint, `Changes` → **steps → Sprint PR**.
 - No task slugs, sprint jargon, verifier rounds, test counts, process section, follow-up list.
 - Before `gh pr create` / `gh pr edit` → drop any `🤖`, `Generated with`, `Co-Authored-By` line, then **how-it-works → Check** green.
 
 ## Changes
 
-One change a line, glossary terms, sorted by type:
+One change a line, glossary terms. `commit.steps: on` → one line a step, build order (**steps → Changes**). Else by type:
 
 | type | en | fr |
 |---|---|---|
@@ -32,7 +32,7 @@ One change a line, glossary terms, sorted by type:
 | gone | `Remove …` | `Suppression de …` |
 | measured perf / UX | `Improve … : <measure>` | `Amélioration de … : <mesure>` |
 
-- Other language → same five, native words. Nothing fits → plain line, rare.
+- Other language → same five, native words. Nothing fits → plain line.
 - Words the user sees, not `debounce` / `backoff`. Why, not how: how → the bullet folds, **how-it-works**.
 - `Improve` only with a measure.
 
@@ -40,22 +40,23 @@ One change a line, glossary terms, sorted by type:
 
 `pr_screenshots.mode: auto` + `verify.platform` set + a PR in the flow (`board`, or `close.strategy: pr`). Else none, section dropped.
 
-- Independent of `verify.mode`: `autopilot` / `off` gate runtime checks, never shots.
-
 - **Capture** — task review clean → one `wa-screenshot`. Inputs: task file, diff, `merge-base`, `verify.platform`, `pr_screenshots.replay`, glossary **Screens** / **Parts**, out dir `{reports}/<key>/shots/`.
   - Cached with its sha, `ShotsTests.swift` too. Later delta touches a shot screen → re-shoot that screen only.
   - No screen touched → none.
 - **Section** `## Screenshots`, after `## Changes`, even if the template lacks it. Caption = glossary screen name.
   - New screen → images in a row.
   - Changed screen → `| Before | After |` table, one row a state. State absent before → `—`.
-- **Upload**, two passes:
-  1. Body with `![<Screen> <state>](./<file>.png)` in place → `gh pr edit <pr> --body-file … --attach <file>…` (`gh pr create` at `/wa-close`). Paths rewritten to `user-attachments` URLs.
-  2. Each `![alt](url)` → `<img src="url" width="<pr_screenshots.width>" alt="alt">` → `gh pr edit --body-file`.
-  - Body rewrite → keep uploaded URLs, attach new shots only.
+- **Upload** → **shots → Upload**.
 - **Components** — `COMPONENTS` shots: same upload, placed per **how-it-works → UI bullet**.
 - **Sprint PR** → reuse task PR URLs: per screen, first task's before, last task's after. No capture, no upload.
 - **Failure** never blocks (build, sim, `gh` < 2.102, `--attach` non-zero). Keep what uploaded, never half a pair. **Warning** + **components → Shots**.
 - No confirm before upload. Never a shot from the sprint test branch.
+
+## To test
+
+- Each group of checks starts with its path: plain line, no bullet, no emoji, first screen after launch → screen to test: `Onglet Entraînement → Créer une séance → Séries`.
+- Path read in the code (tab, push, sheet). Words on screen, glossary **Screens** first. Several ways in → shortest.
+- One group per area, app order. No screen → last group, no path.
 
 ## How it works
 
@@ -71,7 +72,7 @@ Term a dev new to the PR may not know, in a bullet fold → numbered, defined in
 - `## Vocabulary` (`Vocabulaire`) after `## Notes`, before `Closes`, even if the template lacks it. Under it `<details><summary>7 terms</summary>`, one numbered line each: `1. <a id="watchdog"></a>**watchdog** : …`.
 - Definition, ≤ 30 words:
   1. `<term> : <category> that <difference>`, no article: `**borrow** : appel qui sort une session du pool`. Never the term itself, no other unknown word.
-  2. One context, the most useful: where and whose (`IMAPSessionPool.borrowSession`, called by `withSession`), or why it exists.
+  2. One context: where and whose (`IMAPSessionPool.borrowSession`, called by `withSession`), or why it exists.
   - A code name always.
 
 ## Example
@@ -80,8 +81,6 @@ Term a dev new to the PR may not know, in a bullet fold → numbered, defined in
 Les mails des 30 derniers jours sont lisibles hors ligne.
 
 ## Changements
-- Ajout du téléchargement du contenu des mails de l'Inbox (≤ 30 jours) pendant la Sync
-
 <dl><dd><details>
 <summary>Modification de l'écran de mail : contenu local d'abord, sinon téléchargement</summary>
 <dl><dd><br>
@@ -92,7 +91,9 @@ Les mails des 30 derniers jours sont lisibles hors ligne.
 </details></dd></dl>
 
 ## À tester
-- [ ] Mode avion → un mail récent s'ouvre
+Inbox → un mail de la semaine
+
+- [ ] Mode avion → le mail s'ouvre
 
 Closes #53
 ````

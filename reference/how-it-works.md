@@ -4,11 +4,11 @@ Detail of each `Changes` bullet, for a reviewer new to the task. **voice**, **pr
 
 ## Signals
 
-Before writing: `${CLAUDE_PLUGIN_ROOT}/scripts/pr-check signals <base-branch>` → signals per code file. `<base-branch>` = branch name (`develop`, `sprint/3`; sprint PR → sprint branch), never a sha. Generated files → `generated (skipped)`, no signal.
+Before writing: `${CLAUDE_PLUGIN_ROOT}/scripts/pr-check signals <base-branch>` → signals per code file. `<base-branch>` = branch name (`develop`; sprint PR → sprint branch), never a sha. Generated → `generated (skipped)`, no signal. Close with `commit.steps: on` → **steps → Changes**.
 
 - **Coverage**: each code file → one `Changes` line. In none → add its line. Tests follow their code.
 - **Split**: new types of a line not linked → one line per group.
-- Line signals = union of its files. Judgment adds blocks, never drops one.
+- Line signals = union of its files. Judgment adds blocks, never drops.
 
 | signal | block |
 |---|---|
@@ -76,7 +76,7 @@ Before `gh pr create` / `gh pr edit`: `pr-check check <body.md> <base-branch>`. 
 
 ## Diagram
 
-- Steps or states, never who uses whom (**Overview**, **Read** show it). Linear → numbered list.
+- Steps or states, never who uses whom. Linear → numbered list.
 - `flowchart TD` (never `LR`) → steps with branches. `sequenceDiagram` → exchanges. `stateDiagram-v2` → states with transitions.
 - Node = a step (`Coupe la ligne au pli`) or a state, never a bare type name. Arrow = condition or real data, ≤ 4 words. ≤ 8 nodes. No caption.
 
@@ -95,4 +95,4 @@ From the diff vs `merge-base` + `## Context / Decisions`. Link unsure → read t
 
 ## Example
 
-Full body, overview, three folds: `${CLAUDE_PLUGIN_ROOT}/scripts/pr-check-fixtures/swift/body-good.md`.
+Full body: `${CLAUDE_PLUGIN_ROOT}/scripts/pr-check-fixtures/swift/body-good.md`.

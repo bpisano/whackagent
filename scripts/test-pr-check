@@ -27,6 +27,7 @@ echo "$out" | grep -q "Tests" && err "swift signals: test file counted"
 out=$(scripts/pr-check check $F/swift/body-bad.md --diff $F/swift/diff.patch) && err "swift bad body green"
 has "$out" "Changes: no fold" "swift bad body"
 has "$out" "HingeRule: new type named in no Changes fold" "swift bad body"
+has "$out" "To test: UI changed, no path line" "swift bad body"
 [ "$fail" = 0 ] && echo "✅ swift bad body fails"
 
 scripts/pr-check check $F/swift/body-good.md --diff $F/swift/diff.patch >/dev/null \
@@ -104,6 +105,35 @@ out=$(cd "$t/work" && "$pc" signals "$(git -C "$t/work" rev-parse origin/develop
 has "$out" "(as given, not refreshed)" "base sha"
 has "$out" "Diverged (struct)" "base sha"
 [ "$fail" = 0 ] && echo "✅ base resolved"
+
+# Steps: one Changes line per code commit, in order, folded when the commit has signals.
+g -C "$t/work" checkout -b steps develop
+mkdir -p "$t/work/Old"; printf 'struct Row {\n    let id: Int\n}\n' > "$t/work/Old/Row.swift"
+g -C "$t/work" add -A; g -C "$t/work" commit -m "chore: base row"; g -C "$t/work" push origin steps:develop --force
+g -C "$t/work" fetch
+mkdir -p "$t/work/New"; g -C "$t/work" mv Old/Row.swift New/Row.swift
+g -C "$t/work" commit -m "refactor: Déplacement de Row"
+printf 'struct Line {\n    let id: Int\n}\n' > "$t/work/New/Row.swift"; g -C "$t/work" mv New/Row.swift New/Line.swift
+g -C "$t/work" commit -am "refactor: Renommage de Row en Line"
+printf 'struct Row {\n    let id: Int\n}\n' > "$t/work/New/Line.swift"; g -C "$t/work" mv New/Line.swift New/Row.swift
+g -C "$t/work" commit -am "refactor: Renommage de Line en Row"
+printf 'struct Row {\n    let id: Int\n    let meters: Int\n}\n' > "$t/work/New/Row.swift"
+g -C "$t/work" commit -am "feat: Ajout des mètres dans Row"
+mkdir -p "$t/work/.whackagent"; echo x > "$t/work/.whackagent/task.md"
+g -C "$t/work" add -A; g -C "$t/work" commit -m "docs: Mise à jour de la tâche"
+out=$(cd "$t/work" && "$pc" signals develop --steps 2>&1)
+has "$out" "steps: 3 code commits" "steps signals"
+has "$out" "Row.meters stored" "steps signals"
+fold='<dl><dd><details>\n<summary>Ajout des mètres dans Row : en mètres</summary>\n<dl><dd><br>\n\n**Avant** : rien.\n\n</dd></dl>\n</details></dd></dl>'
+printf "Intro.\n\n## Changements\n- Déplacement de Row : seul\n- Renommage de Row en Line\n- Renommage de Line en Row\n\n$fold\n\n## À tester\n- [ ] ok\n" > "$t/good.md"
+(cd "$t/work" && "$pc" check "$t/good.md" develop --steps >/dev/null) || err "steps: good body red"
+printf "Intro.\n\n## Changements\n- Ajout des mètres dans Row\n\n## À tester\n- [ ] ok\n" > "$t/flat.md"
+out=$(cd "$t/work" && "$pc" check "$t/flat.md" develop --steps 2>&1) && err "steps: line without fold green"
+has "$out" "has signals, its Changes line does not fold" "steps flat body"
+printf "Intro.\n\n## Changements\n- Autre chose\n\n## À tester\n- [ ] ok\n" > "$t/none.md"
+out=$(cd "$t/work" && "$pc" check "$t/none.md" develop --steps 2>&1) && err "steps: missing line green"
+has "$out" "no Changes line starting with it" "steps missing line"
+[ "$fail" = 0 ] && echo "✅ steps checked"
 
 [ "$fail" = 0 ] && echo "✅ pr-check proven"
 exit "$fail"
