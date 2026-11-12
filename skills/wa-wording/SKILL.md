@@ -12,6 +12,7 @@ Read: voice, components, tasks
 
 - Inside the flow, `wa-implementer` and `wa-verifier` get these rules from the `wording.md` module.
 - `wording/` = `${CLAUDE_PLUGIN_ROOT}/conventions/wording/`.
+- Base = **voice → Human style**, **Tics**. Project tone on top.
 
 ## Steps
 

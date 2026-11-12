@@ -14,14 +14,13 @@ Task history rewritten as build steps at close, read like a build manual. Each `
 ## Message
 
 ```
-refactor: Renommage des lignes répétitions en lignes éditables
+feat: Ajout du nettoyage de la saisie Distance
 
-Déplacement seul, aucun changement de logique.
-Prépare la case Distance dans la même ligne.
+Le curseur revient en fin de case à chaque frappe : coût accepté.
 ```
 
 - Subject = `<prefix>: <Changes line>`, `pr_language`, ≤ 60 chars. Prefix per step: `feat` · `fix` · `refactor` · `test` · `chore` · `docs`.
-- Body 1–3 lines: what it brings, what to watch in review (`Déplacement seul`). **voice** applies.
+- Body optional, rare: only what the reviewer can't see in the diff. **voice → Human style**, **Tics**.
 - No number, no task slug. Author → **git → Commits**.
 
 ## Docs commit
@@ -43,6 +42,7 @@ Tree identical = `## Review` still valid: code unchanged.
 ## Changes
 
 - Construction order, never by type. Line text = commit subject without prefix (`Ajout du nettoyage de la saisie Distance`).
+- `: <detail>` only when it adds a fact the title lacks (`: 5 chiffres max`). Plain step (move, generated) → never.
 - Signals per commit: `pr-check signals <base-branch> --steps`. Step with signals → fold (**how-it-works**). No signal, or `refactor` / `chore` / `docs` → plain `- ` line.
 - Check: `pr-check check <body.md> <base-branch> --steps`: one line per code commit, same order, fold when signals.
 - Fold **Read** links point to the commit diff: `pull/<n>/commits/<sha>#diff-<sha256(path)>R<line>`.
@@ -58,7 +58,7 @@ One fold more: task → its steps → each step's fold.
 <dl><dd><br>
 
 - Mise à jour des traductions depuis Loco
-- Renommage des lignes répétitions en lignes éditables : déplacement seul
+- Renommage des lignes répétitions en lignes éditables
 
 <dl><dd><details>
 <summary>Ajout du nettoyage de la saisie Distance</summary>

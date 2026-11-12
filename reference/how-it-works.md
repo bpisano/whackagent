@@ -82,7 +82,7 @@ Before `gh pr create` / `gh pr edit`: `pr-check check <body.md> <base-branch>`. 
 
 ## Words
 
-**voice → Words**, plus:
+**voice → Human style**, **Tics**, plus:
 
 - **Part title** starts with the situation: `How` / `When` / `If` (`Comment`, `Quand`, `Si`). Subject + verb, no comma, no `?`: `Quand les 3 sessions sont occupées`.
 - ≥ 2 facts → bullets. Condition → `Si …, …`, never `<case> : <result>`.

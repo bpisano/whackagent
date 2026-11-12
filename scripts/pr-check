@@ -15,7 +15,7 @@ newest of local / origin is diffed. origin/x or a sha is used as given, not refr
 Generated files (header comment, or linguist-generated in .gitattributes) are skipped.
 
 Exit 0 ok · 1 body misses something (check) · 2 usage.
-Rules: reference/how-it-works.md → Signals, reference/pr.md → To test.
+Rules: reference/how-it-works.md → Signals, reference/pr.md → To test, reference/voice.md → Tics.
 """
 import re
 import subprocess
@@ -387,6 +387,44 @@ def check_steps(body, steps):
     return miss
 
 
+VOICE = __import__("os").path.join(__import__("os").path.dirname(__import__("os").path.realpath(__file__)), "..", "reference", "voice.md")
+
+
+def banned_words():
+    """Backticked words of the `**Banned words**` line of reference/voice.md."""
+    try:
+        line = next(l for l in open(VOICE) if l.startswith("**Banned words**"))
+    except (OSError, StopIteration):
+        return []
+    return re.findall(r"`([^`]+)`", line.split(":", 1)[1])
+
+
+def prose(text):
+    """Lines readers see as prose: no fences, comments, code spans, URLs."""
+    text = re.sub(r"<!--.*?-->", "", text, flags=re.S)
+    out = []
+    for l in outside_fences(text):
+        l = re.sub(r"`[^`]*`", "x", l)
+        l = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", l)
+        l = re.sub(r"<[^>]+>", " ", l)
+        out.append(l)
+    return out
+
+
+def wording(text, where):
+    """Banned words, and `→` chains whose parts are sentences (one arrow a sentence)."""
+    miss, words = [], banned_words()
+    for l in prose(text):
+        low = l.lower()
+        for w in words:
+            if re.search(rf"(?<!\w){re.escape(w.lower())}(?!\w)", low):
+                miss.append(f"{where}: banned word `{w}` (voice → Tics): {l.strip()[:60]}")
+        parts = l.split("→")
+        if len(parts) > 2 and any(len(p.split()) > 5 for p in parts):
+            miss.append(f"{where}: several `→` in a sentence (voice → Human style): {l.strip()[:60]}")
+    return miss
+
+
 def type_nodes(body, types):
     """Flowchart nodes showing a bare new type name: a type graph, not steps."""
     out = []
@@ -452,7 +490,10 @@ def main(argv):
             print_signals(sfiles)
         print(f"steps: {len(steps)} code commits")
         return 0
-    miss = check(body, files) + (check_steps(body, steps) if steps_mode else [])
+    miss = check(body, files) + (check_steps(body, steps) if steps_mode else []) + wording(body, "body")
+    if rest[0] != "--diff":
+        for sha in git("rev-list", "--no-merges", f"{ref}..HEAD").stdout.split():
+            miss += wording(git("log", "-1", "--format=%B", sha).stdout, f"commit {sha[:7]}")
     for m in miss:
         print(f"❌ {m}")
     if not miss:

@@ -59,6 +59,7 @@ Read: voice, components, tasks, store      ← reference/ files this skill needs
 | `wa-setup` | 2 000 |
 | agent | 800 |
 | `reference/*` | 800 |
+| `reference/voice.md` | 1 200 |
 | `reference/components.md` | 1 000 |
 | migration | 400 |
 
@@ -72,7 +73,8 @@ Over budget → cut elsewhere before adding.
 
 ## Writing skills
 
-- `reference/voice.md` applies to skill text too: telegraphic, bullets, short words.
+- Skill, agent, reference text is read by the AI: telegraphic, bullets, short words (**voice → Readers**).
+- Examples of output take the style of their final reader: PR, commit, terminal message → **voice → Human style**, **Tics**.
 - Cut before adding. Delete any line that restates a reference, re-explains the flow, or describes default model behavior.
 - Imperative, second person implied: `Read the task.`, not `You should read`.
 - English, examples too. Real names (`#42 Add Apple login`), shortest that shows the point.

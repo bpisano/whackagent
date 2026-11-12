@@ -48,6 +48,14 @@ has "$out" "diagram: node \`ScreenOcclusionsModifier\` is a type" "swift type gr
 rm -f "$tmp"
 [ "$fail" = 0 ] && echo "✅ swift type graph fails"
 
+tmp=$(mktemp); { cat $F/swift/body-good.md; printf '\nLa sheet permet de saisir la distance.\n\nMode Distance actif → une case par ligne → la valeur est sauvée en mètres\n'; } > "$tmp"
+out=$(scripts/pr-check check "$tmp" --diff $F/swift/diff.patch) && err "swift body with tics green"
+has "$out" "banned word \`permet de\`" "wording"
+has "$out" "several \`→\` in a sentence" "wording"
+echo "$out" | grep -q "Lancement → écran" && err "wording: path line flagged"
+rm -f "$tmp"
+[ "$fail" = 0 ] && echo "✅ wording tics fail"
+
 # Kotlin: suspend members, enum class, primary constructor.
 out=$(scripts/pr-check signals --diff $F/kotlin/diff.patch)
 has "$out" "new types: 2" "kotlin signals"

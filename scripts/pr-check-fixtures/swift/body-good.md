@@ -172,12 +172,12 @@ enum KeypadEdgeReach { // jusqu'où le clavier s'étend sur ses côtés
 ## À tester
 Lancement → écran Calculatrice
 
-- [ ] Duo fermé, portrait : pas de saut au lancement, pager pleine largeur, Cos/Cosh invisibles
-- [ ] Duo fermé, paysage caméra en haut à gauche : clavier à 14 pt du bord gauche
-- [ ] Duo fermé, paysage caméra en bas à droite : comme avant
-- [ ] Duo ouvert à plat, paysage : clavier Étendu à 14 pt des bords, status line alignée
-- [ ] iPhone en paysage : côté sans Dynamic Island à 14 pt, s'inverse en tournant
-- [ ] iPad et iPhone portrait : inchangés, hors écart status line ↔ clavier en Étendu
+- [ ] Duo fermé, en portrait → le pager prend toute la largeur, sans saut au lancement
+- [ ] Duo fermé, en paysage, caméra en haut à gauche → le clavier est à 14 pt du bord gauche
+- [ ] Duo fermé, en paysage, caméra en bas à droite → rien ne change
+- [ ] Duo ouvert à plat, en paysage → le clavier Étendu est à 14 pt des bords
+- [ ] iPhone en paysage → le clavier est à 14 pt du côté sans Dynamic Island
+- [ ] iPad et iPhone en portrait → rien ne change
 
 ## Vocabulaire
 

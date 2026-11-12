@@ -163,7 +163,7 @@ In `.whackagent/config.md`:
 - **`review.when`** — review once at the end (default), or after every round.
 - **`lint.tool`** — strict linter on the build (`none` to turn off). `lint.fix_command` overrides the autofix.
 - **`archtest.tool`** — architecture rules as unit tests (`none` to turn off). `archtest.command` overrides the run.
-- **`paths`** — move the wiki, tasks or backlog, e.g. to `docs/` so the team can read them.
+- **`paths`** — move the wiki, tasks or backlog, e.g. tasks to `docs/` so the team can read them. The wiki is written for the agent, not for people.
 
 ## Files
 
@@ -180,6 +180,8 @@ In `.whackagent/config.md`:
 ## Conventions
 
 One file per rule set, copied into your project and yours to edit. `/wa-setup` copies only what fits: Swift (style, elegance, architecture, SwiftUI, testing), TypeScript, or generic. The reviewer reads exactly those.
+
+**Voice**: two readers, two styles. What people read (terminal, PRs, commits, tasks) is short, plain sentences, bullets, `→` only for action → result, no recap. A list of AI tics is banned (a thing with intent like "the field refuses", explaining the format, saying the obvious, "désormais", "robust"…): the text is reread once before publishing, and `pr-check` refuses banned words in a PR body or commit. What the agent reads (skills, wiki, reports) stays telegraphic to save tokens. Your corrections become new examples.
 
 **Wording** (UI projects): `/wa-setup` asks how your app talks (tone, tu/vous, audience) and copies the UI copy rules into `conventions/wording.md`. Every string the agent writes follows them: remove it, show it, shorten it, then tune it. Strings you rewrite become examples the agent copies. The reviewer checks them too. The same rules load by themselves when you write UI with Claude outside a task. No command.
 

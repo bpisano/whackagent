@@ -67,7 +67,7 @@ for f in skills/wa-update/migrations/*.md; do
 done
 
 for f in reference/*.md; do
-  max=800; [ "$f" = reference/components.md ] && max=1000
+  max=800; [ "$f" = reference/components.md ] && max=1000; [ "$f" = reference/voice.md ] && max=1200
   budget "$f" "$max"
 done
 

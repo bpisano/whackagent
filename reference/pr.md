@@ -82,7 +82,7 @@ Les mails des 30 derniers jours sont lisibles hors ligne.
 
 ## Changements
 <dl><dd><details>
-<summary>Modification de l'écran de mail : contenu local d'abord, sinon téléchargement</summary>
+<summary>Modification de l'ouverture d'un mail : le contenu local s'affiche d'abord</summary>
 <dl><dd><br>
 
 …
