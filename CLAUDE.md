@@ -74,7 +74,7 @@ Over budget → cut elsewhere before adding.
 ## Writing skills
 
 - Skill, agent, reference text is read by the AI: telegraphic, bullets, short words (**voice → Readers**).
-- Examples of output take the style of their final reader: PR, commit, terminal message → **voice → Human style**, **Tics**.
+- Examples of output take the style of their final reader: PR, commit → **voice → Human style**; terminal message → **voice → User style**. Both → **Tics**.
 - Cut before adding. Delete any line that restates a reference, re-explains the flow, or describes default model behavior.
 - Imperative, second person implied: `Read the task.`, not `You should read`.
 - English, examples too. Real names (`#42 Add Apple login`), shortest that shows the point.

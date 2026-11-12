@@ -2,21 +2,15 @@
 
 How whackagent writes: every message, report, task file, PR, commit, wiki. PRs → **pr**.
 
-## Output
-
-- **Shape** → **components.md**. Never an ad-hoc format.
-- **≤ 5 bullets, ≤ 12 words each.** More → it goes in the report or task file, linked.
-- **Detail on demand.** No why, how or recap unless asked.
-- **Progress mid-run** = one line, no bullets.
-- **Questions** = one at a time, always with a recommendation → **components → Question**.
-
 ## Readers
 
-Two readers, two styles. Pick by who reads the text last.
+Pick by who reads the text last.
 
-- **Human** → terminal messages, PR, commits, task title / summary / body, pitch, sprint. **Human style**.
-- **AI** → skills, `reference/`, CLAUDE.md, conventions, wiki, glossary, reports, `## Implementation`, `## Review`. Telegraphic: fragments, no articles, bullets, no word that carries nothing.
-- Example → style of its final reader: a PR body sample in an AI file stays human.
+- **User** = who runs the skill, now, with context. Terminal, questions, `→ next:`. **User style**.
+- **Human** = a teammate, later, cold. PR, commits, task title / summary / body, pitch, sprint. **Human style**.
+- **AI** = the model. Skills, `reference/`, CLAUDE.md, conventions, wiki, glossary, reports, `## Implementation`, `## Review`. Telegraphic: fragments, no articles, bullets, no word that carries nothing.
+- **App user** = who uses the product. UI strings → `wa-wording`.
+- Example → style of its final reader: a PR body sample in an AI file stays Human.
 
 ## Human style
 
@@ -28,16 +22,34 @@ A dev writing to a colleague: short, plain, direct.
 - **Bullets** from 2 facts. Each bullet stands alone. No lone bullet, 2 levels max.
 - **`→`** = action or condition → visible result. One per sentence, except a path (`Onglet Moi → Mes séances`). Never for "becomes", "so", "then".
 - **Everyday word**: `fix`, `affiche`, never the rare precise one (`pose`, `relève`).
-- **What the user sees**, not the code concept: `le nombre`, not `la vue`. Type name only when the line is about code.
+- **What the app shows**, not the code concept: `le nombre`, not `la vue`. Type name only when the line is about code.
 - **No recap, no conclusion, no announce.**
 - **Tech terms stay English**, any language: `bouton Apple pas disabled pendant le loading`. Never a calque (`fil principal`).
 - **No dash as separator** (`—`, ` - `): `:` or new line.
 - **Meaning never lost.** Readable two ways → add the word.
 - Reread once before publishing, against **Tics**. Same pass, no extra step.
 
+## User style
+
+Human style, plus:
+
+- **Tu** when the language has it (`tu`, `du`, `tú`). English unchanged.
+- **Only what changes the next action or would surprise.** No why, promise or hedge.
+- **≤ 5 bullets, ≤ 12 words each.** More → report or task file, linked.
+- **`subject : state`** for one fact: `Tes fichiers proto : intacts.` Two facts → two sentences.
+- **`→ next:`** = one action, two for a real choice.
+- Shape → **components.md**. Questions → **components → Question**.
+
+| ❌ | ✅ |
+|---|---|
+| `Avatars à 52 pt, sinon ils débordent.` | `Avatars fixés à 52 pt.` |
+| `Je les synchroniserai au prochain round.` | *(cut)* |
+| `avec au moins un PNG` | *(cut)* |
+| `testez, puis /wa-validate 330 et /wa-validate 331` | `teste, puis /wa-validate 330 et 331` |
+
 ## Tics
 
-Never, in human text:
+Never, in User or Human text:
 
 | tic | ❌ | ✅ |
 |---|---|---|
